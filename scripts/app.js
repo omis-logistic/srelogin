@@ -1,7 +1,7 @@
 //scripts/app.js
 // ================= CONFIGURATION =================
 const CONFIG = {
-  GAS_URL: 'https://script.google.com/macros/s/AKfycbxofj7y7NvCnZp4TaF7GL29kg8jRosSLkYDDXdFCyJHoBi5639-XwO6y458mFiwRFZtYw/exec',
+  GAS_URL: 'https://script.google.com/macros/s/AKfycbzWy10ZLPZdvROkTMa7rT4JY4cik85p6cIynwbjGO4dnlGPKxMH63eMINlmxn9t2tlemg/exec',
   PROXY_URL: 'https://script.google.com/macros/s/AKfycbwDmSYGMv0tW87V9vTWU90qzKyo3YIU7X1yIT3-LGb0XYcgf9eqg-0er0eYuiE1op9Z/exec',
   SESSION_TIMEOUT: 3600,
   MAX_FILE_SIZE: 5 * 1024 * 1024,
@@ -671,26 +671,114 @@ async function handleLogin() {
 }
 
 async function handleRegistration() {
-  if (!validateRegistrationForm()) return;
-
+  // 1. Get all form values
   const formData = {
-    phone: document.getElementById('regPhone').value.trim(),
+    action: 'createAccount',
+    icNumber: document.getElementById('icNumber').value,
+    fullName: document.getElementById('fullName').value,
+    mailingAddress: document.getElementById('mailingAddress').value,
+    postcode: document.getElementById('postcode').value,
+    phone: document.getElementById('regPhone').value,
     password: document.getElementById('regPassword').value,
-    email: document.getElementById('regEmail').value.trim()
+    email: document.getElementById('regEmail').value,
+    confirmPassword: document.getElementById('regConfirmPass').value,
+    confirmEmail: document.getElementById('regConfirmEmail').value
   };
 
+  // Clear previous errors
+  clearErrors();
+
+  // === VALIDATIONS ===
+  // IC Number format validation
+  if (!/^\d{2}-\d{6}$/.test(formData.icNumber)) {
+    showError('Invalid IC Number format (XX-XXXXXX)', 'icNumberError');
+    return;
+  }
+
+  // File presence validation
+  const frontICInput = document.getElementById('frontIC');
+  const backICInput = document.getElementById('backIC');
+  if (!frontICInput.files.length || !backICInput.files.length) {
+    showError('Both IC documents are required', 'fileError');
+    return;
+  }
+
+  // Password validation
+  if (!validatePassword(formData.password)) {
+    showError('Password must contain 6+ chars with 1 uppercase and 1 number', 'passError');
+    return;
+  }
+
+  // Password match validation
+  if (formData.password !== formData.confirmPassword) {
+    showError('Passwords do not match', 'confirmPassError');
+    return;
+  }
+
+  // Email validation
+  if (!validateEmail(formData.email)) {
+    showError('Invalid email format', 'emailError');
+    return;
+  }
+
+  // Email match validation
+  if (formData.email !== formData.confirmEmail) {
+    showError('Emails do not match', 'confirmEmailError');
+    return;
+  }
+
+  // Show loading state
+  showLoading(true);
+
   try {
-    const result = await callAPI('createAccount', formData);
-    
+    // 2. Process files
+    const frontICFile = await processFiles(frontICInput.files, 'frontIC');
+    const backICFile = await processFiles(backICInput.files, 'backIC');
+
+    // 3. Create payload
+    const payload = {
+      ...formData,
+      files: {
+        frontIC: frontICFile[0],  // Get first (and only) file
+        backIC: backICFile[0]
+      }
+    };
+
+    // 4. Submit to backend
+    const response = await fetch(CONFIG.PROXY_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8'
+      },
+      body: `payload=${encodeURIComponent(JSON.stringify(payload))}`
+    });
+
+    const result = await response.json();
+
+    // 5. Handle response
     if (result.success) {
-      alert('Registration successful! Please login.');
-      safeRedirect('login.html');
+      showError('Registration successful! Please login.', 'status-message success');
+      resetRegistrationForm();
+      setTimeout(() => safeRedirect('login.html'), 2000);
     } else {
-      showError(result.message || 'Registration failed');
+      showError(result.message || 'Registration failed', 'status-message error');
     }
   } catch (error) {
-    showError('Registration failed - please try again');
+    console.error('Registration error:', error);
+    showError('Registration failed. Please try again.', 'status-message error');
+  } finally {
+    showLoading(false);
   }
+}
+
+// Helper functions
+function clearErrors() {
+  document.querySelectorAll('.error-message').forEach(el => el.textContent = '');
+}
+
+function resetRegistrationForm() {
+  document.getElementById('registrationForm').reset();
+  document.querySelectorAll('.file-input').forEach(input => input.value = '');
 }
 
 // ================= PASSWORD MANAGEMENT =================
