@@ -78,10 +78,11 @@
   <!-- New Fields -->
   <div class="input-group">
     <input type="text" 
-           id="icNumber" 
-           placeholder="I.C Number (XX-XXXXXX)"
-           pattern="\d{2}-\d{6}" 
-           required>
+       id="icNumber" 
+       pattern="\d{2}-\d{6}"
+       title="Format: XX-XXXXXX (e.g., 00-123456)"
+       placeholder="00-123456"
+       required>
     <div class="error-message" id="icNumberError"></div>
   </div>
 
