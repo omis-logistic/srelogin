@@ -398,7 +398,27 @@ function validateParcelPhone(input) {
 }
 
 // ================= FILE HANDLING =================
-async function processFiles(files) {
+async function processFiles(files, uploadType = 'parcel') {
+  // Handle different upload types
+  if(uploadType === 'ic') {
+    // IC documents require exactly 1 file per upload
+    if(files.length !== 1) {
+      throw new Error(uploadType === 'frontIC' 
+        ? 'Front IC requires exactly 1 file' 
+        : 'Back IC requires exactly 1 file');
+    }
+    
+    const file = files[0];
+    return {
+      name: file.name.replace(/[^a-z0-9._-]/gi, '_'),
+      mimeType: file.type,
+      data: await toBase64(file),
+      size: file.size,
+      field: uploadType // Add field identifier
+    };
+  }
+
+  // Existing parcel file handling
   return Promise.all(files.map(async file => ({
     name: file.name.replace(/[^a-z0-9._-]/gi, '_'),
     mimeType: file.type,
@@ -416,50 +436,59 @@ function toBase64(file) {
   });
 }
 
-function validateFiles(category, files) {
+function validateFiles(category, files, uploadType = 'parcel') {
+  // Handle IC document validation
+  if(uploadType === 'ic') {
+    if(files.length !== 1) {
+      throw new Error('Exactly 1 file required for IC document');
+    }
+    
+    const file = files[0];
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'];
+    
+    if(!allowedTypes.includes(file.type.toLowerCase())) {
+      throw new Error('IC documents must be JPG, PNG, or PDF');
+    }
+
+    if(file.size > CONFIG.MAX_FILE_SIZE) {
+      throw new Error(`IC document exceeds ${CONFIG.MAX_FILE_SIZE/1024/1024}MB limit`);
+    }
+    return;
+  }
+
+  // Existing parcel file validation
   const starredCategories = [
     '*Books', '*Cosmetics/Skincare/Bodycare', '*Food Beverage/Drinks',
     '*Gadgets', '*Oil Ointment', '*Supplement'
   ];
 
-  if (starredCategories.includes(category)) {
-    if (files.length < 1) throw new Error('At least 1 file required');
-    if (files.length > 3) throw new Error('Maximum 3 files allowed');
+  if(starredCategories.includes(category)) {
+    if(files.length < 1) throw new Error('At least 1 file required');
+    if(files.length > CONFIG.MAX_FILES) throw new Error(`Maximum ${CONFIG.MAX_FILES} files allowed`);
   }
 
   files.forEach(file => {
-    if (file.size > CONFIG.MAX_FILE_SIZE) {
+    if(file.size > CONFIG.MAX_FILE_SIZE) {
       throw new Error(`${file.name} exceeds ${CONFIG.MAX_FILE_SIZE/1024/1024}MB limit`);
     }
   });
 }
 
-function handleFileSelection(input) {
+function handleFileSelection(input, uploadType = 'parcel') {
   try {
     const files = Array.from(input.files);
-    const category = document.getElementById('itemCategory').value;
     
-    // Validate against starred categories
-    const starredCategories = [
-      '*Books', '*Cosmetics/Skincare/Bodycare', '*Food Beverage/Drinks',
-      '*Gadgets', '*Oil Ointment', '*Supplement'
-    ];
-    
-    if (starredCategories.includes(category)) {
-      if (files.length < 1) throw new Error('At least 1 file required');
-      if (files.length > 3) throw new Error('Max 3 files allowed');
+    if(uploadType === 'ic') {
+      validateFiles(null, files, 'ic');
+      showError(`${files.length} IC document selected`, 'status-message success');
+      return;
     }
 
-    // Validate individual files
-    files.forEach(file => {
-      if (file.size > CONFIG.MAX_FILE_SIZE) {
-        throw new Error(`${file.name} exceeds 5MB`);
-      }
-    });
-
+    const category = document.getElementById('itemCategory')?.value;
+    validateFiles(category, files);
     showError(`${files.length} valid files selected`, 'status-message success');
     
-  } catch (error) {
+  } catch(error) {
     showError(error.message);
     input.value = '';
   }
@@ -745,6 +774,21 @@ function validateRegistrationForm() {
 
   let isValid = true;
   document.querySelectorAll('.error-message').forEach(el => el.textContent = '');
+
+    if(!/^\d{2}-\d{6}$/.test(document.getElementById('icNumber').value)) {
+    document.getElementById('icNumberError').textContent = 'Invalid IC format (XX-XXXXXX)';
+    isValid = false;
+  }
+  
+  if(!document.getElementById('frontIC').files[0]) {
+    document.getElementById('frontICError').textContent = 'Front IC required';
+    isValid = false;
+  }
+
+  if(!document.getElementById('backIC').files[0]) {
+    document.getElementById('backICError').textContent = 'Back IC required';
+    isValid = false;
+  }
 
   if (!validatePhone(phone)) {
     document.getElementById('phoneError').textContent = 'Invalid phone format';
