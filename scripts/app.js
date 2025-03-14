@@ -674,9 +674,7 @@ async function handleRegistration() {
   // 1. Get all form values
   const formData = {
     action: 'createAccount',
-    icNumber: document.getElementById('icNumber').value
-      .trim()
-      .replace(/[‐﹣−–—]/g, '-'), /
+    icNumber: document.getElementById('icNumber').value,
     fullName: document.getElementById('fullName').value,
     mailingAddress: document.getElementById('mailingAddress').value,
     postcode: document.getElementById('postcode').value,
@@ -692,9 +690,9 @@ async function handleRegistration() {
 
   // === VALIDATIONS ===
   // IC Number format validation
-  if (!/^\d{2}-\d{6}$/.test(formData.icNumber.trim())) {
-  showError('Invalid IC format. Example: 00-123456', 'icNumberError');
-  return;
+  if (!/^\d{2}-\d{6}$/.test(formData.icNumber)) {
+    showError('Invalid IC Number format (XX-XXXXXX)', 'icNumberError');
+    return;
   }
 
   // File presence validation
