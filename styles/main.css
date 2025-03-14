@@ -86,16 +86,13 @@ input, select, button, textarea {
 }
 
 button {
-  background-color: var(--primary-color);
-  color: var(--text-light);
-  font-weight: bold;
-  cursor: pointer;
-  border: none;
+  background-color: #9C51B6;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 button:hover {
-  background-color: #8A45A3;
-  opacity: 0.9;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(156, 81, 182, 0.25);
 }
 
 .error-message {
@@ -475,15 +472,27 @@ select {
   margin: 0 auto;
 }
 
+h1.login-header {
+  font-family: 'Poppins', sans-serif;
+  font-weight: 600;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  font-size: 2.4rem;
+  margin-bottom: 2.5rem;
+  text-shadow: 2px 2px 4px rgba(156, 81, 182, 0.1);
+}
+
 .secondary-btn {
-  background: transparent !important;
-  border: 1px solid var(--primary-color) !important;
-  color: var(--primary-color) !important;
+  background: #D6A8E6 !important;  /* Light purple */
+  border: 1px solid #9C51B6 !important;
+  color: #6B3A7F !important;       /* Dark purple */
+  transition: all 0.3s ease;
 }
 
 .secondary-btn:hover {
-  background: var(--primary-color) !important;
-  color: var(--text-light) !important;
+  background: #9C51B6 !important;
+  color: #FFF !important;
+  transform: translateY(-1px);
 }
 
 /* MY INFO PAGE */
