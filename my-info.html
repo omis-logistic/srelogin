@@ -59,7 +59,26 @@
 </head>
 <body>
   <div class="container my-info-page">
-    <h1>My Information</h1>
+  <h1>My Information</h1>
+  
+  <!-- New Read-only Fields -->
+  <div class="input-group">
+    <input type="text" id="infoFullName" placeholder="Full Name" readonly>
+  </div>
+  
+  <div class="input-group">
+    <input type="text" id="infoICNumber" placeholder="I.C Number" readonly>
+  </div>
+
+  <div class="input-group">
+    <label>Front I.C:</label>
+    <a id="frontICLink" target="_blank" class="file-link">View Document</a>
+  </div>
+
+  <div class="input-group">
+    <label>Back I.C:</label>
+    <a id="backICLink" target="_blank" class="file-link">View Document</a>
+  </div>
     
     <div class="input-group">
       <input type="tel" id="infoPhone" placeholder="Phone Number" readonly>
