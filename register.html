@@ -78,11 +78,9 @@
   <form id="registrationForm" onsubmit="event.preventDefault(); handleRegistration();">
   <div class="input-group">
     <input type="text" 
-       id="icNumber" 
-       pattern="\d{2}-\d{6}"
-       title="Format: XX-XXXXXX (e.g., 00-123456)"
-       placeholder="00-123456"
-       required>
+           id="icNumber" 
+           placeholder="IC Number"
+           required>
     <div class="error-message" id="icNumberError"></div>
   </div>
 
