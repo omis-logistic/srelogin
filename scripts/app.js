@@ -697,7 +697,7 @@ async function handleRegistration() {
 
   try {
     // 1. File Processing
-    const frontIcFile = document.getElementById('frontIc').files[0];
+    const frontIcFile = document.getElementById('frontIc').files[0]; 
     const backIcFile = document.getElementById('backIc').files[0];
     
     if (!frontIcFile || !backIcFile) {
@@ -867,14 +867,14 @@ function validateRegistrationForm() {
     isValid = false;
   }
   
-  if(!document.getElementById('frontIC').files[0]) {
-    document.getElementById('frontICError').textContent = 'Front IC required';
-    isValid = false;
+  if (!document.getElementById('frontIc').files[0]) {  // Lowercase 'c'
+  document.getElementById('frontIcError').textContent = 'Front IC required';
+  isValid = false;
   }
 
-  if(!document.getElementById('backIC').files[0]) {
-    document.getElementById('backICError').textContent = 'Back IC required';
-    isValid = false;
+  if (!document.getElementById('backIc').files[0]) {  // Lowercase 'c'
+  document.getElementById('backIcError').textContent = 'Back IC required';
+  isValid = false;
   }
 
   if (!validatePhone(phone)) {
