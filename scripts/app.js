@@ -680,41 +680,96 @@ async function handleLogin() {
 }
 
 async function handleRegistration() {
-  const form = document.getElementById('registrationForm');
-  const formData = new FormData(form);
-  
-  // Process files
-  const frontICFile = formData.get('frontIC');
-  const backICFile = formData.get('backIC');
-
-  // Create payload with all fields
-  const payload = {
+  // 1. Get all form values
+  const formData = {
     action: 'createAccount',
-    icNumber: formData.get('icNumber'),
-    fullName: formData.get('fullName'),
-    mailingAddress: formData.get('mailingAddress'),
-    postcode: formData.get('postcode'),
-    phone: formData.get('regPhone'),
-    password: formData.get('regPassword'),
-    email: formData.get('regEmail'),
+    icNumber: document.getElementById('icNumber').value,
+    fullName: document.getElementById('fullName').value,
+    mailingAddress: document.getElementById('mailingAddress').value,
+    postcode: document.getElementById('postcode').value,
+    phone: document.getElementById('regPhone').value,
+    password: document.getElementById('regPassword').value,
+    email: document.getElementById('regEmail').value,
+    confirmPassword: document.getElementById('regConfirmPass').value,
+    confirmEmail: document.getElementById('regConfirmEmail').value
   };
 
-  try {
-    // Use FormData for file upload
-    const data = new FormData();
-    data.append('data', JSON.stringify(payload));
-    data.append('file0', frontICFile);
-    data.append('file1', backICFile);
+  // Clear previous errors
+  clearErrors();
 
-    const response = await fetch(CONFIG.GAS_URL, {
+  // File presence validation
+  const frontICInput = document.getElementById('frontIC');
+  const backICInput = document.getElementById('backIC');
+  if (!frontICInput.files.length || !backICInput.files.length) {
+    showError('Both IC documents are required', 'fileError');
+    return;
+  }
+
+  // Password validation
+  if (!validatePassword(formData.password)) {
+    showError('Password must contain 6+ chars with 1 uppercase and 1 number', 'passError');
+    return;
+  }
+
+  // Password match validation
+  if (formData.password !== formData.confirmPassword) {
+    showError('Passwords do not match', 'confirmPassError');
+    return;
+  }
+
+  // Email validation
+  if (!validateEmail(formData.email)) {
+    showError('Invalid email format', 'emailError');
+    return;
+  }
+
+  // Email match validation
+  if (formData.email !== formData.confirmEmail) {
+    showError('Emails do not match', 'confirmEmailError');
+    return;
+  }
+
+  // Show loading state
+  showLoading(true);
+
+  try {
+    // 2. Process files
+    const frontICFile = await processFiles(frontICInput.files, 'frontIC');
+    const backICFile = await processFiles(backICInput.files, 'backIC');
+
+    // 3. Create payload
+    const payload = {
+      ...formData,
+      files: {
+        frontIC: frontICFile[0],  // Get first (and only) file
+        backIC: backICFile[0]
+      }
+    };
+
+    // 4. Submit to backend
+    const response = await fetch(CONFIG.PROXY_URL, {
       method: 'POST',
-      body: data
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8'
+      },
+      body: `payload=${encodeURIComponent(JSON.stringify(payload))}`
     });
 
     const result = await response.json();
-    // Handle response...
+
+    // 5. Handle response
+    if (result.success) {
+      showError('Registration successful! Please login.', 'status-message success');
+      resetRegistrationForm();
+      setTimeout(() => safeRedirect('login.html'), 2000);
+    } else {
+      showError(result.message || 'Registration failed', 'status-message error');
+    }
   } catch (error) {
-    // Handle error...
+    console.error('Registration error:', error);
+    showError('Registration failed. Please try again.', 'status-message error');
+  } finally {
+    showLoading(false);
   }
 }
 
