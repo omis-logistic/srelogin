@@ -1,7 +1,7 @@
 //scripts/app.js
 // ================= CONFIGURATION =================
 const CONFIG = {
-  GAS_URL: 'https://script.google.com/macros/s/AKfycby09Obe31MpNrsUwtiOp_Yad7fqF9XOVOU6frfO4YBMkRVFo_UZRLGM0syUManHotTU-w/exec',
+  GAS_URL: 'https://script.google.com/macros/s/AKfycbwkTJkqm5FeeV-FbkN85mSPJ8kk8mxgO1ZbK_6o55yO-rB7aVDURmUktcfrr7jqTew1kA/exec',
   PROXY_URL: 'https://script.google.com/macros/s/AKfycbwDmSYGMv0tW87V9vTWU90qzKyo3YIU7X1yIT3-LGb0XYcgf9eqg-0er0eYuiE1op9Z/exec',
   SESSION_TIMEOUT: 3600,
   MAX_FILE_SIZE: 5 * 1024 * 1024,
@@ -688,53 +688,46 @@ async function handleLogin() {
 }
 
 async function handleRegistration() {
-  if (!validateRegistrationForm()) return;
-
-  const btn = document.querySelector('.registration-page button');
-  const originalText = btn.innerHTML;
+  const btn = document.querySelector('button');
   btn.disabled = true;
-  btn.innerHTML = '<div class="button-loader"></div> Registering...';
+  btn.innerHTML = 'Registering...';
 
   try {
-    // Prepare form data
     const formData = new FormData();
     
-    // Add text fields
-    formData.append('data', JSON.stringify({
-      action: 'createAccount',
-      phone: document.getElementById('regPhone').value.trim(),
-      password: document.getElementById('regPassword').value.trim(),
-      email: document.getElementById('regEmail').value.trim(),
-      icNumber: document.getElementById('icNumber').value.trim(),
-      fullName: document.getElementById('fullName').value.trim(),
-      address: document.getElementById('address').value.trim(),
-      postcode: document.getElementById('postcode').value.trim()
-    }));
-
+    // Add all form fields
+    formData.append('action', 'createAccount');
+    formData.append('phone', document.getElementById('regPhone').value);
+    formData.append('password', document.getElementById('regPassword').value);
+    formData.append('email', document.getElementById('regEmail').value);
+    formData.append('icNumber', document.getElementById('icNumber').value);
+    formData.append('fullName', document.getElementById('fullName').value);
+    formData.append('address', document.getElementById('address').value);
+    formData.append('postcode', document.getElementById('postcode').value);
+    
     // Add files
     formData.append('frontIc', document.getElementById('frontIc').files[0]);
     formData.append('backIc', document.getElementById('backIc').files[0]);
 
-    // Send request
     const response = await fetch(CONFIG.GAS_URL, {
       method: 'POST',
       body: formData
     });
 
     const result = await response.json();
-
-    if (result.success) {
-      showError('Registration successful! Redirecting...', 'registrationStatus');
-      setTimeout(() => safeRedirect('login.html'), 1500);
+    
+    if(result.success) {
+      alert('Registration successful!');
+      window.location.href = 'login.html';
     } else {
-      showError(result.message || 'Registration failed', 'registrationStatus');
+      alert('Error: ' + result.message);
     }
-  } catch (error) {
-    console.error('Registration error:', error);
-    showError('Registration failed - please try again', 'registrationStatus');
+  } catch(error) {
+    console.error('Registration failed:', error);
+    alert('Registration failed. Please try again.');
   } finally {
     btn.disabled = false;
-    btn.innerHTML = originalText;
+    btn.innerHTML = 'Register';
   }
 }
 
