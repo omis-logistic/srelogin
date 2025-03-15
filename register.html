@@ -2,7 +2,7 @@
 <html>
 <head>
   <base target="_top">
-  <title>Register - Cahaya Az Zahra Enterprise</title>
+  <title>Register - Safhanarizqi Enterprise</title>
   <link rel="stylesheet" href="styles/main.css">
   <style>
     .registration-page {
@@ -60,15 +60,31 @@
         font-size: 14px;
       }
     }
-    body {
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-}
 
-.container {
-  flex: 1;
-}
+    body {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .container {
+      flex: 1;
+    }
+
+    .button-loader {
+      display: inline-block;
+      width: 12px;
+      height: 12px;
+      border: 2px solid #fff;
+      border-radius: 50%;
+      border-top-color: transparent;
+      animation: spin 0.8s linear infinite;
+      margin-right: 8px;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
   </style>
 </head>
 <body>
@@ -83,37 +99,39 @@
              required>
       <div class="error-message" id="phoneError"></div>
     </div>
+    
     <div class="input-group">
-  <input type="text" id="icNumber" placeholder="I.C Number" required>
-  <div class="error-message" id="icError"></div>
-</div>
+      <input type="text" id="icNumber" placeholder="I.C Number" required>
+      <div class="error-message" id="icError"></div>
+    </div>
 
-<div class="input-group">
-  <label>Front I.C (Image/PDF):</label>
-  <input type="file" id="frontIc" accept="image/*,.pdf" required>
-  <div class="error-message" id="frontIcError"></div>
-</div>
+    <div class="input-group">
+      <label>Front I.C (Image/PDF):</label>
+      <input type="file" id="frontIc" accept="image/*,.pdf" required>
+      <div class="error-message" id="frontIcError"></div>
+    </div>
 
-<div class="input-group">
-  <label>Back I.C (Image/PDF):</label>
-  <input type="file" id="backIc" accept="image/*,.pdf" required>
-  <div class="error-message" id="backIcError"></div>
-</div>
+    <div class="input-group">
+      <label>Back I.C (Image/PDF):</label>
+      <input type="file" id="backIc" accept="image/*,.pdf" required>
+      <div class="error-message" id="backIcError"></div>
+    </div>
 
-<div class="input-group">
-  <input type="text" id="fullName" placeholder="Full Name" required>
-  <div class="error-message" id="nameError"></div>
-</div>
+    <div class="input-group">
+      <input type="text" id="fullName" placeholder="Full Name" required>
+      <div class="error-message" id="nameError"></div>
+    </div>
 
-<div class="input-group">
-  <input type="text" id="address" placeholder="Mailing Address" required>
-  <div class="error-message" id="addressError"></div>
-</div>
+    <div class="input-group">
+      <input type="text" id="address" placeholder="Mailing Address" required>
+      <div class="error-message" id="addressError"></div>
+    </div>
 
-<div class="input-group">
-  <input type="text" id="postcode" placeholder="Postcode" pattern="\d{5}" required>
-  <div class="error-message" id="postcodeError"></div>
-</div>
+    <div class="input-group">
+      <input type="text" id="postcode" placeholder="Postcode" pattern="\d{5}" required>
+      <div class="error-message" id="postcodeError"></div>
+    </div>
+
     <div class="input-group">
       <input type="password" 
              id="regPassword" 
@@ -156,67 +174,134 @@
 
   <script src="scripts/app.js"></script>
   <script>
-    function handleRegistration() {
-  const btn = document.querySelector('.registration-page button');
-  const originalText = btn.innerHTML;
-  btn.disabled = true;
-  btn.innerHTML = '<div class="button-loader"></div> Registering...';
+    async function handleRegistration() {
+      const btn = document.querySelector('button');
+      btn.disabled = true;
+      btn.innerHTML = '<div class="button-loader"></div> Registering...';
+      clearErrors();
 
-  // Clear previous errors
-  document.querySelectorAll('.error-message').forEach(el => el.textContent = '');
-  const statusElement = document.getElementById('registrationStatus');
-  statusElement.className = '';
-  statusElement.textContent = '';
+      try {
+        if (!validateRegistrationForm()) {
+          btn.disabled = false;
+          btn.innerHTML = 'Register';
+          return;
+        }
 
-  // Validate form first
-  if (!validateRegistrationForm()) {
-    btn.disabled = false;
-    btn.innerHTML = originalText;
-    return;
-  }
+        const formData = new FormData();
+        formData.append('action', 'createAccount');
+        formData.append('phone', document.getElementById('regPhone').value.trim());
+        formData.append('password', document.getElementById('regPassword').value);
+        formData.append('email', document.getElementById('regEmail').value.trim());
+        formData.append('icNumber', document.getElementById('icNumber').value.trim());
+        formData.append('fullName', document.getElementById('fullName').value.trim());
+        formData.append('address', document.getElementById('address').value.trim());
+        formData.append('postcode', document.getElementById('postcode').value.trim());
+        formData.append('frontIc', document.getElementById('frontIc').files[0]);
+        formData.append('backIc', document.getElementById('backIc').files[0]);
 
-  // Get form values
-  const phone = document.getElementById('regPhone').value;
-  const password = document.getElementById('regPassword').value;
-  const email = document.getElementById('regEmail').value;
-
-  // Create JSONP request
-  const callbackName = `jsonp_${Date.now()}`;
-  const script = document.createElement('script');
-  script.src = `${CONFIG.GAS_URL}?action=createAccount&phone=${encodeURIComponent(phone)}&password=${encodeURIComponent(password)}&email=${encodeURIComponent(email)}&callback=${callbackName}`;
-
-  window[callbackName] = (response) => {
-    // Cleanup and restore button
-    delete window[callbackName];
-    document.body.removeChild(script);
-    btn.disabled = false;
-    btn.innerHTML = originalText;
-
-    // Handle response
-    if (response.success) {
-      statusElement.className = 'status-message success';
-      statusElement.textContent = 'Registration successful! Redirecting...';
-      setTimeout(() => safeRedirect('login.html'), 1500);
-    } else {
-      statusElement.className = 'status-message error';
-      statusElement.textContent = response.message || 'Registration failed';
-      
-      // Highlight specific errors if available
-      if (response.errors) {
-        response.errors.forEach(error => {
-          const errorField = document.getElementById(`${error.field}Error`);
-          if (errorField) errorField.textContent = error.message;
+        const response = await fetch(CONFIG.GAS_URL, {
+          method: 'POST',
+          body: formData
         });
+
+        const result = await response.json();
+        
+        if (result.success) {
+          showError('Registration successful! Redirecting...', 'registrationStatus');
+          setTimeout(() => safeRedirect('login.html'), 1500);
+        } else {
+          showError(result.message || 'Registration failed', 'registrationStatus');
+        }
+      } catch (error) {
+        console.error('Registration failed:', error);
+        showError('Registration failed. Please try again.', 'registrationStatus');
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = 'Register';
       }
     }
-  };
 
-  document.body.appendChild(script);
-}
+    function clearErrors() {
+      document.querySelectorAll('.error-message').forEach(el => el.textContent = '');
+    }
+
+    function validateRegistrationForm() {
+      let isValid = true;
+      const fields = {
+        phone: document.getElementById('regPhone').value.trim(),
+        fullName: document.getElementById('fullName').value.trim(),
+        address: document.getElementById('address').value.trim(),
+        postcode: document.getElementById('postcode').value.trim(),
+        frontIc: document.getElementById('frontIc').files[0],
+        backIc: document.getElementById('backIc').files[0],
+        password: document.getElementById('regPassword').value,
+        confirmPass: document.getElementById('regConfirmPass').value,
+        email: document.getElementById('regEmail').value.trim(),
+        confirmEmail: document.getElementById('regConfirmEmail').value.trim()
+      };
+
+      if (!validatePhone(fields.phone)) {
+        document.getElementById('phoneError').textContent = 'Invalid phone format';
+        isValid = false;
+      }
+      if (fields.fullName.length < 3) {
+        document.getElementById('nameError').textContent = 'Minimum 3 characters required';
+        isValid = false;
+      }
+      if (fields.address.length < 5) {
+        document.getElementById('addressError').textContent = 'Minimum 5 characters required';
+        isValid = false;
+      }
+      if (!/^\d{5}$/.test(fields.postcode)) {
+        document.getElementById('postcodeError').textContent = '5 digits required';
+        isValid = false;
+      }
+      if (!fields.frontIc) {
+        document.getElementById('frontIcError').textContent = 'Front IC required';
+        isValid = false;
+      }
+      if (!fields.backIc) {
+        document.getElementById('backIcError').textContent = 'Back IC required';
+        isValid = false;
+      }
+      if (!validatePassword(fields.password)) {
+        document.getElementById('passError').textContent = '6+ chars, 1 uppercase, 1 number';
+        isValid = false;
+      }
+      if (fields.password !== fields.confirmPass) {
+        document.getElementById('confirmPassError').textContent = 'Passwords mismatch';
+        isValid = false;
+      }
+      if (!validateEmail(fields.email)) {
+        document.getElementById('emailError').textContent = 'Invalid email format';
+        isValid = false;
+      }
+      if (fields.email !== fields.confirmEmail) {
+        document.getElementById('confirmEmailError').textContent = 'Emails mismatch';
+        isValid = false;
+      }
+
+      return isValid;
+    }
 
     document.getElementById('regPhone').addEventListener('input', function() {
       document.getElementById('phoneError').textContent = 
         !validatePhone(this.value) ? 'Invalid phone format' : '';
+    });
+
+    document.getElementById('postcode').addEventListener('input', function() {
+      document.getElementById('postcodeError').textContent = 
+        !/^\d{5}$/.test(this.value) ? '5 digits required' : '';
+    });
+
+    document.getElementById('fullName').addEventListener('input', function() {
+      document.getElementById('nameError').textContent = 
+        this.value.trim().length < 3 ? 'Minimum 3 characters required' : '';
+    });
+
+    document.getElementById('address').addEventListener('input', function() {
+      document.getElementById('addressError').textContent = 
+        this.value.trim().length < 5 ? 'Minimum 5 characters required' : '';
     });
 
     document.getElementById('regPassword').addEventListener('input', function() {
@@ -239,7 +324,8 @@
         this.value !== document.getElementById('regEmail').value ? 'Emails mismatch' : '';
     });
   </script>
-<div class="footer-text">
+  
+  <div class="footer-text">
     Built by Omis Logistics. For more info 👉
     <a href="https://wa.me/6737187776" target="_blank" rel="noopener">here</a>
   </div>
