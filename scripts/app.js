@@ -1,7 +1,7 @@
 //scripts/app.js
 // ================= CONFIGURATION =================
 const CONFIG = {
-  GAS_URL: 'https://script.google.com/macros/s/AKfycbwuVnv7Yq1KhPh9QYzGZtI5Jicz--grRtl1FejSIop4L-n2OXXO6cLS3MgQdRxNl4PKfA/exec',
+  GAS_URL: 'https://script.google.com/macros/s/AKfycbyBapm7Vwn2uYTAGERXoEUzlKlD90ngZ9V5gvhdv7QDyaEmAmwgF0JyDWOBxEVpFjYg/exec',
   PROXY_URL: 'https://script.google.com/macros/s/AKfycbwDmSYGMv0tW87V9vTWU90qzKyo3YIU7X1yIT3-LGb0XYcgf9eqg-0er0eYuiE1op9Z/exec',
   SESSION_TIMEOUT: 3600,
   MAX_FILE_SIZE: 5 * 1024 * 1024,
@@ -857,6 +857,10 @@ function validateRegistrationForm() {
   const confirmPassword = document.getElementById('regConfirmPass').value;
   const email = document.getElementById('regEmail').value;
   const confirmEmail = document.getElementById('regConfirmEmail').value;
+  const icNumber = document.getElementById('icNumber').value;
+  const fullName = document.getElementById('fullName').value;
+  const address = document.getElementById('address').value;
+  const postcode = document.getElementById('postcode').value;
 
   let isValid = true;
   document.querySelectorAll('.error-message').forEach(el => el.textContent = '');
@@ -881,6 +885,11 @@ function validateRegistrationForm() {
     isValid = false;
   }
 
+  if (!validateICNumber(document.getElementById('icNumber'))) isValid = false;
+  if (!validateFullName(document.getElementById('fullName'))) isValid = false;
+  if (!validateAddress(document.getElementById('address'))) isValid = false;
+  if (!validatePostcode(document.getElementById('postcode'))) isValid = false;
+  
   if (!validatePassword(password)) {
     document.getElementById('passError').textContent = '6+ chars, 1 uppercase, 1 number';
     isValid = false;
