@@ -709,7 +709,7 @@ async function handleRegistration() {
     formData.append('frontIc', document.getElementById('frontIc').files[0]);
     formData.append('backIc', document.getElementById('backIc').files[0]);
 
-    const response = await fetch(CONFIG.GAS_URL, {
+    const response = await fetch(CONFIG.PROXY_URL, {
       method: 'POST',
       body: formData
     });
