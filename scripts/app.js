@@ -696,31 +696,14 @@ async function handleRegistration() {
   btn.innerHTML = '<div class="button-loader"></div> Registering...';
 
   try {
-    // 1. File Processing
-    const frontIcFile = document.getElementById('frontIc').files[0]; 
-    const backIcFile = document.getElementById('backIc').files[0];
-    
-    if (!frontIcFile || !backIcFile) {
-      throw new Error('Both IC documents are required');
-    }
-
-    // 2. Prepare Files with Base64 Encoding
-    const processFile = async (file, fieldName) => {
-      if (!file) throw new Error(`${fieldName} document missing`);
-      return {
-        name: fieldName,
-        filename: file.name,
-        contentType: file.type,
-        data: await readFileAsBase64(file)
-      };
-    };
-
-    // 3. Create FormData payload
+    // Prepare form data
     const formData = new FormData();
+    
+    // Add text fields
     formData.append('data', JSON.stringify({
       action: 'createAccount',
       phone: document.getElementById('regPhone').value.trim(),
-      password: document.getElementById('regPassword').value,
+      password: document.getElementById('regPassword').value.trim(),
       email: document.getElementById('regEmail').value.trim(),
       icNumber: document.getElementById('icNumber').value.trim(),
       fullName: document.getElementById('fullName').value.trim(),
@@ -728,11 +711,11 @@ async function handleRegistration() {
       postcode: document.getElementById('postcode').value.trim()
     }));
 
-    // 4. Add files to FormData
-    formData.append('frontIc', await processFile(frontIcFile, 'frontIc'));
-    formData.append('backIc', await processFile(backIcFile, 'backIc'));
+    // Add files
+    formData.append('frontIc', document.getElementById('frontIc').files[0]);
+    formData.append('backIc', document.getElementById('backIc').files[0]);
 
-    // 5. API Call
+    // Send request
     const response = await fetch(CONFIG.GAS_URL, {
       method: 'POST',
       body: formData
@@ -740,27 +723,16 @@ async function handleRegistration() {
 
     const result = await response.json();
 
-    // 6. Handle Response
     if (result.success) {
       showError('Registration successful! Redirecting...', 'registrationStatus');
       setTimeout(() => safeRedirect('login.html'), 1500);
     } else {
-      // Handle field-specific errors
-      if (result.errors) {
-        result.errors.forEach(error => {
-          const errorField = document.getElementById(`${error.field}Error`);
-          if (errorField) {
-            errorField.textContent = error.message;
-          }
-        });
-      }
       showError(result.message || 'Registration failed', 'registrationStatus');
     }
   } catch (error) {
     console.error('Registration error:', error);
-    showError(error.message || 'Registration failed - please try again', 'registrationStatus');
+    showError('Registration failed - please try again', 'registrationStatus');
   } finally {
-    // 7. Cleanup
     btn.disabled = false;
     btn.innerHTML = originalText;
   }
@@ -849,60 +821,57 @@ function validateEmail(email) {
 }
 
 function validateRegistrationForm() {
-  const phone = document.getElementById('regPhone').value;
-  const password = document.getElementById('regPassword').value;
-  const confirmPassword = document.getElementById('regConfirmPass').value;
-  const email = document.getElementById('regEmail').value;
-  const confirmEmail = document.getElementById('regConfirmEmail').value;
-  const icNumber = document.getElementById('icNumber').value;
-  const fullName = document.getElementById('fullName').value;
-  const address = document.getElementById('address').value;
-  const postcode = document.getElementById('postcode').value;
+  // Get all field values
+  const fields = {
+    phone: document.getElementById('regPhone').value.trim(),
+    password: document.getElementById('regPassword').value.trim(),
+    email: document.getElementById('regEmail').value.trim(),
+    icNumber: document.getElementById('icNumber').value.trim(),
+    fullName: document.getElementById('fullName').value.trim(),
+    address: document.getElementById('address').value.trim(),
+    postcode: document.getElementById('postcode').value.trim(),
+    frontIc: document.getElementById('frontIc').files[0],
+    backIc: document.getElementById('backIc').files[0]
+  };
 
   let isValid = true;
   document.querySelectorAll('.error-message').forEach(el => el.textContent = '');
 
-    if(!/^\d{2}-\d{6}$/.test(document.getElementById('icNumber').value)) {
-    document.getElementById('icNumberError').textContent = 'Invalid IC format (XX-XXXXXX)';
+  // Validate required fields
+  if (!fields.phone) {
+    document.getElementById('phoneError').textContent = 'Phone number is required';
     isValid = false;
   }
-  
-  if (!document.getElementById('frontIc').files[0]) {  // Lowercase 'c'
-  document.getElementById('frontIcError').textContent = 'Front IC required';
-  isValid = false;
-  }
-
-  if (!document.getElementById('backIc').files[0]) {  // Lowercase 'c'
-  document.getElementById('backIcError').textContent = 'Back IC required';
-  isValid = false;
-  }
-
-  if (!validatePhone(phone)) {
-    document.getElementById('phoneError').textContent = 'Invalid phone format';
+  if (!fields.fullName) {
+    document.getElementById('nameError').textContent = 'Full name is required';
     isValid = false;
   }
-
-  if (!validateFullName(document.getElementById('fullName'))) isValid = false;
-  if (!validateAddress(document.getElementById('address'))) isValid = false;
-  if (!validatePostcode(document.getElementById('postcode'))) isValid = false;
-  
-  if (!validatePassword(password)) {
-    document.getElementById('passError').textContent = '6+ chars, 1 uppercase, 1 number';
+  if (!fields.address) {
+    document.getElementById('addressError').textContent = 'Address is required';
+    isValid = false;
+  }
+  if (!fields.postcode) {
+    document.getElementById('postcodeError').textContent = 'Postcode is required';
+    isValid = false;
+  }
+  if (!fields.frontIc) {
+    document.getElementById('frontIcError').textContent = 'Front IC document is required';
+    isValid = false;
+  }
+  if (!fields.backIc) {
+    document.getElementById('backIcError').textContent = 'Back IC document is required';
     isValid = false;
   }
 
-  if (password !== confirmPassword) {
-    document.getElementById('confirmPassError').textContent = 'Passwords mismatch';
+  // Validate password match
+  if (fields.password !== document.getElementById('regConfirmPass').value.trim()) {
+    document.getElementById('confirmPassError').textContent = 'Passwords do not match';
     isValid = false;
   }
 
-  if (!validateEmail(email)) {
-    document.getElementById('emailError').textContent = 'Invalid email format';
-    isValid = false;
-  }
-
-  if (email !== confirmEmail) {
-    document.getElementById('confirmEmailError').textContent = 'Emails mismatch';
+  // Validate email match
+  if (fields.email !== document.getElementById('regConfirmEmail').value.trim()) {
+    document.getElementById('confirmEmailError').textContent = 'Emails do not match';
     isValid = false;
   }
 
