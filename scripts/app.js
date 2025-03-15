@@ -1,7 +1,7 @@
 //scripts/app.js
 // ================= CONFIGURATION =================
 const CONFIG = {
-  GAS_URL: 'https://script.google.com/macros/s/AKfycbzWy10ZLPZdvROkTMa7rT4JY4cik85p6cIynwbjGO4dnlGPKxMH63eMINlmxn9t2tlemg/exec',
+  GAS_URL: 'https://script.google.com/macros/s/AKfycbwldvYntHvOz3BEkYYoz7m4z1wigwH6dwZXyghpJFp69N8JgL_xcKXeIEnEun_zje4OmA/exec',
   PROXY_URL: 'https://script.google.com/macros/s/AKfycbwDmSYGMv0tW87V9vTWU90qzKyo3YIU7X1yIT3-LGb0XYcgf9eqg-0er0eYuiE1op9Z/exec',
   SESSION_TIMEOUT: 3600,
   MAX_FILE_SIZE: 5 * 1024 * 1024,
@@ -397,6 +397,15 @@ function validateParcelPhone(input) {
   return isValid;
 }
 
+function validateICNumber(input) {
+  const isValid = /^\d{2}-\d{6}$/.test(input.value);
+  showError(isValid ? '' : 'Format: XX-XXXXXX', 'icNumberError');
+  return isValid;
+}
+
+document.getElementById('icNumber').addEventListener('input', function(e) {
+  validateICNumber(e.target);
+});
 // ================= FILE HANDLING =================
 async function processFiles(files, uploadType = 'parcel') {
   // Handle different upload types
@@ -671,103 +680,41 @@ async function handleLogin() {
 }
 
 async function handleRegistration() {
-  // 1. Get all form values
-  const formData = {
+  const form = document.getElementById('registrationForm');
+  const formData = new FormData(form);
+  
+  // Process files
+  const frontICFile = formData.get('frontIC');
+  const backICFile = formData.get('backIC');
+
+  // Create payload with all fields
+  const payload = {
     action: 'createAccount',
-    icNumber: document.getElementById('icNumber').value,
-    fullName: document.getElementById('fullName').value,
-    mailingAddress: document.getElementById('mailingAddress').value,
-    postcode: document.getElementById('postcode').value,
-    phone: document.getElementById('regPhone').value,
-    password: document.getElementById('regPassword').value,
-    email: document.getElementById('regEmail').value,
-    confirmPassword: document.getElementById('regConfirmPass').value,
-    confirmEmail: document.getElementById('regConfirmEmail').value
+    icNumber: formData.get('icNumber'),
+    fullName: formData.get('fullName'),
+    mailingAddress: formData.get('mailingAddress'),
+    postcode: formData.get('postcode'),
+    phone: formData.get('regPhone'),
+    password: formData.get('regPassword'),
+    email: formData.get('regEmail'),
   };
 
-  // Clear previous errors
-  clearErrors();
-
-  // === VALIDATIONS ===
-  // IC Number format validation
-  if (!/^\d{2}-\d{6}$/.test(formData.icNumber)) {
-    showError('Invalid IC Number format (XX-XXXXXX)', 'icNumberError');
-    return;
-  }
-
-  // File presence validation
-  const frontICInput = document.getElementById('frontIC');
-  const backICInput = document.getElementById('backIC');
-  if (!frontICInput.files.length || !backICInput.files.length) {
-    showError('Both IC documents are required', 'fileError');
-    return;
-  }
-
-  // Password validation
-  if (!validatePassword(formData.password)) {
-    showError('Password must contain 6+ chars with 1 uppercase and 1 number', 'passError');
-    return;
-  }
-
-  // Password match validation
-  if (formData.password !== formData.confirmPassword) {
-    showError('Passwords do not match', 'confirmPassError');
-    return;
-  }
-
-  // Email validation
-  if (!validateEmail(formData.email)) {
-    showError('Invalid email format', 'emailError');
-    return;
-  }
-
-  // Email match validation
-  if (formData.email !== formData.confirmEmail) {
-    showError('Emails do not match', 'confirmEmailError');
-    return;
-  }
-
-  // Show loading state
-  showLoading(true);
-
   try {
-    // 2. Process files
-    const frontICFile = await processFiles(frontICInput.files, 'frontIC');
-    const backICFile = await processFiles(backICInput.files, 'backIC');
+    // Use FormData for file upload
+    const data = new FormData();
+    data.append('data', JSON.stringify(payload));
+    data.append('file0', frontICFile);
+    data.append('file1', backICFile);
 
-    // 3. Create payload
-    const payload = {
-      ...formData,
-      files: {
-        frontIC: frontICFile[0],  // Get first (and only) file
-        backIC: backICFile[0]
-      }
-    };
-
-    // 4. Submit to backend
-    const response = await fetch(CONFIG.PROXY_URL, {
+    const response = await fetch(CONFIG.GAS_URL, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8'
-      },
-      body: `payload=${encodeURIComponent(JSON.stringify(payload))}`
+      body: data
     });
 
     const result = await response.json();
-
-    // 5. Handle response
-    if (result.success) {
-      showError('Registration successful! Please login.', 'status-message success');
-      resetRegistrationForm();
-      setTimeout(() => safeRedirect('login.html'), 2000);
-    } else {
-      showError(result.message || 'Registration failed', 'status-message error');
-    }
+    // Handle response...
   } catch (error) {
-    console.error('Registration error:', error);
-    showError('Registration failed. Please try again.', 'status-message error');
-  } finally {
-    showLoading(false);
+    // Handle error...
   }
 }
 
