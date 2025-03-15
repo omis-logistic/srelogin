@@ -102,21 +102,20 @@ function handleLogout() {
 }
 
 // ================= API HANDLER =================
-async function callAPI(action, payload) {
+async function callAPI(action, payload, files = []) {
   try {
     const formData = new FormData();
     
-    if (payload.files) {
-      payload.files.forEach((file, index) => {
-        const blob = new Blob(
-          [Uint8Array.from(atob(file.base64), c => c.charCodeAt(0))],
-          { type: file.type }
-        );
-        formData.append(`file${index}`, blob, file.name);
-      });
-    }
+    // Add files to formData with proper field names
+    files.forEach((file, index) => {
+      formData.append(`file${index}`, file.file, file.name);
+    });
 
-    formData.append('data', JSON.stringify(payload.data));
+    // Add all form data
+    formData.append('data', JSON.stringify({
+      ...payload,
+      action: action
+    }));
 
     const response = await fetch(CONFIG.GAS_URL, {
       method: 'POST',
@@ -394,12 +393,6 @@ function validateParcelPhone(input) {
   const value = input.value.trim();
   const isValid = /^(673\d{7,}|60\d{9,})$/.test(value);
   showError(isValid ? '' : 'Invalid phone number format', 'phoneNumberError');
-  return isValid;
-}
-
-function validateICNumber(input) {
-  const isValid = /^[A-Z0-9]{6,}$/i.test(input.value.trim());
-  showError(isValid ? '' : 'Invalid IC Number format', 'icError');
   return isValid;
 }
 
@@ -706,18 +699,7 @@ async function handleRegistration() {
   btn.innerHTML = '<div class="button-loader"></div> Registering...';
 
   try {
-    // Collect form data
-    const formData = {
-      phone: document.getElementById('regPhone').value.trim(),
-      password: document.getElementById('regPassword').value,
-      email: document.getElementById('regEmail').value.trim(),
-      icNumber: document.getElementById('icNumber').value.trim(),
-      fullName: document.getElementById('fullName').value.trim(),
-      address: document.getElementById('address').value.trim(),
-      postcode: document.getElementById('postcode').value.trim()
-    };
-
-    // Process files
+    // 1. File Processing
     const frontIcFile = document.getElementById('frontIc').files[0];
     const backIcFile = document.getElementById('backIc').files[0];
     
@@ -725,45 +707,63 @@ async function handleRegistration() {
       throw new Error('Both IC documents are required');
     }
 
-    // Prepare API payload
-    const payload = {
-      action: 'createAccount',
-      data: formData,
-      files: [
-        { name: 'frontIc', file: frontIcFile },
-        { name: 'backIc', file: backIcFile }
-      ]
+    // 2. Prepare Files with Base64 Encoding
+    const processFile = async (file, fieldName) => {
+      if (!file) throw new Error(`${fieldName} document missing`);
+      return {
+        name: fieldName,
+        filename: file.name,
+        contentType: file.type,
+        data: await readFileAsBase64(file)
+      };
     };
 
-    // Call API
-    const response = await fetch(CONFIG.PROXY_URL, {
+    // 3. Create FormData payload
+    const formData = new FormData();
+    formData.append('data', JSON.stringify({
+      action: 'createAccount',
+      phone: document.getElementById('regPhone').value.trim(),
+      password: document.getElementById('regPassword').value,
+      email: document.getElementById('regEmail').value.trim(),
+      icNumber: document.getElementById('icNumber').value.trim(),
+      fullName: document.getElementById('fullName').value.trim(),
+      address: document.getElementById('address').value.trim(),
+      postcode: document.getElementById('postcode').value.trim()
+    }));
+
+    // 4. Add files to FormData
+    formData.append('frontIc', await processFile(frontIcFile, 'frontIc'));
+    formData.append('backIc', await processFile(backIcFile, 'backIc'));
+
+    // 5. API Call
+    const response = await fetch(CONFIG.GAS_URL, {
       method: 'POST',
-      body: JSON.stringify(payload),
-      headers: {
-        'Content-Type': 'application/json'
-      }
+      body: formData
     });
 
     const result = await response.json();
 
+    // 6. Handle Response
     if (result.success) {
       showError('Registration successful! Redirecting...', 'registrationStatus');
       setTimeout(() => safeRedirect('login.html'), 1500);
     } else {
-      showError(result.message || 'Registration failed', 'registrationStatus');
-      
-      // Handle specific field errors
+      // Handle field-specific errors
       if (result.errors) {
         result.errors.forEach(error => {
           const errorField = document.getElementById(`${error.field}Error`);
-          if (errorField) errorField.textContent = error.message;
+          if (errorField) {
+            errorField.textContent = error.message;
+          }
         });
       }
+      showError(result.message || 'Registration failed', 'registrationStatus');
     }
   } catch (error) {
     console.error('Registration error:', error);
     showError(error.message || 'Registration failed - please try again', 'registrationStatus');
   } finally {
+    // 7. Cleanup
     btn.disabled = false;
     btn.innerHTML = originalText;
   }
@@ -885,7 +885,6 @@ function validateRegistrationForm() {
     isValid = false;
   }
 
-  if (!validateICNumber(document.getElementById('icNumber'))) isValid = false;
   if (!validateFullName(document.getElementById('fullName'))) isValid = false;
   if (!validateAddress(document.getElementById('address'))) isValid = false;
   if (!validatePostcode(document.getElementById('postcode'))) isValid = false;
