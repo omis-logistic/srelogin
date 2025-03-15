@@ -688,46 +688,53 @@ async function handleLogin() {
 }
 
 async function handleRegistration() {
-  const btn = document.querySelector('button');
+  if (!validateRegistrationForm()) return;
+
+  const btn = document.querySelector('.registration-page button');
+  const originalText = btn.innerHTML;
   btn.disabled = true;
-  btn.innerHTML = 'Registering...';
+  btn.innerHTML = '<div class="button-loader"></div> Registering...';
 
   try {
+    // Prepare form data
     const formData = new FormData();
     
-    // Add all form fields
-    formData.append('action', 'createAccount');
-    formData.append('phone', document.getElementById('regPhone').value);
-    formData.append('password', document.getElementById('regPassword').value);
-    formData.append('email', document.getElementById('regEmail').value);
-    formData.append('icNumber', document.getElementById('icNumber').value);
-    formData.append('fullName', document.getElementById('fullName').value);
-    formData.append('address', document.getElementById('address').value);
-    formData.append('postcode', document.getElementById('postcode').value);
-    
+    // Add text fields
+    formData.append('data', JSON.stringify({
+      action: 'createAccount',
+      phone: document.getElementById('regPhone').value.trim(),
+      password: document.getElementById('regPassword').value.trim(),
+      email: document.getElementById('regEmail').value.trim(),
+      icNumber: document.getElementById('icNumber').value.trim(),
+      fullName: document.getElementById('fullName').value.trim(),
+      address: document.getElementById('address').value.trim(),
+      postcode: document.getElementById('postcode').value.trim()
+    }));
+
     // Add files
     formData.append('frontIc', document.getElementById('frontIc').files[0]);
     formData.append('backIc', document.getElementById('backIc').files[0]);
 
-    const response = await fetch(CONFIG.PROXY_URL, {
+    // Send request
+    const response = await fetch(CONFIG.GAS_URL, {
       method: 'POST',
       body: formData
     });
 
     const result = await response.json();
-    
-    if(result.success) {
-      alert('Registration successful!');
-      window.location.href = 'login.html';
+
+    if (result.success) {
+      showError('Registration successful! Redirecting...', 'registrationStatus');
+      setTimeout(() => safeRedirect('login.html'), 1500);
     } else {
-      alert('Error: ' + result.message);
+      showError(result.message || 'Registration failed', 'registrationStatus');
     }
-  } catch(error) {
-    console.error('Registration failed:', error);
-    alert('Registration failed. Please try again.');
+  } catch (error) {
+    console.error('Registration error:', error);
+    showError('Registration failed - please try again', 'registrationStatus');
   } finally {
     btn.disabled = false;
-    btn.innerHTML = 'Register';
+    btn.innerHTML = originalText;
   }
 }
 
