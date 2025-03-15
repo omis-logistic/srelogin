@@ -2,7 +2,7 @@
 <html>
 <head>
   <base target="_top">
-  <title>Register - Safhanarizqi Enterprise</title>
+  <title>Register - Cahaya Az Zahra Enterprise</title>
   <link rel="stylesheet" href="styles/main.css">
   <style>
     .registration-page {
@@ -73,58 +73,8 @@
 </head>
 <body>
   <div class="container registration-page">
-  <h1>New Registration</h1>
-  
-  <form id="registrationForm" onsubmit="event.preventDefault(); handleRegistration();">
-  <div class="input-group">
-    <input type="text" 
-           id="icNumber" 
-           placeholder="IC Number"
-           required>
-    <div class="error-message" id="icNumberError"></div>
-  </div>
-
-  <div class="input-group">
-    <label>Front I.C (Image/PDF):</label>
-    <input type="file" 
-           id="frontIC" 
-           accept="image/*,application/pdf"
-           required>
-    <div class="error-message" id="frontICError"></div>
-  </div>
-
-  <div class="input-group">
-    <label>Back I.C (Image/PDF):</label>
-    <input type="file" 
-           id="backIC" 
-           accept="image/*,application/pdf"
-           required>
-    <div class="error-message" id="backICError"></div>
-  </div>
-
-  <div class="input-group">
-    <input type="text" 
-           id="fullName" 
-           placeholder="Full Name"
-           required>
-    <div class="error-message" id="fullNameError"></div>
-  </div>
-
-  <div class="input-group">
-    <input type="text" 
-           id="mailingAddress" 
-           placeholder="Mailing Address"
-           required>
-    <div class="error-message" id="mailingAddressError"></div>
-  </div>
-
-  <div class="input-group">
-    <input type="text" 
-           id="postcode" 
-           placeholder="Postcode"
-           required>
-    <div class="error-message" id="postcodeError"></div>
-  </div>
+    <h1>New Registration</h1>
+    
     <div class="input-group">
       <input type="tel" 
              id="regPhone" 
@@ -133,7 +83,35 @@
              required>
       <div class="error-message" id="phoneError"></div>
     </div>
+    <div class="input-group">
+  <input type="text" id="icNumber" placeholder="I.C Number" required>
+  <div class="error-message" id="icError"></div>
+</div>
 
+<div class="input-group">
+  <label>Front I.C (Image/PDF):</label>
+  <input type="file" id="frontIc" accept="image/*,.pdf" required>
+</div>
+
+<div class="input-group">
+  <label>Back I.C (Image/PDF):</label>
+  <input type="file" id="backIc" accept="image/*,.pdf" required>
+</div>
+
+<div class="input-group">
+  <input type="text" id="fullName" placeholder="Full Name" required>
+  <div class="error-message" id="nameError"></div>
+</div>
+
+<div class="input-group">
+  <input type="text" id="address" placeholder="Mailing Address" required>
+  <div class="error-message" id="addressError"></div>
+</div>
+
+<div class="input-group">
+  <input type="text" id="postcode" placeholder="Postcode" pattern="\d{5}" required>
+  <div class="error-message" id="postcodeError"></div>
+</div>
     <div class="input-group">
       <input type="password" 
              id="regPassword" 
@@ -168,8 +146,7 @@
       <div class="error-message" id="confirmEmailError"></div>
     </div>
 
-    <button type="submit">Register</button>
-    </form>
+    <button onclick="handleRegistration()">Register</button>
     <button class="secondary-btn" onclick="safeRedirect('login.html')" style="margin-top: 10px;">Back to Login</button>
 
     <div id="registrationStatus" class="status-message"></div>
