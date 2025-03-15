@@ -2,7 +2,7 @@
 // ================= CONFIGURATION =================
 const CONFIG = {
   GAS_URL: 'https://script.google.com/macros/s/AKfycbwkTJkqm5FeeV-FbkN85mSPJ8kk8mxgO1ZbK_6o55yO-rB7aVDURmUktcfrr7jqTew1kA/exec',
-  PROXY_URL: 'https://script.google.com/macros/s/AKfycbwDmSYGMv0tW87V9vTWU90qzKyo3YIU7X1yIT3-LGb0XYcgf9eqg-0er0eYuiE1op9Z/exec',
+  PROXY_URL: 'https://script.google.com/macros/s/AKfycbz-2DADnIiW4RE7655yxnXyM7AxOJ6MV2xoFWUWEQQIn1YGEbvGOl1H-WcUaEz6dTva/exec',
   SESSION_TIMEOUT: 3600,
   MAX_FILE_SIZE: 5 * 1024 * 1024,
   ALLOWED_FILE_TYPES: ['image/jpeg', 'image/png', 'application/pdf'],
@@ -106,20 +106,24 @@ async function callAPI(action, payload, files = []) {
   try {
     const formData = new FormData();
     
-    // Add files to formData with proper field names
+    // Add all form data directly to FormData
+    formData.append('action', action);
+    for (const [key, value] of Object.entries(payload)) {
+      formData.append(key, value);
+    }
+
+    // Add files with proper field names
     files.forEach((file, index) => {
       formData.append(`file${index}`, file.file, file.name);
     });
 
-    // Add all form data
-    formData.append('data', JSON.stringify({
-      ...payload,
-      action: action
-    }));
-
-    const response = await fetch(CONFIG.GAS_URL, {
+    // Use proxy URL with URL-encoded payload
+    const response = await fetch(CONFIG.PROXY_URL, {
       method: 'POST',
-      body: formData
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded'
+      },
+      body: `payload=${encodeURIComponent(JSON.stringify(Object.fromEntries(formData)))}`
     });
 
     return await response.json();
@@ -688,19 +692,20 @@ async function handleLogin() {
 }
 
 async function handleRegistration() {
-  if (!validateRegistrationForm()) return;
-
   const btn = document.querySelector('.registration-page button');
   const originalText = btn.innerHTML;
   btn.disabled = true;
   btn.innerHTML = '<div class="button-loader"></div> Registering...';
+  clearErrors();
 
   try {
+    if (!validateRegistrationForm()) {
+      console.warn('Form validation failed');
+      return;
+    }
+
     // Prepare form data
-    const formData = new FormData();
-    
-    // Add text fields
-    formData.append('data', JSON.stringify({
+    const formData = {
       action: 'createAccount',
       phone: document.getElementById('regPhone').value.trim(),
       password: document.getElementById('regPassword').value.trim(),
@@ -709,29 +714,32 @@ async function handleRegistration() {
       fullName: document.getElementById('fullName').value.trim(),
       address: document.getElementById('address').value.trim(),
       postcode: document.getElementById('postcode').value.trim()
-    }));
+    };
 
-    // Add files
-    formData.append('frontIc', document.getElementById('frontIc').files[0]);
-    formData.append('backIc', document.getElementById('backIc').files[0]);
+    // Prepare files
+    const files = [
+      {
+        file: document.getElementById('frontIc').files[0],
+        name: 'frontIc'
+      },
+      {
+        file: document.getElementById('backIc').files[0],
+        name: 'backIc'
+      }
+    ];
 
-    // Send request
-    const response = await fetch(CONFIG.GAS_URL, {
-      method: 'POST',
-      body: formData
-    });
-
-    const result = await response.json();
+    // Send through proxy
+    const result = await callAPI('createAccount', formData, files);
 
     if (result.success) {
-      showError('Registration successful! Redirecting...', 'registrationStatus');
+      showError('✓ Registration successful! Redirecting...', 'registrationStatus');
       setTimeout(() => safeRedirect('login.html'), 1500);
     } else {
-      showError(result.message || 'Registration failed', 'registrationStatus');
+      showError(`❗ ${result.message || 'Registration failed'}`, 'registrationStatus');
     }
   } catch (error) {
     console.error('Registration error:', error);
-    showError('Registration failed - please try again', 'registrationStatus');
+    showError(`❗ Error: ${error.message}`, 'registrationStatus');
   } finally {
     btn.disabled = false;
     btn.innerHTML = originalText;
