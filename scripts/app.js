@@ -1,7 +1,7 @@
 //scripts/app.js
 // ================= CONFIGURATION =================
 const CONFIG = {
-  GAS_URL: 'https://script.google.com/macros/s/AKfycbwldvYntHvOz3BEkYYoz7m4z1wigwH6dwZXyghpJFp69N8JgL_xcKXeIEnEun_zje4OmA/exec',
+  GAS_URL: 'https://script.google.com/macros/s/AKfycbwuVnv7Yq1KhPh9QYzGZtI5Jicz--grRtl1FejSIop4L-n2OXXO6cLS3MgQdRxNl4PKfA/exec',
   PROXY_URL: 'https://script.google.com/macros/s/AKfycbwDmSYGMv0tW87V9vTWU90qzKyo3YIU7X1yIT3-LGb0XYcgf9eqg-0er0eYuiE1op9Z/exec',
   SESSION_TIMEOUT: 3600,
   MAX_FILE_SIZE: 5 * 1024 * 1024,
@@ -398,8 +398,26 @@ function validateParcelPhone(input) {
 }
 
 function validateICNumber(input) {
-  const isValid = /^\d{2}-\d{6}$/.test(input.value);
-  showError(isValid ? '' : 'Format: XX-XXXXXX', 'icNumberError');
+  const isValid = /^[A-Z0-9]{6,}$/i.test(input.value.trim());
+  showError(isValid ? '' : 'Invalid IC Number format', 'icError');
+  return isValid;
+}
+
+function validateFullName(input) {
+  const isValid = input.value.trim().length >= 3;
+  showError(isValid ? '' : 'Minimum 3 characters required', 'nameError');
+  return isValid;
+}
+
+function validateAddress(input) {
+  const isValid = input.value.trim().length >= 5;
+  showError(isValid ? '' : 'Minimum 5 characters required', 'addressError');
+  return isValid;
+}
+
+function validatePostcode(input) {
+  const isValid = /^\d{5}$/.test(input.value.trim());
+  showError(isValid ? '' : 'Invalid postcode (5 digits)', 'postcodeError');
   return isValid;
 }
 
@@ -680,96 +698,74 @@ async function handleLogin() {
 }
 
 async function handleRegistration() {
-  // 1. Get all form values
-  const formData = {
-    action: 'createAccount',
-    icNumber: document.getElementById('icNumber').value,
-    fullName: document.getElementById('fullName').value,
-    mailingAddress: document.getElementById('mailingAddress').value,
-    postcode: document.getElementById('postcode').value,
-    phone: document.getElementById('regPhone').value,
-    password: document.getElementById('regPassword').value,
-    email: document.getElementById('regEmail').value,
-    confirmPassword: document.getElementById('regConfirmPass').value,
-    confirmEmail: document.getElementById('regConfirmEmail').value
-  };
+  if (!validateRegistrationForm()) return;
 
-  // Clear previous errors
-  clearErrors();
-
-  // File presence validation
-  const frontICInput = document.getElementById('frontIC');
-  const backICInput = document.getElementById('backIC');
-  if (!frontICInput.files.length || !backICInput.files.length) {
-    showError('Both IC documents are required', 'fileError');
-    return;
-  }
-
-  // Password validation
-  if (!validatePassword(formData.password)) {
-    showError('Password must contain 6+ chars with 1 uppercase and 1 number', 'passError');
-    return;
-  }
-
-  // Password match validation
-  if (formData.password !== formData.confirmPassword) {
-    showError('Passwords do not match', 'confirmPassError');
-    return;
-  }
-
-  // Email validation
-  if (!validateEmail(formData.email)) {
-    showError('Invalid email format', 'emailError');
-    return;
-  }
-
-  // Email match validation
-  if (formData.email !== formData.confirmEmail) {
-    showError('Emails do not match', 'confirmEmailError');
-    return;
-  }
-
-  // Show loading state
-  showLoading(true);
+  const btn = document.querySelector('.registration-page button');
+  const originalText = btn.innerHTML;
+  btn.disabled = true;
+  btn.innerHTML = '<div class="button-loader"></div> Registering...';
 
   try {
-    // 2. Process files
-    const frontICFile = await processFiles(frontICInput.files, 'frontIC');
-    const backICFile = await processFiles(backICInput.files, 'backIC');
-
-    // 3. Create payload
-    const payload = {
-      ...formData,
-      files: {
-        frontIC: frontICFile[0],  // Get first (and only) file
-        backIC: backICFile[0]
-      }
+    // Collect form data
+    const formData = {
+      phone: document.getElementById('regPhone').value.trim(),
+      password: document.getElementById('regPassword').value,
+      email: document.getElementById('regEmail').value.trim(),
+      icNumber: document.getElementById('icNumber').value.trim(),
+      fullName: document.getElementById('fullName').value.trim(),
+      address: document.getElementById('address').value.trim(),
+      postcode: document.getElementById('postcode').value.trim()
     };
 
-    // 4. Submit to backend
+    // Process files
+    const frontIcFile = document.getElementById('frontIc').files[0];
+    const backIcFile = document.getElementById('backIc').files[0];
+    
+    if (!frontIcFile || !backIcFile) {
+      throw new Error('Both IC documents are required');
+    }
+
+    // Prepare API payload
+    const payload = {
+      action: 'createAccount',
+      data: formData,
+      files: [
+        { name: 'frontIc', file: frontIcFile },
+        { name: 'backIc', file: backIcFile }
+      ]
+    };
+
+    // Call API
     const response = await fetch(CONFIG.PROXY_URL, {
       method: 'POST',
+      body: JSON.stringify(payload),
       headers: {
-        'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8'
-      },
-      body: `payload=${encodeURIComponent(JSON.stringify(payload))}`
+        'Content-Type': 'application/json'
+      }
     });
 
     const result = await response.json();
 
-    // 5. Handle response
     if (result.success) {
-      showError('Registration successful! Please login.', 'status-message success');
-      resetRegistrationForm();
-      setTimeout(() => safeRedirect('login.html'), 2000);
+      showError('Registration successful! Redirecting...', 'registrationStatus');
+      setTimeout(() => safeRedirect('login.html'), 1500);
     } else {
-      showError(result.message || 'Registration failed', 'status-message error');
+      showError(result.message || 'Registration failed', 'registrationStatus');
+      
+      // Handle specific field errors
+      if (result.errors) {
+        result.errors.forEach(error => {
+          const errorField = document.getElementById(`${error.field}Error`);
+          if (errorField) errorField.textContent = error.message;
+        });
+      }
     }
   } catch (error) {
     console.error('Registration error:', error);
-    showError('Registration failed. Please try again.', 'status-message error');
+    showError(error.message || 'Registration failed - please try again', 'registrationStatus');
   } finally {
-    showLoading(false);
+    btn.disabled = false;
+    btn.innerHTML = originalText;
   }
 }
 
