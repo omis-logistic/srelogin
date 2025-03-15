@@ -1,7 +1,7 @@
 //scripts/app.js
 // ================= CONFIGURATION =================
 const CONFIG = {
-  GAS_URL: 'https://script.google.com/macros/s/AKfycbyBapm7Vwn2uYTAGERXoEUzlKlD90ngZ9V5gvhdv7QDyaEmAmwgF0JyDWOBxEVpFjYg/exec',
+  GAS_URL: 'https://script.google.com/macros/s/AKfycbx_tiibkV0cwyZW0Ezvx6ggXXfLt0DHTzFEgYnMjGi00V0S9dPr_7YGrO8MOxgspK8tXA/exec',
   PROXY_URL: 'https://script.google.com/macros/s/AKfycbwDmSYGMv0tW87V9vTWU90qzKyo3YIU7X1yIT3-LGb0XYcgf9eqg-0er0eYuiE1op9Z/exec',
   SESSION_TIMEOUT: 3600,
   MAX_FILE_SIZE: 5 * 1024 * 1024,
@@ -414,9 +414,6 @@ function validatePostcode(input) {
   return isValid;
 }
 
-document.getElementById('icNumber').addEventListener('input', function(e) {
-  validateICNumber(e.target);
-});
 // ================= FILE HANDLING =================
 async function processFiles(files, uploadType = 'parcel') {
   // Handle different upload types
