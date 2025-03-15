@@ -75,7 +75,7 @@
   <div class="container registration-page">
   <h1>New Registration</h1>
   
-  <!-- New Fields -->
+  <form id="registrationForm" onsubmit="event.preventDefault(); handleRegistration();">
   <div class="input-group">
     <input type="text" 
        id="icNumber" 
@@ -170,7 +170,8 @@
       <div class="error-message" id="confirmEmailError"></div>
     </div>
 
-    <button onclick="handleRegistration()">Register</button>
+    <button type="submit">Register</button>
+    </form>
     <button class="secondary-btn" onclick="safeRedirect('login.html')" style="margin-top: 10px;">Back to Login</button>
 
     <div id="registrationStatus" class="status-message"></div>
