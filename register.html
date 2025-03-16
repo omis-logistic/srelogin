@@ -184,9 +184,7 @@ async function handleRegistration() {
   clearErrors();
 
   try {
-    if (!CONFIG.PROXY_URL.includes('/exec')) {
-      throw new Error('Configuration error - check proxy URL');
-    }
+    console.log('Starting registration process...');
     
     if (!validateRegistrationForm()) {
       console.warn('Form validation failed');
@@ -209,25 +207,40 @@ async function handleRegistration() {
 
     console.log('Form payload prepared:', formData);
 
-    // Send through proxy
+    // Initial fetch call with redirect handling
     const response = await fetch(CONFIG.PROXY_URL, {
-  method: 'POST',
-  headers: {
-    'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8',
-    'X-Requested-With': 'XMLHttpRequest'
-  },
-  body: `payload=${encodeURIComponent(JSON.stringify(formData))}`,
-  redirect: 'follow' // Critical for Google Scripts
-});
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'X-Requested-With': 'XMLHttpRequest'
+      },
+      body: `payload=${encodeURIComponent(JSON.stringify(formData))}`,
+      redirect: 'manual'
+    });
 
-    console.log('Received response:', response);
+    console.log('Initial response:', response);
 
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+    // Handle Google Scripts redirect
+    let result;
+    if (response.status === 0 || response.status === 307) {
+      const finalUrl = response.headers.get('Location');
+      if (!finalUrl) throw new Error('Missing redirect location');
+      
+      console.log('Redirecting to:', finalUrl);
+      const redirectedResponse = await fetch(finalUrl, {
+        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+      });
+      
+      if (!redirectedResponse.ok) {
+        throw new Error(`Redirect failed: ${redirectedResponse.status}`);
+      }
+      
+      result = await redirectedResponse.json();
+    } else {
+      result = await response.json();
     }
 
-    const result = await response.json();
-    console.log('API Result:', result);
+    console.log('Final API Result:', result);
 
     if (result.success) {
       showError('✓ Registration successful! Redirecting...', 'registrationStatus');
@@ -235,6 +248,7 @@ async function handleRegistration() {
     } else {
       showError(`❗ ${result.message || 'Registration failed'}`, 'registrationStatus');
     }
+
   } catch (error) {
     console.error('Registration error:', error);
     showError(`❗ Error: ${error.message}`, 'registrationStatus');
