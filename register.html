@@ -184,7 +184,9 @@ async function handleRegistration() {
   clearErrors();
 
   try {
-    console.log('Starting registration process...');
+    if (!CONFIG.PROXY_URL.includes('/exec')) {
+      throw new Error('Configuration error - check proxy URL');
+    }
     
     if (!validateRegistrationForm()) {
       console.warn('Form validation failed');
