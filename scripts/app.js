@@ -819,77 +819,106 @@ async function handlePasswordReset() {
 }
 
 // ================= FORM VALIDATION =================
-function validatePhone(phone) {
-  const regex = /^(673\d{7,}|60\d{9,})$/;
-  return regex.test(phone);
+function validatePhone(value) {
+  if (!value) return false;
+  const cleanValue = String(value).trim().replace(/[^0-9]/g, '');
+  return /^(673\d{7,}|60\d{9,})$/.test(cleanValue);
 }
 
-function validatePassword(password) {
-  const regex = /^(?=.*[A-Z])(?=.*\d).{6,}$/;
-  return regex.test(password);
+function validatePassword(value) {
+  return /^(?=.*[A-Z])(?=.*\d).{6,}$/.test(value);
 }
 
-function validateEmail(email) {
-  const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  return regex.test(email);
+function validateEmail(value) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
 }
 
 function validateRegistrationForm() {
-  // Get all field values
-  const fields = {
-    phone: document.getElementById('regPhone').value.trim(),
-    password: document.getElementById('regPassword').value.trim(),
-    email: document.getElementById('regEmail').value.trim(),
-    icNumber: document.getElementById('icNumber').value.trim(),
-    fullName: document.getElementById('fullName').value.trim(),
-    address: document.getElementById('address').value.trim(),
-    postcode: document.getElementById('postcode').value.trim(),
-    frontIc: document.getElementById('frontIc').files[0],
-    backIc: document.getElementById('backIc').files[0]
-  };
-
   let isValid = true;
   document.querySelectorAll('.error-message').forEach(el => el.textContent = '');
 
-  // Validate required fields
-  if (!fields.phone) {
-    document.getElementById('phoneError').textContent = 'Phone number is required';
-    isValid = false;
-  }
-  if (!fields.fullName) {
-    document.getElementById('nameError').textContent = 'Full name is required';
-    isValid = false;
-  }
-  if (!fields.address) {
-    document.getElementById('addressError').textContent = 'Address is required';
-    isValid = false;
-  }
-  if (!fields.postcode) {
-    document.getElementById('postcodeError').textContent = 'Postcode is required';
-    isValid = false;
-  }
-  if (!fields.frontIc) {
-    document.getElementById('frontIcError').textContent = 'Front IC document is required';
-    isValid = false;
-  }
-  if (!fields.backIc) {
-    document.getElementById('backIcError').textContent = 'Back IC document is required';
-    isValid = false;
-  }
+  const validations = [
+    { 
+      id: 'regPhone',
+      validator: v => validatePhone(v),
+      errorId: 'phoneError'
+    },
+    { 
+      id: 'fullName',
+      validator: v => v.trim().length >= 3,
+      errorId: 'nameError'
+    },
+    { 
+      id: 'address',
+      validator: v => v.trim().length >= 5,
+      errorId: 'addressError'
+    },
+    { 
+      id: 'postcode',
+      validator: v => /^\d{5}$/.test(v),
+      errorId: 'postcodeError'
+    },
+    { 
+      id: 'regPassword',
+      validator: v => validatePassword(v),
+      errorId: 'passError'
+    },
+    { 
+      id: 'regConfirmPass',
+      validator: v => v === document.getElementById('regPassword').value,
+      errorId: 'confirmPassError'
+    },
+    { 
+      id: 'regEmail',
+      validator: v => validateEmail(v),
+      errorId: 'emailError'
+    },
+    { 
+      id: 'regConfirmEmail',
+      validator: v => v === document.getElementById('regEmail').value,
+      errorId: 'confirmEmailError'
+    }
+  ];
 
-  // Validate password match
-  if (fields.password !== document.getElementById('regConfirmPass').value.trim()) {
-    document.getElementById('confirmPassError').textContent = 'Passwords do not match';
-    isValid = false;
-  }
+  // Validate form fields
+  validations.forEach(({ id, validator, errorId }) => {
+    const element = document.getElementById(id);
+    const value = element?.value || '';
+    const valid = validator(value);
+    
+    if (!valid) {
+      document.getElementById(errorId).textContent = getValidationMessage(id);
+      isValid = false;
+    }
+  });
 
-  // Validate email match
-  if (fields.email !== document.getElementById('regConfirmEmail').value.trim()) {
-    document.getElementById('confirmEmailError').textContent = 'Emails do not match';
-    isValid = false;
-  }
+  // Validate files
+  ['frontIc', 'backIc'].forEach(id => {
+    const fileInput = document.getElementById(id);
+    if (!fileInput?.files[0]) {
+      document.getElementById(`${id}Error`).textContent = `${id.replace('Ic', ' IC')} is required`;
+      isValid = false;
+    }
+  });
 
   return isValid;
+}
+
+// ================= VALIDATION MESSAGES =================
+function getValidationMessage(fieldId) {
+  const messages = {
+    regPhone: 'Valid phone number required (673/60 format)',
+    fullName: 'Minimum 3 characters required',
+    address: 'Minimum 5 characters required',
+    postcode: '5-digit postcode required',
+    regPassword: '6+ characters with 1 uppercase and 1 number',
+    regConfirmPass: 'Passwords must match',
+    regEmail: 'Valid email required',
+    regConfirmEmail: 'Emails must match',
+    frontIc: 'Front IC document required',
+    backIc: 'Back IC document required'
+  };
+  return messages[fieldId] || 'Invalid value';
 }
 
 // ================= UTILITIES =================
