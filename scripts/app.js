@@ -691,45 +691,50 @@ async function handleLogin() {
   }
 }
 
+// ================= MODIFIED REGISTRATION HANDLER =================
 async function handleRegistration() {
-  const btn = document.querySelector('.registration-page button');
+  const btn = document.querySelector('button');
   const originalText = btn.innerHTML;
   btn.disabled = true;
   btn.innerHTML = '<div class="button-loader"></div> Registering...';
   clearErrors();
 
   try {
+    console.log('Starting registration process...');
+    
     if (!validateRegistrationForm()) {
       console.warn('Form validation failed');
       return;
     }
 
-    // Prepare form data
-    const formData = {
-      action: 'createAccount',
-      phone: document.getElementById('regPhone').value.trim(),
-      password: document.getElementById('regPassword').value.trim(),
-      email: document.getElementById('regEmail').value.trim(),
-      icNumber: document.getElementById('icNumber').value.trim(),
-      fullName: document.getElementById('fullName').value.trim(),
-      address: document.getElementById('address').value.trim(),
-      postcode: document.getElementById('postcode').value.trim()
-    };
-
-    // Prepare files
-    const files = [
-      {
-        file: document.getElementById('frontIc').files[0],
-        name: 'frontIc'
+    // Use PROXY_URL instead of GAS_URL for registration
+    const response = await fetch(CONFIG.PROXY_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded'
       },
-      {
-        file: document.getElementById('backIc').files[0],
-        name: 'backIc'
-      }
-    ];
+      body: `payload=${encodeURIComponent(JSON.stringify({
+        action: 'createAccount',
+        phone: document.getElementById('regPhone').value.trim(),
+        password: document.getElementById('regPassword').value,
+        email: document.getElementById('regEmail').value.trim(),
+        icNumber: document.getElementById('icNumber').value.trim(),
+        fullName: document.getElementById('fullName').value.trim(),
+        address: document.getElementById('address').value.trim(),
+        postcode: document.getElementById('postcode').value.trim(),
+        frontIc: document.getElementById('frontIc').files[0],
+        backIc: document.getElementById('backIc').files[0]
+      }))}`
+    });
 
-    // Send through proxy
-    const result = await callAPI('createAccount', formData, files);
+    console.log('Received response:', response);
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const result = await response.json();
+    console.log('API Result:', result);
 
     if (result.success) {
       showError('✓ Registration successful! Redirecting...', 'registrationStatus');
@@ -743,6 +748,7 @@ async function handleRegistration() {
   } finally {
     btn.disabled = false;
     btn.innerHTML = originalText;
+    console.log('Registration process completed');
   }
 }
 
