@@ -275,26 +275,39 @@ function readFileAsBase64(file) {
   });
 }
 
-// ================= VALIDATION ENHANCEMENTS =================
+// ================= CORRECTED VALIDATION FUNCTIONS =================
+function validatePhone(value) {
+  const cleanValue = String(value || '').trim().replace(/[^0-9]/g, '');
+  return /^(673\d{7,}|60\d{9,})$/.test(cleanValue);
+}
+
+function validatePassword(value) {
+  return /^(?=.*[A-Z])(?=.*\d).{6,}$/.test(value || '');
+}
+
+function validateEmail(value) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value || '');
+}
+
+// ================= COMPLETE VALIDATION MATRIX =================
 function validateRegistrationForm() {
   let isValid = true;
   document.querySelectorAll('.error-message').forEach(el => el.textContent = '');
 
-  // Field validation matrix
   const validations = [
     { id: 'regPhone', validator: validatePhone, errorId: 'phoneError' },
-    { id: 'fullName', validator: v => v.trim().length >= 3, errorId: 'nameError' },
-    { id: 'address', validator: v => v.trim().length >= 5, errorId: 'addressError' },
-    { id: 'postcode', validator: v => /^\d{5}$/.test(v), errorId: 'postcodeError' },
+    { id: 'fullName', validator: v => String(v || '').trim().length >= 3, errorId: 'nameError' },
+    { id: 'address', validator: v => String(v || '').trim().length >= 5, errorId: 'addressError' },
+    { id: 'postcode', validator: v => /^\d{5}$/.test(v || ''), errorId: 'postcodeError' },
     { id: 'regPassword', validator: validatePassword, errorId: 'passError' },
-    { id: 'regConfirmPass', validator: v => v === document.getElementById('regPassword').value, errorId: 'confirmPassError' },
+    { id: 'regConfirmPass', validator: v => v === (document.getElementById('regPassword')?.value || ''), errorId: 'confirmPassError' },
     { id: 'regEmail', validator: validateEmail, errorId: 'emailError' },
-    { id: 'regConfirmEmail', validator: v => v === document.getElementById('regEmail').value, errorId: 'confirmEmailError' }
+    { id: 'regConfirmEmail', validator: v => v === (document.getElementById('regEmail')?.value || ''), errorId: 'confirmEmailError' }
   ];
 
   validations.forEach(({ id, validator, errorId }) => {
     const value = document.getElementById(id)?.value || '';
-    const valid = typeof validator === 'function' ? validator(value) : false;
+    const valid = validator(value);
     if (!valid) {
       document.getElementById(errorId).textContent = getValidationMessage(id);
       isValid = false;
@@ -304,7 +317,7 @@ function validateRegistrationForm() {
   // File validation
   ['frontIc', 'backIc'].forEach(id => {
     const fileInput = document.getElementById(id);
-    if (!fileInput?.files[0]) {
+    if (!fileInput?.files?.[0]) {
       document.getElementById(`${id}Error`).textContent = `${id.replace('Ic', ' IC')} is required`;
       isValid = false;
     }
@@ -313,13 +326,14 @@ function validateRegistrationForm() {
   return isValid;
 }
 
+// ================= VALIDATION MESSAGES =================
 function getValidationMessage(fieldId) {
   const messages = {
     regPhone: 'Valid phone number required (673/60 format)',
     fullName: 'Minimum 3 characters required',
     address: 'Minimum 5 characters required',
     postcode: '5-digit postcode required',
-    regPassword: '6+ chars, 1 uppercase, 1 number required',
+    regPassword: '6+ characters with 1 uppercase and 1 number',
     regConfirmPass: 'Passwords must match',
     regEmail: 'Valid email required',
     regConfirmEmail: 'Emails must match'
@@ -327,94 +341,77 @@ function getValidationMessage(fieldId) {
   return messages[fieldId] || 'Invalid value';
 }
 
-  // Enhanced validation helpers
-  function validatePhone(element) {
-    const value = element.value.trim();
-    const isValid = /^(673\d{7,}|60\d{9,})$/.test(value);
-    element.setCustomValidity(isValid ? '' : 'Invalid phone format');
-    return isValid;
-  }
+// ================= UPDATED REAL-TIME VALIDATION =================
+document.getElementById('regPhone').addEventListener('input', function() {
+  const isValid = validatePhone(this.value);
+  this.setCustomValidity(isValid ? '' : 'Invalid format');
+  document.getElementById('phoneError').textContent = isValid ? '' : getValidationMessage('regPhone');
+});
 
-  function validatePassword(element) {
-    const value = element.value;
-    const isValid = /^(?=.*[A-Z])(?=.*\d).{6,}$/.test(value);
-    element.setCustomValidity(isValid ? '' : '6+ chars, 1 uppercase, 1 number');
-    return isValid;
-  }
+document.getElementById('fullName').addEventListener('input', function() {
+  const isValid = this.value.trim().length >= 3;
+  this.setCustomValidity(isValid ? '' : 'Too short');
+  document.getElementById('nameError').textContent = isValid ? '' : getValidationMessage('fullName');
+});
 
-  function validateEmail(element) {
-    const value = element.value.trim();
-    const isValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
-    element.setCustomValidity(isValid ? '' : 'Invalid email format');
-    return isValid;
-  }
+document.getElementById('address').addEventListener('input', function() {
+  const isValid = this.value.trim().length >= 5;
+  this.setCustomValidity(isValid ? '' : 'Too short');
+  document.getElementById('addressError').textContent = isValid ? '' : getValidationMessage('address');
+});
 
-  // Real-time validation listeners
-  document.getElementById('regPhone').addEventListener('input', function() {
-    validatePhone(this);
-    document.getElementById('phoneError').textContent = this.validationMessage;
+document.getElementById('postcode').addEventListener('input', function() {
+  const isValid = /^\d{5}$/.test(this.value);
+  this.setCustomValidity(isValid ? '' : 'Invalid postcode');
+  document.getElementById('postcodeError').textContent = isValid ? '' : getValidationMessage('postcode');
+});
+
+document.getElementById('regPassword').addEventListener('input', function() {
+  const isValid = validatePassword(this.value);
+  this.setCustomValidity(isValid ? '' : 'Invalid format');
+  document.getElementById('passError').textContent = isValid ? '' : getValidationMessage('regPassword');
+});
+
+document.getElementById('regConfirmPass').addEventListener('input', function() {
+  const isValid = this.value === document.getElementById('regPassword').value;
+  this.setCustomValidity(isValid ? '' : 'Mismatch');
+  document.getElementById('confirmPassError').textContent = isValid ? '' : getValidationMessage('regConfirmPass');
+});
+
+document.getElementById('regEmail').addEventListener('input', function() {
+  const isValid = validateEmail(this.value);
+  this.setCustomValidity(isValid ? '' : 'Invalid email');
+  document.getElementById('emailError').textContent = isValid ? '' : getValidationMessage('regEmail');
+});
+
+document.getElementById('regConfirmEmail').addEventListener('input', function() {
+  const isValid = this.value === document.getElementById('regEmail').value;
+  this.setCustomValidity(isValid ? '' : 'Mismatch');
+  document.getElementById('confirmEmailError').textContent = isValid ? '' : getValidationMessage('regConfirmEmail');
+});
+
+document.getElementById('frontIc').addEventListener('change', function() {
+  const isValid = this.files.length > 0;
+  this.setCustomValidity(isValid ? '' : 'Required');
+  document.getElementById('frontIcError').textContent = isValid ? '' : getValidationMessage('frontIc');
+});
+
+document.getElementById('backIc').addEventListener('change', function() {
+  const isValid = this.files.length > 0;
+  this.setCustomValidity(isValid ? '' : 'Required');
+  document.getElementById('backIcError').textContent = isValid ? '' : getValidationMessage('backIc');
+});
+
+// ================= UTILITIES =================
+function clearErrors() {
+  document.querySelectorAll('.error-message').forEach(el => {
+    el.textContent = '';
   });
-
-  document.getElementById('postcode').addEventListener('input', function() {
-    const isValid = /^\d{5}$/.test(this.value);
-    this.setCustomValidity(isValid ? '' : '5 digits required');
-    document.getElementById('postcodeError').textContent = this.validationMessage;
+  document.querySelectorAll('input').forEach(el => {
+    el.setCustomValidity('');
   });
+}
 
-  document.getElementById('fullName').addEventListener('input', function() {
-    const isValid = this.value.trim().length >= 3;
-    this.setCustomValidity(isValid ? '' : 'Minimum 3 characters required');
-    document.getElementById('nameError').textContent = this.validationMessage;
-  });
-
-  document.getElementById('address').addEventListener('input', function() {
-    const isValid = this.value.trim().length >= 5;
-    this.setCustomValidity(isValid ? '' : 'Minimum 5 characters required');
-    document.getElementById('addressError').textContent = this.validationMessage;
-  });
-
-  document.getElementById('regPassword').addEventListener('input', function() {
-    validatePassword(this);
-    document.getElementById('passError').textContent = this.validationMessage;
-  });
-
-  document.getElementById('regConfirmPass').addEventListener('input', function() {
-    const isValid = this.value === document.getElementById('regPassword').value;
-    this.setCustomValidity(isValid ? '' : 'Passwords must match');
-    document.getElementById('confirmPassError').textContent = this.validationMessage;
-  });
-
-  document.getElementById('regEmail').addEventListener('input', function() {
-    validateEmail(this);
-    document.getElementById('emailError').textContent = this.validationMessage;
-  });
-
-  document.getElementById('regConfirmEmail').addEventListener('input', function() {
-    const isValid = this.value === document.getElementById('regEmail').value;
-    this.setCustomValidity(isValid ? '' : 'Emails must match');
-    document.getElementById('confirmEmailError').textContent = this.validationMessage;
-  });
-
-  document.getElementById('frontIc').addEventListener('change', function() {
-    const isValid = this.files.length > 0;
-    this.setCustomValidity(isValid ? '' : 'Front IC required');
-    document.getElementById('frontIcError').textContent = this.validationMessage;
-  });
-
-  document.getElementById('backIc').addEventListener('change', function() {
-    const isValid = this.files.length > 0;
-    this.setCustomValidity(isValid ? '' : 'Back IC required');
-    document.getElementById('backIcError').textContent = this.validationMessage;
-  });
-
-  function clearErrors() {
-    document.querySelectorAll('.error-message').forEach(el => {
-      el.textContent = '';
-    });
-    document.querySelectorAll('input, select').forEach(el => {
-      el.setCustomValidity('');
-    });
-  }
   </script>
   
   <div class="footer-text">
