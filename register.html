@@ -174,101 +174,158 @@
 
   <script src="scripts/app.js"></script>
   <script>
-  async function handleRegistration() {
-    const btn = document.querySelector('button');
-    const originalText = btn.innerHTML;
-    btn.disabled = true;
-    btn.innerHTML = '<div class="button-loader"></div> Registering...';
-    clearErrors();
-
-    try {
-      console.log('Starting registration process...');
-      
-      if (!validateRegistrationForm()) {
-        console.warn('Form validation failed');
-        return;
-      }
-
-      const formData = new FormData();
-      // Add text fields
-      formData.append('action', 'createAccount');
-      formData.append('phone', document.getElementById('regPhone').value.trim());
-      formData.append('password', document.getElementById('regPassword').value);
-      formData.append('email', document.getElementById('regEmail').value.trim());
-      formData.append('icNumber', document.getElementById('icNumber').value.trim());
-      formData.append('fullName', document.getElementById('fullName').value.trim());
-      formData.append('address', document.getElementById('address').value.trim());
-      formData.append('postcode', document.getElementById('postcode').value.trim());
-      
-      // Add files with proper field names
-      const frontIcFile = document.getElementById('frontIc').files[0];
-      const backIcFile = document.getElementById('backIc').files[0];
-      formData.append('frontIc', frontIcFile, frontIcFile.name);
-      formData.append('backIc', backIcFile, backIcFile.name);
-
-      console.log('FormData content:', Array.from(formData.entries()));
-
-      const response = await fetch(CONFIG.GAS_URL, {
-        method: 'POST',
-        body: formData,
-        redirect: 'follow' // Important for Google Scripts
-      });
-
-      console.log('Received response:', response);
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const result = await response.json();
-      console.log('API Result:', result);
-
-      if (result.success) {
-        showError('✓ Registration successful! Redirecting...', 'registrationStatus');
-        setTimeout(() => safeRedirect('login.html'), 1500);
-      } else {
-        showError(`❗ ${result.message || 'Registration failed'}`, 'registrationStatus');
-      }
-    } catch (error) {
-      console.error('Registration error:', error);
-      showError(`❗ Error: ${error.message}`, 'registrationStatus');
-    } finally {
-      btn.disabled = false;
-      btn.innerHTML = originalText;
-      console.log('Registration process completed');
-    }
-  }
-
-  // Add debug-friendly validation
-  function validateRegistrationForm() {
-    let isValid = true;
     
-    const validateField = (fieldId, validator, errorId) => {
-      const element = document.getElementById(fieldId);
-      const errorElement = document.getElementById(errorId);
-      const valid = validator(element);
-      if (!valid) {
-        errorElement.textContent = element.validationMessage || 'Invalid value';
-        isValid = false;
-      }
-      return valid;
+  // ================= UPDATED REGISTRATION HANDLER =================
+async function handleRegistration() {
+  const btn = document.querySelector('button');
+  const originalText = btn.innerHTML;
+  btn.disabled = true;
+  btn.innerHTML = '<div class="button-loader"></div> Registering...';
+  clearErrors();
+
+  try {
+    console.log('Starting registration process...');
+    
+    if (!validateRegistrationForm()) {
+      console.warn('Form validation failed');
+      return;
+    }
+
+    // Prepare form data with files
+    const formData = {
+      action: 'createAccount',
+      phone: document.getElementById('regPhone').value.trim(),
+      password: document.getElementById('regPassword').value,
+      email: document.getElementById('regEmail').value.trim(),
+      icNumber: document.getElementById('icNumber').value.trim(),
+      fullName: document.getElementById('fullName').value.trim(),
+      address: document.getElementById('address').value.trim(),
+      postcode: document.getElementById('postcode').value.trim(),
+      frontIc: await processFileInput('frontIc'),
+      backIc: await processFileInput('backIc')
     };
 
-    // Required field validations
-    isValid &= validateField('regPhone', validatePhone, 'phoneError');
-    isValid &= validateField('fullName', el => el.value.trim().length >= 3, 'nameError');
-    isValid &= validateField('address', el => el.value.trim().length >= 5, 'addressError');
-    isValid &= validateField('postcode', el => /^\d{5}$/.test(el.value), 'postcodeError');
-    isValid &= validateField('frontIc', el => el.files.length > 0, 'frontIcError');
-    isValid &= validateField('backIc', el => el.files.length > 0, 'backIcError');
-    isValid &= validateField('regPassword', validatePassword, 'passError');
-    isValid &= validateField('regConfirmPass', el => el.value === document.getElementById('regPassword').value, 'confirmPassError');
-    isValid &= validateField('regEmail', validateEmail, 'emailError');
-    isValid &= validateField('regConfirmEmail', el => el.value === document.getElementById('regEmail').value, 'confirmEmailError');
+    console.log('Form payload prepared:', formData);
 
-    console.log('Form validation result:', isValid);
-    return isValid;
+    // Send through proxy
+    const response = await fetch(CONFIG.PROXY_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded'
+      },
+      body: `payload=${encodeURIComponent(JSON.stringify(formData))}`
+    });
+
+    console.log('Received response:', response);
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const result = await response.json();
+    console.log('API Result:', result);
+
+    if (result.success) {
+      showError('✓ Registration successful! Redirecting...', 'registrationStatus');
+      setTimeout(() => safeRedirect('login.html'), 1500);
+    } else {
+      showError(`❗ ${result.message || 'Registration failed'}`, 'registrationStatus');
+    }
+  } catch (error) {
+    console.error('Registration error:', error);
+    showError(`❗ Error: ${error.message}`, 'registrationStatus');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = originalText;
+    console.log('Registration process completed');
   }
+}
+
+// ================= FILE PROCESSING UTILITIES =================
+async function processFileInput(elementId) {
+  const fileInput = document.getElementById(elementId);
+  if (!fileInput || !fileInput.files[0]) return null;
+  
+  try {
+    const file = fileInput.files[0];
+    return {
+      name: file.name,
+      type: file.type,
+      data: await readFileAsBase64(file)
+    };
+  } catch (error) {
+    console.error('File processing error:', error);
+    throw new Error(`Failed to process ${elementId} file`);
+  }
+}
+
+function readFileAsBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = reader.result;
+      if (!result) {
+        reject(new Error('Failed to read file'));
+        return;
+      }
+      resolve(result.split(',')[1]); // Remove data URL prefix
+    };
+    reader.onerror = error => reject(error);
+    reader.readAsDataURL(file);
+  });
+}
+
+// ================= VALIDATION ENHANCEMENTS =================
+function validateRegistrationForm() {
+  let isValid = true;
+  document.querySelectorAll('.error-message').forEach(el => el.textContent = '');
+
+  // Field validation matrix
+  const validations = [
+    { id: 'regPhone', validator: validatePhone, errorId: 'phoneError' },
+    { id: 'fullName', validator: v => v.trim().length >= 3, errorId: 'nameError' },
+    { id: 'address', validator: v => v.trim().length >= 5, errorId: 'addressError' },
+    { id: 'postcode', validator: v => /^\d{5}$/.test(v), errorId: 'postcodeError' },
+    { id: 'regPassword', validator: validatePassword, errorId: 'passError' },
+    { id: 'regConfirmPass', validator: v => v === document.getElementById('regPassword').value, errorId: 'confirmPassError' },
+    { id: 'regEmail', validator: validateEmail, errorId: 'emailError' },
+    { id: 'regConfirmEmail', validator: v => v === document.getElementById('regEmail').value, errorId: 'confirmEmailError' }
+  ];
+
+  validations.forEach(({ id, validator, errorId }) => {
+    const value = document.getElementById(id)?.value || '';
+    const valid = typeof validator === 'function' ? validator(value) : false;
+    if (!valid) {
+      document.getElementById(errorId).textContent = getValidationMessage(id);
+      isValid = false;
+    }
+  });
+
+  // File validation
+  ['frontIc', 'backIc'].forEach(id => {
+    const fileInput = document.getElementById(id);
+    if (!fileInput?.files[0]) {
+      document.getElementById(`${id}Error`).textContent = `${id.replace('Ic', ' IC')} is required`;
+      isValid = false;
+    }
+  });
+
+  return isValid;
+}
+
+function getValidationMessage(fieldId) {
+  const messages = {
+    regPhone: 'Valid phone number required (673/60 format)',
+    fullName: 'Minimum 3 characters required',
+    address: 'Minimum 5 characters required',
+    postcode: '5-digit postcode required',
+    regPassword: '6+ chars, 1 uppercase, 1 number required',
+    regConfirmPass: 'Passwords must match',
+    regEmail: 'Valid email required',
+    regConfirmEmail: 'Emails must match'
+  };
+  return messages[fieldId] || 'Invalid value';
+}
 
   // Enhanced validation helpers
   function validatePhone(element) {
