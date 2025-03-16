@@ -820,17 +820,17 @@ async function handlePasswordReset() {
 
 // ================= FORM VALIDATION =================
 function validatePhone(value) {
-  if (!value) return false;
-  const cleanValue = String(value).trim().replace(/[^0-9]/g, '');
+  if (typeof value !== 'string') return false;
+  const cleanValue = value.trim().replace(/[^0-9]/g, '');
   return /^(673\d{7,}|60\d{9,})$/.test(cleanValue);
 }
 
 function validatePassword(value) {
-  return /^(?=.*[A-Z])(?=.*\d).{6,}$/.test(value);
+  return typeof value === 'string' && /^(?=.*[A-Z])(?=.*\d).{6,}$/.test(value);
 }
 
 function validateEmail(value) {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+  return typeof value === 'string' && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
 }
 
 function validateRegistrationForm() {
@@ -840,50 +840,50 @@ function validateRegistrationForm() {
   const validations = [
     { 
       id: 'regPhone',
-      validator: v => validatePhone(v),
+      validator: v => validatePhone(v || ''),
       errorId: 'phoneError'
     },
     { 
       id: 'fullName',
-      validator: v => v.trim().length >= 3,
+      validator: v => (v || '').trim().length >= 3,
       errorId: 'nameError'
     },
     { 
       id: 'address',
-      validator: v => v.trim().length >= 5,
+      validator: v => (v || '').trim().length >= 5,
       errorId: 'addressError'
     },
     { 
       id: 'postcode',
-      validator: v => /^\d{5}$/.test(v),
+      validator: v => /^\d{5}$/.test(v || ''),
       errorId: 'postcodeError'
     },
     { 
       id: 'regPassword',
-      validator: v => validatePassword(v),
+      validator: v => validatePassword(v || ''),
       errorId: 'passError'
     },
     { 
       id: 'regConfirmPass',
-      validator: v => v === document.getElementById('regPassword').value,
+      validator: v => v === (document.getElementById('regPassword')?.value || ''),
       errorId: 'confirmPassError'
     },
     { 
       id: 'regEmail',
-      validator: v => validateEmail(v),
+      validator: v => validateEmail(v || ''),
       errorId: 'emailError'
     },
     { 
       id: 'regConfirmEmail',
-      validator: v => v === document.getElementById('regEmail').value,
+      validator: v => v === (document.getElementById('regEmail')?.value || ''),
       errorId: 'confirmEmailError'
     }
   ];
 
-  // Validate form fields
+  // Validate all fields
   validations.forEach(({ id, validator, errorId }) => {
     const element = document.getElementById(id);
-    const value = element?.value || '';
+    const value = element?.value ?? '';
     const valid = validator(value);
     
     if (!valid) {
@@ -895,7 +895,7 @@ function validateRegistrationForm() {
   // Validate files
   ['frontIc', 'backIc'].forEach(id => {
     const fileInput = document.getElementById(id);
-    if (!fileInput?.files[0]) {
+    if (!fileInput?.files?.[0]) {
       document.getElementById(`${id}Error`).textContent = `${id.replace('Ic', ' IC')} is required`;
       isValid = false;
     }
