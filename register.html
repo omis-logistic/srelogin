@@ -208,13 +208,13 @@
 
       // Prepare payload with correct field names
       const payload = {
-        action: 'createAccount',
-        data: { // Nested under data property
-          phone: document.getElementById('regPhone').value.trim(),
-          password: document.getElementById('regPassword').value,
-          email: document.getElementById('regEmail').value.trim().toLowerCase()
-        }
-      };
+  action: 'createAccount',
+  data: {
+    phone: document.getElementById('regPhone').value.trim(),
+    password: document.getElementById('regPassword').value,
+    email: document.getElementById('regEmail').value.trim().toLowerCase()
+  }
+};
 
       try {
         const response = await fetch(CONFIG.PROXY_URL, {
