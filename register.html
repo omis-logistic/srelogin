@@ -8,6 +8,8 @@
     .registration-page {
       max-width: 500px;
       animation: slideUp 0.3s ease-out;
+      padding: 20px;
+      margin: 0 auto;
     }
 
     .password-rules {
@@ -71,19 +73,56 @@
       flex: 1;
     }
 
-    .button-loader {
-      display: inline-block;
-      width: 12px;
-      height: 12px;
-      border: 2px solid #fff;
-      border-radius: 50%;
-      border-top-color: transparent;
-      animation: spin 0.8s linear infinite;
-      margin-right: 8px;
+    .footer-text {
+      text-align: center;
+      padding: 20px;
+      color: var(--text-light);
+      opacity: 0.8;
+      font-size: 0.9em;
     }
 
-    @keyframes spin {
-      to { transform: rotate(360deg); }
+    .footer-text a {
+      color: var(--gold);
+      text-decoration: none;
+    }
+
+    .error-message {
+      color: #ff4444;
+      font-size: 0.8em;
+      margin-top: 4px;
+      display: none;
+    }
+
+    .input-group {
+      margin-bottom: 15px;
+    }
+
+    input, button {
+      width: 100%;
+      padding: 12px;
+      border-radius: 5px;
+      border: 1px solid var(--gold);
+      background: rgba(0,0,0,0.5);
+      color: var(--text-light);
+      margin-top: 5px;
+    }
+
+    button {
+      background: var(--gold);
+      color: var(--dark-bg);
+      border: none;
+      cursor: pointer;
+      transition: opacity 0.3s ease;
+    }
+
+    button:hover {
+      opacity: 0.9;
+    }
+
+    .secondary-btn {
+      background: transparent !important;
+      color: var(--gold) !important;
+      border: 1px solid var(--gold) !important;
     }
   </style>
 </head>
@@ -98,38 +137,6 @@
              pattern="^(673\d{7,}|60\d{9,})$" 
              required>
       <div class="error-message" id="phoneError"></div>
-    </div>
-    
-    <div class="input-group">
-      <input type="text" id="icNumber" placeholder="I.C Number" required>
-      <div class="error-message" id="icError"></div>
-    </div>
-
-    <div class="input-group">
-      <label>Front I.C (Image/PDF):</label>
-      <input type="file" id="frontIc" accept="image/*,.pdf" required>
-      <div class="error-message" id="frontIcError"></div>
-    </div>
-
-    <div class="input-group">
-      <label>Back I.C (Image/PDF):</label>
-      <input type="file" id="backIc" accept="image/*,.pdf" required>
-      <div class="error-message" id="backIcError"></div>
-    </div>
-
-    <div class="input-group">
-      <input type="text" id="fullName" placeholder="Full Name" required>
-      <div class="error-message" id="nameError"></div>
-    </div>
-
-    <div class="input-group">
-      <input type="text" id="address" placeholder="Mailing Address" required>
-      <div class="error-message" id="addressError"></div>
-    </div>
-
-    <div class="input-group">
-      <input type="text" id="postcode" placeholder="Postcode" pattern="\d{5}" required>
-      <div class="error-message" id="postcodeError"></div>
     </div>
 
     <div class="input-group">
@@ -166,253 +173,130 @@
       <div class="error-message" id="confirmEmailError"></div>
     </div>
 
-    <button id="registerButton" onclick="handleRegistration()">
-  Register
-</button>
-    <button class="secondary-btn" onclick="safeRedirect('login.html')" style="margin-top: 10px;">Back to Login</button>
+    <button onclick="handleRegistration()">Register</button>
+    <button class="secondary-btn" onclick="safeRedirect('login.html')" style="margin-top: 10px;">
+      Back to Login
+    </button>
 
     <div id="registrationStatus" class="status-message"></div>
   </div>
 
   <script src="scripts/app.js"></script>
   <script>
-    
-  // ================= UPDATED REGISTRATION HANDLER =================
-async function handleRegistration() {
-  const PROXY_URL = 'https://script.google.com/macros/s/AKfycbzY9Pog-ObMuwnKKo38yNBHyHdDQzGKfgOwYOa-RUhFyawlJoWUxH44MxOD1h_yeUXq/exec';
-  
-  try {
-    const formData = new FormData();
-    
-    // 1. Add JSON data
-    formData.append('data', JSON.stringify({
-      phone: document.getElementById('regPhone').value,
-      password: document.getElementById('regPassword').value,
-      email: document.getElementById('regEmail').value,
-      icNumber: document.getElementById('icNumber').value,
-      fullName: document.getElementById('fullName').value,
-      address: document.getElementById('address').value,
-      postcode: document.getElementById('postcode').value
-    }));
+    async function handleRegistration() {
+      const btn = document.querySelector('.registration-page button');
+      const originalText = btn.innerHTML;
+      btn.disabled = true;
+      btn.innerHTML = '<div class="button-loader"></div> Registering...';
 
-    // 2. Add files
-    formData.append('frontIc', document.getElementById('frontIc').files[0]);
-    formData.append('backIc', document.getElementById('backIc').files[0]);
+      // Clear previous errors
+      document.querySelectorAll('.error-message').forEach(el => {
+        el.textContent = '';
+        el.style.display = 'none';
+      });
+      
+      const statusElement = document.getElementById('registrationStatus');
+      statusElement.className = '';
+      statusElement.textContent = '';
 
-    // 3. Send request
-    const response = await fetch(PROXY_URL, {
-      method: 'POST',
-      body: formData,
-      redirect: 'follow'
-    });
-
-    // 4. Force CORS handling
-    if (!response.headers.get('Access-Control-Allow-Origin')) {
-      throw new Error('Missing CORS headers');
-    }
-
-    const result = await response.json();
-    console.log('RAW RESULT:', result);
-    
-    if (result.success) {
-      window.location.href = 'login.html';
-    } else {
-      alert('Error: ' + (result.message || 'Unknown error'));
-    }
-    
-  } catch (error) {
-    console.error('FINAL ERROR:', error);
-    alert('Failed: ' + error.message);
-  }
-}
-
-// Utility functions
-function showError(message, targetId = 'registrationStatus') {
-  const errorElement = document.getElementById(targetId);
-  errorElement.textContent = message;
-  errorElement.style.display = 'block';
-  errorElement.style.color = message.includes('✓') ? '#00C851' : '#ff4444';
-  setTimeout(() => errorElement.style.display = 'none', 5000);
-}
-
-function showLoading(show = true) {
-  const loader = document.getElementById('loadingOverlay');
-  loader.style.display = show ? 'flex' : 'none';
-}
-
-// ================= FILE PROCESSING UTILITIES =================
-async function processFileInput(elementId) {
-  const fileInput = document.getElementById(elementId);
-  if (!fileInput || !fileInput.files[0]) return null;
-  
-  try {
-    const file = fileInput.files[0];
-    return {
-      name: file.name,
-      type: file.type,
-      data: await readFileAsBase64(file)
-    };
-  } catch (error) {
-    console.error('File processing error:', error);
-    throw new Error(`Failed to process ${elementId} file`);
-  }
-}
-
-function readFileAsBase64(file) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => {
-      const result = reader.result;
-      if (!result) {
-        reject(new Error('Failed to read file'));
+      // Validate form first
+      if (!validateRegistrationForm()) {
+        btn.disabled = false;
+        btn.innerHTML = originalText;
         return;
       }
-      resolve(result.split(',')[1]); // Remove data URL prefix
-    };
-    reader.onerror = error => reject(error);
-    reader.readAsDataURL(file);
-  });
-}
 
-// ================= CORRECTED VALIDATION FUNCTIONS =================
-function validatePhone(value) {
-  const cleanValue = String(value || '').trim().replace(/[^0-9]/g, '');
-  return /^(673\d{7,}|60\d{9,})$/.test(cleanValue);
-}
+      // Prepare payload
+      const payload = {
+        action: 'createAccount',
+        phone: document.getElementById('regPhone').value.trim(),
+        password: document.getElementById('regPassword').value,
+        email: document.getElementById('regEmail').value.trim().toLowerCase()
+      };
 
-function validatePassword(value) {
-  return /^(?=.*[A-Z])(?=.*\d).{6,}$/.test(value || '');
-}
+      try {
+        const response = await fetch(CONFIG.GAS_URL, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8'
+          },
+          body: `payload=${encodeURIComponent(JSON.stringify(payload))}`
+        });
 
-function validateEmail(value) {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value || '');
-}
+        // Handle potential redirect
+        const finalResponse = response.url.includes('/exec') 
+          ? response
+          : await fetch(response.url);
 
-// ================= COMPLETE VALIDATION MATRIX =================
-function validateRegistrationForm() {
-  let isValid = true;
-  document.querySelectorAll('.error-message').forEach(el => el.textContent = '');
+        if (!finalResponse.ok) throw new Error('Network response was not OK');
+        
+        const result = await finalResponse.json();
 
-  const validations = [
-    { id: 'regPhone', validator: validatePhone, errorId: 'phoneError' },
-    { id: 'fullName', validator: v => String(v || '').trim().length >= 3, errorId: 'nameError' },
-    { id: 'address', validator: v => String(v || '').trim().length >= 5, errorId: 'addressError' },
-    { id: 'postcode', validator: v => /^\d{5}$/.test(v || ''), errorId: 'postcodeError' },
-    { id: 'regPassword', validator: validatePassword, errorId: 'passError' },
-    { id: 'regConfirmPass', validator: v => v === (document.getElementById('regPassword')?.value || ''), errorId: 'confirmPassError' },
-    { id: 'regEmail', validator: validateEmail, errorId: 'emailError' },
-    { id: 'regConfirmEmail', validator: v => v === (document.getElementById('regEmail')?.value || ''), errorId: 'confirmEmailError' }
-  ];
-
-  validations.forEach(({ id, validator, errorId }) => {
-    const value = document.getElementById(id)?.value || '';
-    const valid = validator(value);
-    if (!valid) {
-      document.getElementById(errorId).textContent = getValidationMessage(id);
-      isValid = false;
+        if (result.success) {
+          statusElement.className = 'status-message success';
+          statusElement.textContent = 'Registration successful! Redirecting...';
+          setTimeout(() => safeRedirect('login.html'), 1500);
+        } else {
+          statusElement.className = 'status-message error';
+          statusElement.textContent = result.message || 'Registration failed';
+          
+          // Handle specific backend errors
+          if (result.message.includes('phone number')) {
+            document.getElementById('phoneError').textContent = result.message;
+            document.getElementById('phoneError').style.display = 'block';
+          }
+        }
+      } catch (error) {
+        console.error('Registration error:', error);
+        statusElement.className = 'status-message error';
+        statusElement.textContent = 'Registration failed - please try again';
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = originalText;
+      }
     }
-  });
 
-  // File validation
-  ['frontIc', 'backIc'].forEach(id => {
-    const fileInput = document.getElementById(id);
-    if (!fileInput?.files?.[0]) {
-      document.getElementById(`${id}Error`).textContent = `${id.replace('Ic', ' IC')} is required`;
-      isValid = false;
-    }
-  });
+    // Validation event listeners
+    document.getElementById('regPhone').addEventListener('input', function() {
+      const errorField = document.getElementById('phoneError');
+      errorField.textContent = !validatePhone(this.value) ? 'Invalid phone format' : '';
+      errorField.style.display = !validatePhone(this.value) ? 'block' : 'none';
+    });
 
-  return isValid;
-}
+    document.getElementById('regPassword').addEventListener('input', function() {
+      const errorField = document.getElementById('passError');
+      errorField.textContent = !validatePassword(this.value) ? '6+ chars, 1 uppercase, 1 number' : '';
+      errorField.style.display = !validatePassword(this.value) ? 'block' : 'none';
+    });
 
-// ================= VALIDATION MESSAGES =================
-function getValidationMessage(fieldId) {
-  const messages = {
-    regPhone: 'Valid phone number required (673/60 format)',
-    fullName: 'Minimum 3 characters required',
-    address: 'Minimum 5 characters required',
-    postcode: '5-digit postcode required',
-    regPassword: '6+ characters with 1 uppercase and 1 number',
-    regConfirmPass: 'Passwords must match',
-    regEmail: 'Valid email required',
-    regConfirmEmail: 'Emails must match'
-  };
-  return messages[fieldId] || 'Invalid value';
-}
+    document.getElementById('regConfirmPass').addEventListener('input', function() {
+      const errorField = document.getElementById('confirmPassError');
+      const password = document.getElementById('regPassword').value;
+      errorField.textContent = this.value !== password ? 'Passwords mismatch' : '';
+      errorField.style.display = this.value !== password ? 'block' : 'none';
+    });
 
-// ================= UPDATED REAL-TIME VALIDATION =================
-document.getElementById('regPhone').addEventListener('input', function() {
-  const isValid = validatePhone(this.value);
-  this.setCustomValidity(isValid ? '' : 'Invalid format');
-  document.getElementById('phoneError').textContent = isValid ? '' : getValidationMessage('regPhone');
-});
+    document.getElementById('regEmail').addEventListener('input', function() {
+      const errorField = document.getElementById('emailError');
+      errorField.textContent = !validateEmail(this.value) ? 'Invalid email format' : '';
+      errorField.style.display = !validateEmail(this.value) ? 'block' : 'none';
+    });
 
-document.getElementById('fullName').addEventListener('input', function() {
-  const isValid = this.value.trim().length >= 3;
-  this.setCustomValidity(isValid ? '' : 'Too short');
-  document.getElementById('nameError').textContent = isValid ? '' : getValidationMessage('fullName');
-});
+    document.getElementById('regConfirmEmail').addEventListener('input', function() {
+      const errorField = document.getElementById('confirmEmailError');
+      const email = document.getElementById('regEmail').value;
+      errorField.textContent = this.value !== email ? 'Emails mismatch' : '';
+      errorField.style.display = this.value !== email ? 'block' : 'none';
+    });
 
-document.getElementById('address').addEventListener('input', function() {
-  const isValid = this.value.trim().length >= 5;
-  this.setCustomValidity(isValid ? '' : 'Too short');
-  document.getElementById('addressError').textContent = isValid ? '' : getValidationMessage('address');
-});
-
-document.getElementById('postcode').addEventListener('input', function() {
-  const isValid = /^\d{5}$/.test(this.value);
-  this.setCustomValidity(isValid ? '' : 'Invalid postcode');
-  document.getElementById('postcodeError').textContent = isValid ? '' : getValidationMessage('postcode');
-});
-
-document.getElementById('regPassword').addEventListener('input', function() {
-  const isValid = validatePassword(this.value);
-  this.setCustomValidity(isValid ? '' : 'Invalid format');
-  document.getElementById('passError').textContent = isValid ? '' : getValidationMessage('regPassword');
-});
-
-document.getElementById('regConfirmPass').addEventListener('input', function() {
-  const isValid = this.value === document.getElementById('regPassword').value;
-  this.setCustomValidity(isValid ? '' : 'Mismatch');
-  document.getElementById('confirmPassError').textContent = isValid ? '' : getValidationMessage('regConfirmPass');
-});
-
-document.getElementById('regEmail').addEventListener('input', function() {
-  const isValid = validateEmail(this.value);
-  this.setCustomValidity(isValid ? '' : 'Invalid email');
-  document.getElementById('emailError').textContent = isValid ? '' : getValidationMessage('regEmail');
-});
-
-document.getElementById('regConfirmEmail').addEventListener('input', function() {
-  const isValid = this.value === document.getElementById('regEmail').value;
-  this.setCustomValidity(isValid ? '' : 'Mismatch');
-  document.getElementById('confirmEmailError').textContent = isValid ? '' : getValidationMessage('regConfirmEmail');
-});
-
-document.getElementById('frontIc').addEventListener('change', function() {
-  const isValid = this.files.length > 0;
-  this.setCustomValidity(isValid ? '' : 'Required');
-  document.getElementById('frontIcError').textContent = isValid ? '' : getValidationMessage('frontIc');
-});
-
-document.getElementById('backIc').addEventListener('change', function() {
-  const isValid = this.files.length > 0;
-  this.setCustomValidity(isValid ? '' : 'Required');
-  document.getElementById('backIcError').textContent = isValid ? '' : getValidationMessage('backIc');
-});
-
-// ================= UTILITIES =================
-function clearErrors() {
-  document.querySelectorAll('.error-message').forEach(el => {
-    el.textContent = '';
-  });
-  document.querySelectorAll('input').forEach(el => {
-    el.setCustomValidity('');
-  });
-}
-
+    // Enter key submission
+    document.addEventListener('keypress', function(e) {
+      if (e.key === 'Enter' && document.activeElement.tagName !== 'TEXTAREA') {
+        handleRegistration();
+      }
+    });
   </script>
-  
+
   <div class="footer-text">
     Built by Omis Logistics. For more info 👉
     <a href="https://wa.me/6737187776" target="_blank" rel="noopener">here</a>
