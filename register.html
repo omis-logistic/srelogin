@@ -206,16 +206,17 @@
         return;
       }
 
-      // Prepare payload
+      // Prepare payload with correct field names
       const payload = {
         action: 'createAccount',
-        phone: document.getElementById('regPhone').value.trim(),
-        password: document.getElementById('regPassword').value,
-        email: document.getElementById('regEmail').value.trim().toLowerCase()
+        data: { // Nested under data property
+          phone: document.getElementById('regPhone').value.trim(),
+          password: document.getElementById('regPassword').value,
+          email: document.getElementById('regEmail').value.trim().toLowerCase()
+        }
       };
 
       try {
-        // Use PROXY_URL instead of GAS_URL
         const response = await fetch(CONFIG.PROXY_URL, {
           method: 'POST',
           headers: {
@@ -224,7 +225,7 @@
           body: `payload=${encodeURIComponent(JSON.stringify(payload))}`
         });
 
-        // Handle Google's URL redirection pattern
+        // Handle Google's URL redirection
         const result = await response.json();
 
         if (result.success) {
@@ -235,8 +236,7 @@
           statusElement.className = 'status-message error';
           statusElement.textContent = result.message || 'Registration failed';
           
-          // Handle specific backend errors
-          if (result.message.includes('phone number')) {
+          if (result.message?.includes('phone number')) {
             document.getElementById('phoneError').textContent = result.message;
             document.getElementById('phoneError').style.display = 'block';
           }
