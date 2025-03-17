@@ -179,54 +179,50 @@
     
   // ================= UPDATED REGISTRATION HANDLER =================
 async function handleRegistration() {
-  const btn = document.getElementById('registerButton');
-  const originalText = btn.innerHTML;
+  const PROXY_URL = 'https://script.google.com/macros/s/AKfycbzY9Pog-ObMuwnKKo38yNBHyHdDQzGKfgOwYOa-RUhFyawlJoWUxH44MxOD1h_yeUXq/exec';
   
   try {
-    btn.disabled = true;
-    btn.innerHTML = '<div class="spinner"></div> Registering...';
-
-    // EXACTLY like parcel declaration
     const formData = new FormData();
     
-    // 1. Data payload (match parcel structure)
-    const userData = {
-      action: 'createAccount', // REQUIRED
-      phone: document.getElementById('regPhone').value.replace(/[^\d]/g, ''),
+    // 1. Add JSON data
+    formData.append('data', JSON.stringify({
+      phone: document.getElementById('regPhone').value,
       password: document.getElementById('regPassword').value,
-      email: document.getElementById('regEmail').value.trim(),
-      icNumber: document.getElementById('icNumber').value.trim(),
-      fullName: document.getElementById('fullName').value.trim(),
-      address: document.getElementById('address').value.trim(),
-      postcode: document.getElementById('postcode').value.trim()
-    };
-    formData.append('data', JSON.stringify(userData));
+      email: document.getElementById('regEmail').value,
+      icNumber: document.getElementById('icNumber').value,
+      fullName: document.getElementById('fullName').value,
+      address: document.getElementById('address').value,
+      postcode: document.getElementById('postcode').value
+    }));
 
-    // 2. Files (identical to parcel file handling)
+    // 2. Add files
     formData.append('frontIc', document.getElementById('frontIc').files[0]);
     formData.append('backIc', document.getElementById('backIc').files[0]);
 
-    // 3. Send request (same as parcel submission)
-    const response = await fetch(CONFIG.PROXY_URL, {
+    // 3. Send request
+    const response = await fetch(PROXY_URL, {
       method: 'POST',
-      body: formData
+      body: formData,
+      redirect: 'follow'
     });
 
-    // 4. Process response (identical to working system)
-    if (!response.ok) throw new Error('Server error');
+    // 4. Force CORS handling
+    if (!response.headers.get('Access-Control-Allow-Origin')) {
+      throw new Error('Missing CORS headers');
+    }
+
     const result = await response.json();
+    console.log('RAW RESULT:', result);
     
     if (result.success) {
       window.location.href = 'login.html';
     } else {
-      throw new Error(result.message);
+      alert('Error: ' + (result.message || 'Unknown error'));
     }
-
+    
   } catch (error) {
-    showError(error.message);
-  } finally {
-    btn.disabled = false;
-    btn.innerHTML = originalText;
+    console.error('FINAL ERROR:', error);
+    alert('Failed: ' + error.message);
   }
 }
 
