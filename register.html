@@ -100,14 +100,14 @@
         <!-- Phone Number -->
         <div class="input-group">
           <label for="regPhone">Phone Number (673/60 format)</label>
-          <input type="tel" id="regPhone" pattern="^(673\d{7,}|60\d{9,})$" required>
+          <input type="tel" id="regPhone" name="regPhone" pattern="^(673\d{7,}|60\d{9,})$" required>
           <div class="error-message" id="phoneError"></div>
         </div>
 
         <!-- IC Number -->
         <div class="input-group">
           <label for="icNumber">I.C Number</label>
-          <input type="text" id="icNumber" required>
+          <input type="text" id="icNumber" name="icNumber" required>
           <div class="error-message" id="icError"></div>
         </div>
 
@@ -116,12 +116,12 @@
           <label>Identity Documents</label>
           <div class="file-input">
             <label for="frontIc">Front IC (Image/PDF)</label>
-            <input type="file" id="frontIc" accept="image/*,.pdf" required>
+            <input type="file" id="frontIc" name="frontIc" accept="image/*,.pdf" required>
             <div class="error-message" id="frontIcError"></div>
           </div>
           <div class="file-input">
             <label for="backIc">Back IC (Image/PDF)</label>
-            <input type="file" id="backIc" accept="image/*,.pdf" required>
+            <input type="file" id="backIc" name="backIc" accept="image/*,.pdf" required>
             <div class="error-message" id="backIcError"></div>
           </div>
         </div>
@@ -129,45 +129,44 @@
         <!-- Personal Details -->
         <div class="input-group">
           <label for="fullName">Full Name</label>
-          <input type="text" id="fullName" required>
+          <input type="text" id="fullName" name="fullName" required>
           <div class="error-message" id="nameError"></div>
         </div>
 
         <div class="input-group">
           <label for="address">Mailing Address</label>
-          <textarea id="address" required></textarea>
+          <textarea id="address" name="address" required></textarea>
           <div class="error-message" id="addressError"></div>
         </div>
 
         <div class="input-group">
           <label for="postcode">Postcode</label>
-          <input type="text" id="postcode" pattern="\d{5}" required>
+          <input type="text" id="postcode" name="postcode" pattern="\d{5}" required>
           <div class="error-message" id="postcodeError"></div>
         </div>
 
         <!-- Account Details -->
         <div class="input-group">
           <label for="regPassword">Password</label>
-          <input type="password" id="regPassword" 
-                 pattern="^(?=.*[A-Z])(?=.*\d).{6,}$" required>
+          <input type="password" id="regPassword" name="regPassword" required>
           <div class="error-message" id="passError"></div>
         </div>
 
         <div class="input-group">
           <label for="regConfirmPass">Confirm Password</label>
-          <input type="password" id="regConfirmPass" required>
+          <input type="password" id="regConfirmPass" name="regConfirmPass" required>
           <div class="error-message" id="confirmPassError"></div>
         </div>
 
         <div class="input-group">
           <label for="regEmail">Email Address</label>
-          <input type="email" id="regEmail" required>
+          <input type="email" id="regEmail" name="regEmail" required>
           <div class="error-message" id="emailError"></div>
         </div>
 
         <div class="input-group">
           <label for="regConfirmEmail">Confirm Email</label>
-          <input type="email" id="regConfirmEmail" required>
+          <input type="email" id="regConfirmEmail" name="regConfirmEmail" required>
           <div class="error-message" id="confirmEmailError"></div>
         </div>
 
@@ -216,16 +215,16 @@
     if (!backIcInput.files[0]) throw new Error('Back IC document is required');
 
     const payload = {
-      action: 'createAccount',
-      phone: formData.get('regPhone').trim(),
-      password: formData.get('regPassword'),
-      email: formData.get('regEmail').trim(),
-      icNumber: formData.get('icNumber').trim(),
-      fullName: formData.get('fullName').trim(),
-      address: formData.get('address').trim(),
-      postcode: formData.get('postcode').trim(),
-      timestamp: new Date().toISOString()
-    };
+  action: 'createAccount',
+  phone: (formData.get('regPhone') || '').trim(),
+  password: formData.get('regPassword') || '',
+  email: (formData.get('regEmail') || '').trim(),
+  icNumber: (formData.get('icNumber') || '').trim(),
+  fullName: (formData.get('fullName') || '').trim(),
+  address: (formData.get('address') || '').trim(),
+  postcode: (formData.get('postcode') || '').trim(),
+  timestamp: new Date().toISOString()
+};
 
     const submissionData = new FormData(form);
     submissionData.append('data', JSON.stringify(payload));
