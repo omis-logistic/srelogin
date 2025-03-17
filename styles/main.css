@@ -136,6 +136,25 @@ button.secondary-btn:hover {
   border-color: #9C51B6 !important;
 }
 
+#registerButton[disabled] {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.spinner {
+  display: inline-block;
+  width: 1rem;
+  height: 1rem;
+  border: 2px solid #fff;
+  border-radius: 50%;
+  border-top-color: transparent;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
 /* ======== ERROR/SUCCESS MESSAGES ======== */
 .error-message {
   color: var(--primary-color);
