@@ -186,7 +186,7 @@
 
   <script>
     const CONFIG = {
-      PROXY_URL: 'https://script.google.com/macros/s/AKfycbzUZudt9i78uO1dBSjahNdTqETk4_WXJ5RWG2BnqqZKxrRRgkuA88rcVjhUft0e1AOV/exec'
+      PROXY_URL: 'https://script.google.com/macros/s/AKfycbwFh1XFloH268f1h7lx2nCOCFXsdCWlckNGji86eqqIcqlMiPq2uhX1PqvYor-2N-I2/exec'
     };
 
     // ================= UPDATED REGISTRATION HANDLER =================
@@ -210,31 +210,37 @@
     const frontIcInput = document.getElementById('frontIc');
     const backIcInput = document.getElementById('backIc');
 
-    // Validate files directly from input elements
     if (!frontIcInput.files[0]) throw new Error('Front IC document is required');
     if (!backIcInput.files[0]) throw new Error('Back IC document is required');
 
     const payload = {
-  action: 'createAccount',
-  phone: (formData.get('regPhone') || '').trim(),
-  password: formData.get('regPassword') || '',
-  email: (formData.get('regEmail') || '').trim(),
-  icNumber: (formData.get('icNumber') || '').trim(),
-  fullName: (formData.get('fullName') || '').trim(),
-  address: (formData.get('address') || '').trim(),
-  postcode: (formData.get('postcode') || '').trim(),
-  timestamp: new Date().toISOString()
-};
+      action: 'createAccount',
+      phone: (formData.get('regPhone') || '').trim(),
+      password: formData.get('regPassword') || '',
+      email: (formData.get('regEmail') || '').trim(),
+      icNumber: (formData.get('icNumber') || '').trim(),
+      fullName: (formData.get('fullName') || '').trim(),
+      address: (formData.get('address') || '').trim(),
+      postcode: (formData.get('postcode') || '').trim(),
+      timestamp: new Date().toISOString()
+    };
 
     const submissionData = new FormData(form);
     submissionData.append('data', JSON.stringify(payload));
+
+    // Timeout handling implementation
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30000);
 
     const response = await fetch(CONFIG.PROXY_URL, {
       method: 'POST',
       body: submissionData,
       headers: {
         'X-Requested-With': 'XMLHttpRequest'
-      }
+      },
+      signal: controller.signal
+    }).finally(() => {
+      clearTimeout(timeoutId);
     });
 
     if (!response.ok) {
@@ -253,9 +259,15 @@
 
   } catch (error) {
     console.error('Registration Error:', error);
-    const errorMessage = error.message.includes('Failed to fetch') 
-      ? 'Network error - check internet connection'
-      : error.message;
+    
+    let errorMessage;
+    if (error.name === 'AbortError') {
+      errorMessage = 'Request timed out - please try again';
+    } else if (error.message.includes('Failed to fetch')) {
+      errorMessage = 'Network error - check internet connection';
+    } else {
+      errorMessage = error.message;
+    }
 
     showStatus(`Error: ${errorMessage}`, 'error');
     form.querySelectorAll('input, button').forEach(el => el.disabled = false);
