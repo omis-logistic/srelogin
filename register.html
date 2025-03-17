@@ -215,7 +215,8 @@
       };
 
       try {
-        const response = await fetch(CONFIG.GAS_URL, {
+        // Use PROXY_URL instead of GAS_URL
+        const response = await fetch(CONFIG.PROXY_URL, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8'
@@ -223,14 +224,8 @@
           body: `payload=${encodeURIComponent(JSON.stringify(payload))}`
         });
 
-        // Handle potential redirect
-        const finalResponse = response.url.includes('/exec') 
-          ? response
-          : await fetch(response.url);
-
-        if (!finalResponse.ok) throw new Error('Network response was not OK');
-        
-        const result = await finalResponse.json();
+        // Handle Google's URL redirection pattern
+        const result = await response.json();
 
         if (result.success) {
           statusElement.className = 'status-message success';
