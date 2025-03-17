@@ -179,18 +179,19 @@
     
   // ================= UPDATED REGISTRATION HANDLER =================
 async function handleRegistration() {
+  const btn = document.getElementById('registerButton');
+  const originalText = btn.innerHTML;
+  
   try {
-    const btn = document.getElementById('registerButton');
-    if (!btn) throw new Error('Register button not found');
-    
-    const originalBtnText = btn.innerHTML;
+    // Show loading state
     btn.disabled = true;
     btn.innerHTML = '<div class="spinner"></div> Processing...';
 
+    // Create FormData instead of JSON
     const formData = new FormData();
     
-    // Required fields
-    const fields = {
+    // Append registration data
+    const userData = {
       phone: document.getElementById('regPhone').value.trim(),
       password: document.getElementById('regPassword').value,
       email: document.getElementById('regEmail').value.trim(),
@@ -199,24 +200,13 @@ async function handleRegistration() {
       address: document.getElementById('address').value.trim(),
       postcode: document.getElementById('postcode').value.trim()
     };
+    formData.append('data', JSON.stringify(userData));
 
-    // Validate required fields
-    Object.entries(fields).forEach(([key, value]) => {
-      if (!value) throw new Error(`Missing ${key.replace('reg', '')}`);
-    });
+    // Append files directly
+    formData.append('frontIc', document.getElementById('frontIc').files[0]);
+    formData.append('backIc', document.getElementById('backIc').files[0]);
 
-    // Add JSON data
-    formData.append('data', JSON.stringify(fields));
-
-    // Add files
-    const frontIc = document.getElementById('frontIc').files[0];
-    const backIc = document.getElementById('backIc').files[0];
-    if (!frontIc || !backIc) throw new Error('Both IC files required');
-    
-    formData.append('frontIc', frontIc);
-    formData.append('backIc', backIc);
-
-    // Send request
+    // Send request using same pattern as parcel declaration
     const response = await fetch(CONFIG.PROXY_URL, {
       method: 'POST',
       body: formData
@@ -228,21 +218,18 @@ async function handleRegistration() {
     }
 
     const result = await response.json();
+    
     if (result.success) {
-      window.location.href = 'login.html';
+      window.location.href = 'login.html?new_user=true';
     } else {
       throw new Error(result.message);
     }
 
   } catch (error) {
     showError(error.message);
-    console.error('Registration Error:', error);
   } finally {
-    const btn = document.getElementById('registerButton');
-    if (btn) {
-      btn.disabled = false;
-      btn.innerHTML = 'Register';
-    }
+    btn.disabled = false;
+    btn.innerHTML = originalText;
   }
 }
 
