@@ -1,8 +1,8 @@
 //scripts/app.js
 // ================= CONFIGURATION =================
 const CONFIG = {
-  GAS_URL: 'https://script.google.com/macros/s/AKfycbwkTJkqm5FeeV-FbkN85mSPJ8kk8mxgO1ZbK_6o55yO-rB7aVDURmUktcfrr7jqTew1kA/exec',
-  PROXY_URL: 'https://script.google.com/macros/s/AKfycbxiDHEVjdzqZ7WU3AlRxbGpCiRvrr8vhqg9qKMvXAQN-e2KPpJNjh6dCVwHzxYTUeBZ/exec',
+  GAS_URL: 'https://script.google.com/macros/s/AKfycbw_XS1DRwXuycYxVyfhCEOLnfXf-syX8YPkHyJqAWLVVy6CHOcDZznYPo13fTSPidwm5g/exec',
+  PROXY_URL: 'https://script.google.com/macros/s/AKfycbxTnHhLjTEyZJWrPZp_ebrMG0yTlq1CUDjkvmc6XMZMBU2N_-KH7zV1Q176gyW-tima/exec',
   SESSION_TIMEOUT: 3600,
   MAX_FILE_SIZE: 5 * 1024 * 1024,
   ALLOWED_FILE_TYPES: ['image/jpeg', 'image/png', 'application/pdf'],
@@ -105,30 +105,25 @@ function handleLogout() {
 async function callAPI(action, payload, files = []) {
   try {
     const formData = new FormData();
-    
-    // Add all form data directly to FormData
     formData.append('action', action);
+    
+    // Append regular fields
     for (const [key, value] of Object.entries(payload)) {
       formData.append(key, value);
     }
 
-    // Add files with proper field names
-    files.forEach((file, index) => {
-      formData.append(`file${index}`, file.file, file.name);
+    // Append files
+    files.forEach(file => {
+      formData.append(file.name, file.data);
     });
 
-    // Use proxy URL with URL-encoded payload
     const response = await fetch(CONFIG.PROXY_URL, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded'
-      },
-      body: `payload=${encodeURIComponent(JSON.stringify(Object.fromEntries(formData)))}`
+      body: formData
     });
 
     return await response.json();
   } catch (error) {
-    console.error('API Call Failed:', error);
     return { success: false, message: error.message };
   }
 }
