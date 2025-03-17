@@ -184,78 +184,46 @@ async function handleRegistration() {
   clearErrors();
 
   try {
-    console.log('Starting registration process...');
+    if (!validateRegistrationForm()) return;
+
+    // Create FormData instead of JSON payload
+    const formData = new FormData();
     
-    if (!validateRegistrationForm()) {
-      console.warn('Form validation failed');
-      return;
-    }
+    // Append regular form fields
+    formData.append('action', 'createAccount');
+    formData.append('phone', document.getElementById('regPhone').value.trim());
+    formData.append('password', document.getElementById('regPassword').value);
+    formData.append('email', document.getElementById('regEmail').value.trim());
+    formData.append('icNumber', document.getElementById('icNumber').value.trim());
+    formData.append('fullName', document.getElementById('fullName').value.trim());
+    formData.append('address', document.getElementById('address').value.trim());
+    formData.append('postcode', document.getElementById('postcode').value.trim());
 
-    // Prepare form data with files
-    const formData = {
-      action: 'createAccount',
-      phone: document.getElementById('regPhone').value.trim(),
-      password: document.getElementById('regPassword').value,
-      email: document.getElementById('regEmail').value.trim(),
-      icNumber: document.getElementById('icNumber').value.trim(),
-      fullName: document.getElementById('fullName').value.trim(),
-      address: document.getElementById('address').value.trim(),
-      postcode: document.getElementById('postcode').value.trim(),
-      frontIc: await processFileInput('frontIc'),
-      backIc: await processFileInput('backIc')
-    };
+    // Append files directly
+    formData.append('frontIc', document.getElementById('frontIc').files[0]);
+    formData.append('backIc', document.getElementById('backIc').files[0]);
 
-    console.log('Form payload prepared:', formData);
-
-    // Initial fetch call with redirect handling
     const response = await fetch(CONFIG.PROXY_URL, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-        'X-Requested-With': 'XMLHttpRequest'
-      },
-      body: `payload=${encodeURIComponent(JSON.stringify(formData))}`,
-      redirect: 'manual'
+      body: formData, // Let browser handle FormData headers
     });
 
-    console.log('Initial response:', response);
-
-    // Handle Google Scripts redirect
-    let result;
-    if (response.status === 0 || response.status === 307) {
-      const finalUrl = response.headers.get('Location');
-      if (!finalUrl) throw new Error('Missing redirect location');
-      
-      console.log('Redirecting to:', finalUrl);
-      const redirectedResponse = await fetch(finalUrl, {
-        headers: { 'X-Requested-With': 'XMLHttpRequest' }
-      });
-      
-      if (!redirectedResponse.ok) {
-        throw new Error(`Redirect failed: ${redirectedResponse.status}`);
-      }
-      
-      result = await redirectedResponse.json();
-    } else {
-      result = await response.json();
-    }
-
-    console.log('Final API Result:', result);
-
+    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+    
+    const result = await response.json();
+    
     if (result.success) {
       showError('✓ Registration successful! Redirecting...', 'registrationStatus');
       setTimeout(() => safeRedirect('login.html'), 1500);
     } else {
       showError(`❗ ${result.message || 'Registration failed'}`, 'registrationStatus');
     }
-
   } catch (error) {
     console.error('Registration error:', error);
     showError(`❗ Error: ${error.message}`, 'registrationStatus');
   } finally {
     btn.disabled = false;
     btn.innerHTML = originalText;
-    console.log('Registration process completed');
   }
 }
 
