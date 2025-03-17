@@ -192,151 +192,232 @@
 
     // ================= UPDATED REGISTRATION HANDLER =================
     async function handleRegistration() {
-      const btn = document.querySelector('button');
-      const originalText = btn.innerHTML;
-      btn.disabled = true;
-      btn.innerHTML = '<div class="button-loader"></div> Registering...';
-      clearErrors();
+  const btn = document.querySelector('#registrationForm button[type="button"]');
+  const originalBtnHTML = btn.innerHTML;
+  const statusElement = document.getElementById('registrationStatus');
+  
+  try {
+    // Show loading state
+    btn.disabled = true;
+    btn.innerHTML = '<div class="spinner"></div> Processing...';
+    statusElement.style.display = 'none';
 
-      try {
-        if (!validateRegistrationForm()) return;
-
-        const formData = new FormData();
-        
-        // Append all form fields
-        formData.append('action', 'createAccount');
-        formData.append('phone', document.getElementById('regPhone').value.trim());
-        formData.append('password', document.getElementById('regPassword').value);
-        formData.append('email', document.getElementById('regEmail').value.trim());
-        formData.append('icNumber', document.getElementById('icNumber').value.trim());
-        formData.append('fullName', document.getElementById('fullName').value.trim());
-        formData.append('address', document.getElementById('address').value.trim());
-        formData.append('postcode', document.getElementById('postcode').value.trim());
-
-        // Append files
-        const frontIcFile = document.getElementById('frontIc').files[0];
-        const backIcFile = document.getElementById('backIc').files[0];
-        formData.append('frontIc', frontIcFile);
-        formData.append('backIc', backIcFile);
-
-        const response = await fetch(CONFIG.PROXY_URL, {
-          method: 'POST',
-          body: formData,
-          headers: {
-            'X-Requested-With': 'XMLHttpRequest'
-          }
-        });
-
-        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-        
-        const result = await response.json();
-        
-        if (result.success) {
-          showStatus('✓ Registration successful! Redirecting...', 'success');
-          setTimeout(() => safeRedirect('login.html'), 1500);
-        } else {
-          showStatus(`❗ ${result.message || 'Registration failed'}`, 'error');
-        }
-      } catch (error) {
-        console.error('Registration error:', error);
-        showStatus(`❗ Error: ${error.message}`, 'error');
-      } finally {
-        btn.disabled = false;
-        btn.innerHTML = originalText;
-      }
+    // Validate form before submission
+    if (!validateRegistrationForm()) {
+      showStatus('Please fix form errors', 'error');
+      return;
     }
+
+    // Create FormData from form elements
+    const form = document.getElementById('registrationForm');
+    const formData = new FormData(form);
+    
+    // Process files with validation
+    const frontIcFile = formData.get('frontIc');
+    const backIcFile = formData.get('backIc');
+    
+    if (!frontIcFile || !frontIcFile.name) {
+      throw new Error('Front IC document is required');
+    }
+    
+    if (!backIcFile || !backIcFile.name) {
+      throw new Error('Back IC document is required');
+    }
+
+    // Create payload with metadata
+    const payload = {
+      action: 'createAccount',
+      phone: formData.get('regPhone').trim(),
+      password: formData.get('regPassword'),
+      email: formData.get('regEmail').trim(),
+      icNumber: formData.get('icNumber').trim(),
+      fullName: formData.get('fullName').trim(),
+      address: formData.get('address').trim(),
+      postcode: formData.get('postcode').trim(),
+      timestamp: new Date().toISOString()
+    };
+
+    // Create final submission form data
+    const submissionData = new FormData();
+    submissionData.append('data', JSON.stringify(payload));
+    submissionData.append('frontIc', frontIcFile);
+    submissionData.append('backIc', backIcFile);
+
+    // Execute proxy request
+    const response = await fetch(CONFIG.PROXY_URL, {
+      method: 'POST',
+      body: submissionData,
+      headers: {
+        'X-Requested-With': 'XMLHttpRequest'
+      }
+    });
+
+    // Handle HTTP errors
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Server error: ${response.status} - ${errorText}`);
+    }
+
+    // Process JSON response
+    const result = await response.json();
+
+    // Handle backend logic errors
+    if (!result.success) {
+      throw new Error(result.message || 'Registration failed on server');
+    }
+
+    // Show success feedback
+    showStatus('Registration successful! Redirecting...', 'success');
+    
+    // Redirect after delay
+    setTimeout(() => {
+      safeRedirect('login.html');
+    }, 2000);
+
+  } catch (error) {
+    // Handle specific error types
+    console.error('Registration Error:', error);
+    
+    const errorMessage = error.message.includes('Failed to fetch') 
+      ? 'Network error - check internet connection'
+      : error.message;
+
+    showStatus(`Error: ${errorMessage}`, 'error');
+    
+    // Re-enable form resubmission
+    form.querySelectorAll('input, button').forEach(el => el.disabled = false);
+
+  } finally {
+    // Reset UI state
+    btn.disabled = false;
+    btn.innerHTML = originalBtnHTML;
+  }
+}
 
     // ================= VALIDATION FUNCTIONS =================
     function validateRegistrationForm() {
-      let isValid = true;
-      clearErrors();
+  let isValid = true;
+  document.querySelectorAll('.error-message').forEach(el => el.style.display = 'none');
 
-      // Phone Validation
-      const phone = document.getElementById('regPhone').value;
-      if (!/^(673\d{7,}|60\d{9,})$/.test(phone)) {
-        showError('phoneError', 'Invalid phone format');
-        isValid = false;
-      }
+  // Phone validation
+  const phone = document.getElementById('regPhone').value.trim();
+  if (!/^(673\d{7,}|60\d{9,})$/.test(phone)) {
+    showError('phoneError', 'Invalid phone format (673/60 prefix required)');
+    isValid = false;
+  }
 
-      // IC Validation
-      if (!document.getElementById('icNumber').value.trim()) {
-        showError('icError', 'IC number required');
-        isValid = false;
-      }
+  // IC Number validation
+  const icNumber = document.getElementById('icNumber').value.trim();
+  if (!icNumber) {
+    showError('icError', 'IC number is required');
+    isValid = false;
+  }
 
-      // Name Validation
-      const fullName = document.getElementById('fullName').value;
-      if (fullName.trim().length < 3) {
-        showError('nameError', 'Minimum 3 characters');
-        isValid = false;
-      }
+  // Full Name validation
+  const fullName = document.getElementById('fullName').value.trim();
+  if (fullName.length < 3) {
+    showError('nameError', 'Minimum 3 characters required');
+    isValid = false;
+  }
 
-      // Address Validation
-      if (document.getElementById('address').value.trim().length < 5) {
-        showError('addressError', 'Minimum 5 characters');
-        isValid = false;
-      }
+  // Address validation
+  const address = document.getElementById('address').value.trim();
+  if (address.length < 5) {
+    showError('addressError', 'Minimum 5 characters required');
+    isValid = false;
+  }
 
-      // Postcode Validation
-      if (!/^\d{5}$/.test(document.getElementById('postcode').value)) {
-        showError('postcodeError', '5-digit postcode required');
-        isValid = false;
-      }
+  // Postcode validation
+  const postcode = document.getElementById('postcode').value.trim();
+  if (!/^\d{5}$/.test(postcode)) {
+    showError('postcodeError', '5-digit postcode required');
+    isValid = false;
+  }
 
-      // Password Validation
-      const password = document.getElementById('regPassword').value;
-      if (!/(?=.*[A-Z])(?=.*\d).{6,}/.test(password)) {
-        showError('passError', '6+ chars with 1 uppercase & 1 number');
-        isValid = false;
-      }
+  // Password validation
+  const password = document.getElementById('regPassword').value;
+  if (!/(?=.*[A-Z])(?=.*\d).{6,}/.test(password)) {
+    showError('passError', '6+ characters with 1 uppercase & 1 number');
+    isValid = false;
+  }
 
-      // Password Match
-      if (password !== document.getElementById('regConfirmPass').value) {
-        showError('confirmPassError', 'Passwords do not match');
-        isValid = false;
-      }
+  // Confirm Password validation
+  const confirmPassword = document.getElementById('regConfirmPass').value;
+  if (password !== confirmPassword) {
+    showError('confirmPassError', 'Passwords do not match');
+    isValid = false;
+  }
 
-      // Email Validation
-      const email = document.getElementById('regEmail').value;
-      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-        showError('emailError', 'Invalid email format');
-        isValid = false;
-      }
+  // Email validation
+  const email = document.getElementById('regEmail').value.trim();
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    showError('emailError', 'Invalid email format');
+    isValid = false;
+  }
 
-      // Email Match
-      if (email !== document.getElementById('regConfirmEmail').value) {
-        showError('confirmEmailError', 'Emails do not match');
-        isValid = false;
-      }
+  // Confirm Email validation
+  const confirmEmail = document.getElementById('regConfirmEmail').value.trim();
+  if (email !== confirmEmail) {
+    showError('confirmEmailError', 'Emails do not match');
+    isValid = false;
+  }
 
-      // File Validation
-      if (!document.getElementById('frontIc').files[0]) {
-        showError('frontIcError', 'Front IC required');
-        isValid = false;
-      }
-      if (!document.getElementById('backIc').files[0]) {
-        showError('backIcError', 'Back IC required');
-        isValid = false;
-      }
+  // Front IC validation
+  const frontIc = document.getElementById('frontIc').files;
+  if (!frontIc || frontIc.length === 0) {
+    showError('frontIcError', 'Front IC document required');
+    isValid = false;
+  }
 
-      return isValid;
+  // Back IC validation
+  const backIc = document.getElementById('backIc').files;
+  if (!backIc || backIc.length === 0) {
+    showError('backIcError', 'Back IC document required');
+    isValid = false;
+  }
+
+  // File type validation
+  if (frontIc.length > 0) {
+    const frontFile = frontIc[0];
+    if (!['image/jpeg', 'image/png', 'application/pdf'].includes(frontFile.type)) {
+      showError('frontIcError', 'Invalid file type (JPEG/PNG/PDF only)');
+      isValid = false;
     }
+  }
 
-    // ================= UTILITY FUNCTIONS =================
-    function showError(elementId, message) {
-      const element = document.getElementById(elementId);
-      if (element) {
-        element.textContent = message;
-        element.style.display = 'block';
-      }
+  if (backIc.length > 0) {
+    const backFile = backIc[0];
+    if (!['image/jpeg', 'image/png', 'application/pdf'].includes(backFile.type)) {
+      showError('backIcError', 'Invalid file type (JPEG/PNG/PDF only)');
+      isValid = false;
     }
+  }
+
+  return isValid;
+}
+
+// Helper function to display errors
+function showError(elementId, message) {
+  const errorElement = document.getElementById(elementId);
+  if (errorElement) {
+    errorElement.textContent = message;
+    errorElement.style.display = 'block';
+  }
+}
 
     function showStatus(message, type = 'info') {
-      const statusElement = document.getElementById('registrationStatus');
-      statusElement.textContent = message;
-      statusElement.className = `status-message ${type}`;
-      statusElement.style.display = 'block';
-    }
+  const statusElement = document.getElementById('registrationStatus');
+  statusElement.textContent = message;
+  statusElement.className = `status-message ${type}`;
+  statusElement.style.display = 'block';
+  
+  // Auto-hide success messages
+  if (type === 'success') {
+    setTimeout(() => {
+      statusElement.style.display = 'none';
+    }, 5000);
+  }
+}
 
     function clearErrors() {
       document.querySelectorAll('.error-message').forEach(el => {
