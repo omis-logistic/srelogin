@@ -195,36 +195,26 @@
   const btn = document.querySelector('#registrationForm button[type="button"]');
   const originalBtnHTML = btn.innerHTML;
   const statusElement = document.getElementById('registrationStatus');
-  
+  const form = document.getElementById('registrationForm');
+
   try {
-    // Show loading state
     btn.disabled = true;
     btn.innerHTML = '<div class="spinner"></div> Processing...';
     statusElement.style.display = 'none';
 
-    // Validate form before submission
     if (!validateRegistrationForm()) {
       showStatus('Please fix form errors', 'error');
       return;
     }
 
-    // Create FormData from form elements
-    const form = document.getElementById('registrationForm');
     const formData = new FormData(form);
-    
-    // Process files with validation
-    const frontIcFile = formData.get('frontIc');
-    const backIcFile = formData.get('backIc');
-    
-    if (!frontIcFile || !frontIcFile.name) {
-      throw new Error('Front IC document is required');
-    }
-    
-    if (!backIcFile || !backIcFile.name) {
-      throw new Error('Back IC document is required');
-    }
+    const frontIcInput = document.getElementById('frontIc');
+    const backIcInput = document.getElementById('backIc');
 
-    // Create payload with metadata
+    // Validate files directly from input elements
+    if (!frontIcInput.files[0]) throw new Error('Front IC document is required');
+    if (!backIcInput.files[0]) throw new Error('Back IC document is required');
+
     const payload = {
       action: 'createAccount',
       phone: formData.get('regPhone').trim(),
@@ -237,13 +227,9 @@
       timestamp: new Date().toISOString()
     };
 
-    // Create final submission form data
-    const submissionData = new FormData();
+    const submissionData = new FormData(form);
     submissionData.append('data', JSON.stringify(payload));
-    submissionData.append('frontIc', frontIcFile);
-    submissionData.append('backIc', backIcFile);
 
-    // Execute proxy request
     const response = await fetch(CONFIG.PROXY_URL, {
       method: 'POST',
       body: submissionData,
@@ -252,43 +238,30 @@
       }
     });
 
-    // Handle HTTP errors
     if (!response.ok) {
       const errorText = await response.text();
       throw new Error(`Server error: ${response.status} - ${errorText}`);
     }
 
-    // Process JSON response
     const result = await response.json();
 
-    // Handle backend logic errors
     if (!result.success) {
       throw new Error(result.message || 'Registration failed on server');
     }
 
-    // Show success feedback
     showStatus('Registration successful! Redirecting...', 'success');
-    
-    // Redirect after delay
-    setTimeout(() => {
-      safeRedirect('login.html');
-    }, 2000);
+    setTimeout(() => safeRedirect('login.html'), 2000);
 
   } catch (error) {
-    // Handle specific error types
     console.error('Registration Error:', error);
-    
     const errorMessage = error.message.includes('Failed to fetch') 
       ? 'Network error - check internet connection'
       : error.message;
 
     showStatus(`Error: ${errorMessage}`, 'error');
-    
-    // Re-enable form resubmission
     form.querySelectorAll('input, button').forEach(el => el.disabled = false);
 
   } finally {
-    // Reset UI state
     btn.disabled = false;
     btn.innerHTML = originalBtnHTML;
   }
