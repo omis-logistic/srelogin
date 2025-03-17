@@ -177,54 +177,98 @@
     
   // ================= UPDATED REGISTRATION HANDLER =================
 async function handleRegistration() {
-  const btn = document.querySelector('button');
-  const originalText = btn.innerHTML;
-  btn.disabled = true;
-  btn.innerHTML = '<div class="button-loader"></div> Registering...';
-  clearErrors();
-
+  const btn = document.querySelector('#registrationForm button');
+  const originalBtnText = btn.innerHTML;
+  
   try {
-    if (!validateRegistrationForm()) return;
-
-    // Create FormData instead of JSON payload
-    const formData = new FormData();
+    // Show loading state
+    btn.disabled = true;
+    btn.innerHTML = '<div class="spinner"></div> Processing...';
     
-    // Append regular form fields
-    formData.append('action', 'createAccount');
-    formData.append('phone', document.getElementById('regPhone').value.trim());
-    formData.append('password', document.getElementById('regPassword').value);
-    formData.append('email', document.getElementById('regEmail').value.trim());
-    formData.append('icNumber', document.getElementById('icNumber').value.trim());
-    formData.append('fullName', document.getElementById('fullName').value.trim());
-    formData.append('address', document.getElementById('address').value.trim());
-    formData.append('postcode', document.getElementById('postcode').value.trim());
+    // Get form elements
+    const form = document.getElementById('registrationForm');
+    const phone = document.getElementById('regPhone').value.trim();
+    const password = document.getElementById('regPassword').value;
+    const email = document.getElementById('regEmail').value.trim();
+    const icNumber = document.getElementById('icNumber').value.trim();
+    const fullName = document.getElementById('fullName').value.trim();
+    const address = document.getElementById('address').value.trim();
+    const postcode = document.getElementById('postcode').value.trim();
+    const frontIcFile = document.getElementById('frontIc').files[0];
+    const backIcFile = document.getElementById('backIc').files[0];
 
-    // Append files directly
-    formData.append('frontIc', document.getElementById('frontIc').files[0]);
-    formData.append('backIc', document.getElementById('backIc').files[0]);
+    // Basic validation
+    if (!frontIcFile || !backIcFile) {
+      throw new Error('Both IC documents are required');
+    }
 
+    // Create FormData payload
+    const formData = new FormData();
+    formData.append('data', JSON.stringify({
+      phone: phone.replace(/[^\d]/g, ''),
+      password: password,
+      email: email,
+      icNumber: icNumber,
+      fullName: fullName,
+      address: address,
+      postcode: postcode
+    }));
+
+    // Append files with validated names
+    formData.append('frontIc', frontIcFile, `front_ic_${encodeURIComponent(phone)}.${frontIcFile.name.split('.').pop()}`);
+    formData.append('backIc', backIcFile, `back_ic_${encodeURIComponent(phone)}.${backIcFile.name.split('.').pop()}`);
+
+    // Send request
     const response = await fetch(CONFIG.PROXY_URL, {
       method: 'POST',
-      body: formData, // Let browser handle FormData headers
+      body: formData,
+      redirect: 'follow'
     });
 
-    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-    
-    const result = await response.json();
-    
-    if (result.success) {
-      showError('✓ Registration successful! Redirecting...', 'registrationStatus');
-      setTimeout(() => safeRedirect('login.html'), 1500);
-    } else {
-      showError(`❗ ${result.message || 'Registration failed'}`, 'registrationStatus');
+    // Handle non-200 responses
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Server error: ${response.status} - ${errorText}`);
     }
+
+    // Parse JSON response
+    const result = await response.json();
+
+    if (!result.success) {
+      throw new Error(result.message || 'Registration failed');
+    }
+
+    // Success handling
+    showError('✓ Registration successful! Redirecting...', 'registrationStatus');
+    setTimeout(() => {
+      form.reset();
+      window.location.href = 'login.html?fresh_registration=true';
+    }, 2000);
+
   } catch (error) {
-    console.error('Registration error:', error);
-    showError(`❗ Error: ${error.message}`, 'registrationStatus');
+    console.error('Registration Error:', error);
+    showError(`❗ ${error.message}`, 'registrationStatus');
+    document.getElementById('regPassword').value = '';
+    document.getElementById('regConfirmPass').value = '';
   } finally {
+    // Reset UI
     btn.disabled = false;
-    btn.innerHTML = originalText;
+    btn.innerHTML = originalBtnText;
   }
+}
+
+// Utility functions
+function showError(message, targetId = 'registrationStatus') {
+  const errorElement = document.getElementById(targetId);
+  errorElement.textContent = message;
+  errorElement.style.display = 'block';
+  errorElement.style.color = message.includes('✓') ? '#00C851' : '#ff4444';
+  setTimeout(() => errorElement.style.display = 'none', 5000);
+}
+
+function showLoading(show = true) {
+  const loader = document.getElementById('loadingOverlay');
+  loader.style.display = show ? 'flex' : 'none';
 }
 
 // ================= FILE PROCESSING UTILITIES =================
