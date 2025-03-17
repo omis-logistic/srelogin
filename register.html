@@ -183,16 +183,16 @@ async function handleRegistration() {
   const originalText = btn.innerHTML;
   
   try {
-    // Show loading state
     btn.disabled = true;
-    btn.innerHTML = '<div class="spinner"></div> Processing...';
+    btn.innerHTML = '<div class="spinner"></div> Registering...';
 
-    // Create FormData instead of JSON
+    // EXACTLY like parcel declaration
     const formData = new FormData();
     
-    // Append registration data
+    // 1. Data payload (match parcel structure)
     const userData = {
-      phone: document.getElementById('regPhone').value.trim(),
+      action: 'createAccount', // REQUIRED
+      phone: document.getElementById('regPhone').value.replace(/[^\d]/g, ''),
       password: document.getElementById('regPassword').value,
       email: document.getElementById('regEmail').value.trim(),
       icNumber: document.getElementById('icNumber').value.trim(),
@@ -202,25 +202,22 @@ async function handleRegistration() {
     };
     formData.append('data', JSON.stringify(userData));
 
-    // Append files directly
+    // 2. Files (identical to parcel file handling)
     formData.append('frontIc', document.getElementById('frontIc').files[0]);
     formData.append('backIc', document.getElementById('backIc').files[0]);
 
-    // Send request using same pattern as parcel declaration
+    // 3. Send request (same as parcel submission)
     const response = await fetch(CONFIG.PROXY_URL, {
       method: 'POST',
       body: formData
     });
 
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.message || 'Registration failed');
-    }
-
+    // 4. Process response (identical to working system)
+    if (!response.ok) throw new Error('Server error');
     const result = await response.json();
     
     if (result.success) {
-      window.location.href = 'login.html?new_user=true';
+      window.location.href = 'login.html';
     } else {
       throw new Error(result.message);
     }
