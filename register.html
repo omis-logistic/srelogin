@@ -166,7 +166,9 @@
       <div class="error-message" id="confirmEmailError"></div>
     </div>
 
-    <button onclick="handleRegistration()">Register</button>
+    <button id="registerButton" onclick="handleRegistration()">
+  Register
+</button>
     <button class="secondary-btn" onclick="safeRedirect('login.html')" style="margin-top: 10px;">Back to Login</button>
 
     <div id="registrationStatus" class="status-message"></div>
@@ -177,83 +179,70 @@
     
   // ================= UPDATED REGISTRATION HANDLER =================
 async function handleRegistration() {
-  const btn = document.querySelector('#registrationForm button');
-  const originalBtnText = btn.innerHTML;
-  
   try {
-    // Show loading state
+    const btn = document.getElementById('registerButton');
+    if (!btn) throw new Error('Register button not found');
+    
+    const originalBtnText = btn.innerHTML;
     btn.disabled = true;
     btn.innerHTML = '<div class="spinner"></div> Processing...';
-    
-    // Get form elements
-    const form = document.getElementById('registrationForm');
-    const phone = document.getElementById('regPhone').value.trim();
-    const password = document.getElementById('regPassword').value;
-    const email = document.getElementById('regEmail').value.trim();
-    const icNumber = document.getElementById('icNumber').value.trim();
-    const fullName = document.getElementById('fullName').value.trim();
-    const address = document.getElementById('address').value.trim();
-    const postcode = document.getElementById('postcode').value.trim();
-    const frontIcFile = document.getElementById('frontIc').files[0];
-    const backIcFile = document.getElementById('backIc').files[0];
 
-    // Basic validation
-    if (!frontIcFile || !backIcFile) {
-      throw new Error('Both IC documents are required');
-    }
-
-    // Create FormData payload
     const formData = new FormData();
-    formData.append('data', JSON.stringify({
-      phone: phone.replace(/[^\d]/g, ''),
-      password: password,
-      email: email,
-      icNumber: icNumber,
-      fullName: fullName,
-      address: address,
-      postcode: postcode
-    }));
+    
+    // Required fields
+    const fields = {
+      phone: document.getElementById('regPhone').value.trim(),
+      password: document.getElementById('regPassword').value,
+      email: document.getElementById('regEmail').value.trim(),
+      icNumber: document.getElementById('icNumber').value.trim(),
+      fullName: document.getElementById('fullName').value.trim(),
+      address: document.getElementById('address').value.trim(),
+      postcode: document.getElementById('postcode').value.trim()
+    };
 
-    // Append files with validated names
-    formData.append('frontIc', frontIcFile, `front_ic_${encodeURIComponent(phone)}.${frontIcFile.name.split('.').pop()}`);
-    formData.append('backIc', backIcFile, `back_ic_${encodeURIComponent(phone)}.${backIcFile.name.split('.').pop()}`);
+    // Validate required fields
+    Object.entries(fields).forEach(([key, value]) => {
+      if (!value) throw new Error(`Missing ${key.replace('reg', '')}`);
+    });
+
+    // Add JSON data
+    formData.append('data', JSON.stringify(fields));
+
+    // Add files
+    const frontIc = document.getElementById('frontIc').files[0];
+    const backIc = document.getElementById('backIc').files[0];
+    if (!frontIc || !backIc) throw new Error('Both IC files required');
+    
+    formData.append('frontIc', frontIc);
+    formData.append('backIc', backIc);
 
     // Send request
     const response = await fetch(CONFIG.PROXY_URL, {
       method: 'POST',
-      body: formData,
-      redirect: 'follow'
+      body: formData
     });
 
-    // Handle non-200 responses
     if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`Server error: ${response.status} - ${errorText}`);
+      const error = await response.json();
+      throw new Error(error.message || 'Registration failed');
     }
 
-    // Parse JSON response
     const result = await response.json();
-
-    if (!result.success) {
-      throw new Error(result.message || 'Registration failed');
+    if (result.success) {
+      window.location.href = 'login.html';
+    } else {
+      throw new Error(result.message);
     }
-
-    // Success handling
-    showError('✓ Registration successful! Redirecting...', 'registrationStatus');
-    setTimeout(() => {
-      form.reset();
-      window.location.href = 'login.html?fresh_registration=true';
-    }, 2000);
 
   } catch (error) {
+    showError(error.message);
     console.error('Registration Error:', error);
-    showError(`❗ ${error.message}`, 'registrationStatus');
-    document.getElementById('regPassword').value = '';
-    document.getElementById('regConfirmPass').value = '';
   } finally {
-    // Reset UI
-    btn.disabled = false;
-    btn.innerHTML = originalBtnText;
+    const btn = document.getElementById('registerButton');
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = 'Register';
+    }
   }
 }
 
