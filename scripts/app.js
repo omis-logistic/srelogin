@@ -1,8 +1,8 @@
 //scripts/app.js
 // ================= CONFIGURATION =================
 const CONFIG = {
-  GAS_URL: 'https://script.google.com/macros/s/AKfycbzX3OtwppxEZrq8tYhHPc3-tifSgxhZildkXwcA4aT0cHwjQuwszTWn7C3fG5iBMT8TKQ/exec',
-  PROXY_URL: 'https://script.google.com/macros/s/AKfycbzY9Pog-ObMuwnKKo38yNBHyHdDQzGKfgOwYOa-RUhFyawlJoWUxH44MxOD1h_yeUXq/exec',
+  GAS_URL: 'https://script.google.com/macros/s/AKfycbzViZplQWAx1Is7IgyV5Pd4sn_5D1tXvEXyUT65gjQ3zII-g6NNZr9I2-qwlm49xKxZ2w/exec',
+  PROXY_URL: 'https://script.google.com/macros/s/AKfycbxIiSHcuPXVM-PFTnAabF-1_jeXtmwz3TNCK6DHm7Yzjk9pUFp0ljWBk-yGLMfNKxkx/exec',
   SESSION_TIMEOUT: 3600,
   MAX_FILE_SIZE: 5 * 1024 * 1024,
   ALLOWED_FILE_TYPES: ['image/jpeg', 'image/png', 'application/pdf'],
@@ -102,28 +102,30 @@ function handleLogout() {
 }
 
 // ================= API HANDLER =================
-async function callAPI(action, payload, files = []) {
+async function callAPI(action, payload) {
   try {
     const formData = new FormData();
-    formData.append('action', action);
     
-    // Append regular fields
-    for (const [key, value] of Object.entries(payload)) {
-      formData.append(key, value);
+    if (payload.files) {
+      payload.files.forEach((file, index) => {
+        const blob = new Blob(
+          [Uint8Array.from(atob(file.base64), c => c.charCodeAt(0))],
+          { type: file.type }
+        );
+        formData.append(`file${index}`, blob, file.name);
+      });
     }
 
-    // Append files
-    files.forEach(file => {
-      formData.append(file.name, file.data);
-    });
+    formData.append('data', JSON.stringify(payload.data));
 
-    const response = await fetch(CONFIG.PROXY_URL, {
+    const response = await fetch(CONFIG.GAS_URL, {
       method: 'POST',
       body: formData
     });
 
     return await response.json();
   } catch (error) {
+    console.error('API Call Failed:', error);
     return { success: false, message: error.message };
   }
 }
@@ -395,46 +397,8 @@ function validateParcelPhone(input) {
   return isValid;
 }
 
-function validateFullName(input) {
-  const isValid = input.value.trim().length >= 3;
-  showError(isValid ? '' : 'Minimum 3 characters required', 'nameError');
-  return isValid;
-}
-
-function validateAddress(input) {
-  const isValid = input.value.trim().length >= 5;
-  showError(isValid ? '' : 'Minimum 5 characters required', 'addressError');
-  return isValid;
-}
-
-function validatePostcode(input) {
-  const isValid = /^\d{5}$/.test(input.value.trim());
-  showError(isValid ? '' : 'Invalid postcode (5 digits)', 'postcodeError');
-  return isValid;
-}
-
 // ================= FILE HANDLING =================
-async function processFiles(files, uploadType = 'parcel') {
-  // Handle different upload types
-  if(uploadType === 'ic') {
-    // IC documents require exactly 1 file per upload
-    if(files.length !== 1) {
-      throw new Error(uploadType === 'frontIC' 
-        ? 'Front IC requires exactly 1 file' 
-        : 'Back IC requires exactly 1 file');
-    }
-    
-    const file = files[0];
-    return {
-      name: file.name.replace(/[^a-z0-9._-]/gi, '_'),
-      mimeType: file.type,
-      data: await toBase64(file),
-      size: file.size,
-      field: uploadType // Add field identifier
-    };
-  }
-
-  // Existing parcel file handling
+async function processFiles(files) {
   return Promise.all(files.map(async file => ({
     name: file.name.replace(/[^a-z0-9._-]/gi, '_'),
     mimeType: file.type,
@@ -452,59 +416,50 @@ function toBase64(file) {
   });
 }
 
-function validateFiles(category, files, uploadType = 'parcel') {
-  // Handle IC document validation
-  if(uploadType === 'ic') {
-    if(files.length !== 1) {
-      throw new Error('Exactly 1 file required for IC document');
-    }
-    
-    const file = files[0];
-    const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'];
-    
-    if(!allowedTypes.includes(file.type.toLowerCase())) {
-      throw new Error('IC documents must be JPG, PNG, or PDF');
-    }
-
-    if(file.size > CONFIG.MAX_FILE_SIZE) {
-      throw new Error(`IC document exceeds ${CONFIG.MAX_FILE_SIZE/1024/1024}MB limit`);
-    }
-    return;
-  }
-
-  // Existing parcel file validation
+function validateFiles(category, files) {
   const starredCategories = [
     '*Books', '*Cosmetics/Skincare/Bodycare', '*Food Beverage/Drinks',
     '*Gadgets', '*Oil Ointment', '*Supplement'
   ];
 
-  if(starredCategories.includes(category)) {
-    if(files.length < 1) throw new Error('At least 1 file required');
-    if(files.length > CONFIG.MAX_FILES) throw new Error(`Maximum ${CONFIG.MAX_FILES} files allowed`);
+  if (starredCategories.includes(category)) {
+    if (files.length < 1) throw new Error('At least 1 file required');
+    if (files.length > 3) throw new Error('Maximum 3 files allowed');
   }
 
   files.forEach(file => {
-    if(file.size > CONFIG.MAX_FILE_SIZE) {
+    if (file.size > CONFIG.MAX_FILE_SIZE) {
       throw new Error(`${file.name} exceeds ${CONFIG.MAX_FILE_SIZE/1024/1024}MB limit`);
     }
   });
 }
 
-function handleFileSelection(input, uploadType = 'parcel') {
+function handleFileSelection(input) {
   try {
     const files = Array.from(input.files);
+    const category = document.getElementById('itemCategory').value;
     
-    if(uploadType === 'ic') {
-      validateFiles(null, files, 'ic');
-      showError(`${files.length} IC document selected`, 'status-message success');
-      return;
+    // Validate against starred categories
+    const starredCategories = [
+      '*Books', '*Cosmetics/Skincare/Bodycare', '*Food Beverage/Drinks',
+      '*Gadgets', '*Oil Ointment', '*Supplement'
+    ];
+    
+    if (starredCategories.includes(category)) {
+      if (files.length < 1) throw new Error('At least 1 file required');
+      if (files.length > 3) throw new Error('Max 3 files allowed');
     }
 
-    const category = document.getElementById('itemCategory')?.value;
-    validateFiles(category, files);
+    // Validate individual files
+    files.forEach(file => {
+      if (file.size > CONFIG.MAX_FILE_SIZE) {
+        throw new Error(`${file.name} exceeds 5MB`);
+      }
+    });
+
     showError(`${files.length} valid files selected`, 'status-message success');
     
-  } catch(error) {
+  } catch (error) {
     showError(error.message);
     input.value = '';
   }
@@ -686,75 +641,27 @@ async function handleLogin() {
   }
 }
 
-// ================= MODIFIED REGISTRATION HANDLER =================
 async function handleRegistration() {
-  const btn = document.querySelector('button');
-  const originalText = btn.innerHTML;
-  btn.disabled = true;
-  btn.innerHTML = '<div class="button-loader"></div> Registering...';
-  clearErrors();
+  if (!validateRegistrationForm()) return;
+
+  const formData = {
+    phone: document.getElementById('regPhone').value.trim(),
+    password: document.getElementById('regPassword').value,
+    email: document.getElementById('regEmail').value.trim()
+  };
 
   try {
-    console.log('Starting registration process...');
+    const result = await callAPI('createAccount', formData);
     
-    if (!validateRegistrationForm()) {
-      console.warn('Form validation failed');
-      return;
-    }
-
-    // Use PROXY_URL instead of GAS_URL for registration
-    const response = await fetch(CONFIG.PROXY_URL, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded'
-      },
-      body: `payload=${encodeURIComponent(JSON.stringify({
-        action: 'createAccount',
-        phone: document.getElementById('regPhone').value.trim(),
-        password: document.getElementById('regPassword').value,
-        email: document.getElementById('regEmail').value.trim(),
-        icNumber: document.getElementById('icNumber').value.trim(),
-        fullName: document.getElementById('fullName').value.trim(),
-        address: document.getElementById('address').value.trim(),
-        postcode: document.getElementById('postcode').value.trim(),
-        frontIc: document.getElementById('frontIc').files[0],
-        backIc: document.getElementById('backIc').files[0]
-      }))}`
-    });
-
-    console.log('Received response:', response);
-
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-
-    const result = await response.json();
-    console.log('API Result:', result);
-
     if (result.success) {
-      showError('✓ Registration successful! Redirecting...', 'registrationStatus');
-      setTimeout(() => safeRedirect('login.html'), 1500);
+      alert('Registration successful! Please login.');
+      safeRedirect('login.html');
     } else {
-      showError(`❗ ${result.message || 'Registration failed'}`, 'registrationStatus');
+      showError(result.message || 'Registration failed');
     }
   } catch (error) {
-    console.error('Registration error:', error);
-    showError(`❗ Error: ${error.message}`, 'registrationStatus');
-  } finally {
-    btn.disabled = false;
-    btn.innerHTML = originalText;
-    console.log('Registration process completed');
+    showError('Registration failed - please try again');
   }
-}
-
-// Helper functions
-function clearErrors() {
-  document.querySelectorAll('.error-message').forEach(el => el.textContent = '');
-}
-
-function resetRegistrationForm() {
-  document.getElementById('registrationForm').reset();
-  document.querySelectorAll('.file-input').forEach(input => input.value = '');
 }
 
 // ================= PASSWORD MANAGEMENT =================
@@ -814,109 +721,57 @@ async function handlePasswordReset() {
 }
 
 // ================= FORM VALIDATION =================
-function validatePhone(value) {
-  try {
-    // Ensure we're working with a string
-    const strValue = String(value || '');
-    // Clean and validate
-    const cleanValue = strValue.trim().replace(/[^0-9]/g, '');
-    return /^(673\d{7,}|60\d{9,})$/.test(cleanValue);
-  } catch (error) {
-    console.error('Phone validation error:', error);
-    return false;
-  }
+function validatePhone(phone) {
+  const regex = /^(673\d{7,}|60\d{9,})$/;
+  return regex.test(phone);
 }
 
-function validatePassword(value) {
-  return typeof value === 'string' && /^(?=.*[A-Z])(?=.*\d).{6,}$/.test(value);
+function validatePassword(password) {
+  const regex = /^(?=.*[A-Z])(?=.*\d).{6,}$/;
+  return regex.test(password);
 }
 
-function validateEmail(value) {
-  return typeof value === 'string' && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+function validateEmail(email) {
+  const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return regex.test(email);
 }
 
 function validateRegistrationForm() {
+  const phone = document.getElementById('regPhone').value;
+  const password = document.getElementById('regPassword').value;
+  const confirmPassword = document.getElementById('regConfirmPass').value;
+  const email = document.getElementById('regEmail').value;
+  const confirmEmail = document.getElementById('regConfirmEmail').value;
+
   let isValid = true;
   document.querySelectorAll('.error-message').forEach(el => el.textContent = '');
 
-  const validations = [
-    { 
-      id: 'regPhone',
-      validator: v => validatePhone(v),
-      errorId: 'phoneError'
-    },
-    { 
-      id: 'fullName',
-      validator: v => String(v || '').trim().length >= 3,
-      errorId: 'nameError'
-    },
-    { 
-      id: 'address',
-      validator: v => String(v || '').trim().length >= 5,
-      errorId: 'addressError'
-    },
-    { 
-      id: 'postcode',
-      validator: v => /^\d{5}$/.test(String(v || '')),
-      errorId: 'postcodeError'
-    },
-    { 
-      id: 'regPassword',
-      validator: v => validatePassword(v || ''),
-      errorId: 'passError'
-    },
-    { 
-      id: 'regConfirmPass',
-      validator: v => v === (document.getElementById('regPassword')?.value || ''),
-      errorId: 'confirmPassError'
-    },
-    { 
-      id: 'regEmail',
-      validator: v => validateEmail(v || ''),
-      errorId: 'emailError'
-    },
-    { 
-      id: 'regConfirmEmail',
-      validator: v => v === (document.getElementById('regEmail')?.value || ''),
-      errorId: 'confirmEmailError'
-    }
-  ];
+  if (!validatePhone(phone)) {
+    document.getElementById('phoneError').textContent = 'Invalid phone format';
+    isValid = false;
+  }
 
-  validations.forEach(({ id, validator, errorId }) => {
-    try {
-      const element = document.getElementById(id);
-      const value = element?.value ?? ''; // Null-safe value access
-      const valid = validator(value);
-      
-      if (!valid) {
-        document.getElementById(errorId).textContent = getValidationMessage(id);
-        isValid = false;
-      }
-    } catch (error) {
-      console.error(`Validation error for ${id}:`, error);
-      isValid = false;
-    }
-  });
+  if (!validatePassword(password)) {
+    document.getElementById('passError').textContent = '6+ chars, 1 uppercase, 1 number';
+    isValid = false;
+  }
 
-  // ... file validation remains unchanged ...
+  if (password !== confirmPassword) {
+    document.getElementById('confirmPassError').textContent = 'Passwords mismatch';
+    isValid = false;
+  }
+
+  if (!validateEmail(email)) {
+    document.getElementById('emailError').textContent = 'Invalid email format';
+    isValid = false;
+  }
+
+  if (email !== confirmEmail) {
+    document.getElementById('confirmEmailError').textContent = 'Emails mismatch';
+    isValid = false;
+  }
+
   return isValid;
-}
-
-// ================= VALIDATION MESSAGES =================
-function getValidationMessage(fieldId) {
-  const messages = {
-    regPhone: 'Valid phone number required (673/60 format)',
-    fullName: 'Minimum 3 characters required',
-    address: 'Minimum 5 characters required',
-    postcode: '5-digit postcode required',
-    regPassword: '6+ characters with 1 uppercase and 1 number',
-    regConfirmPass: 'Passwords must match',
-    regEmail: 'Valid email required',
-    regConfirmEmail: 'Emails must match',
-    frontIc: 'Front IC document required',
-    backIc: 'Back IC document required'
-  };
-  return messages[fieldId] || 'Invalid value';
 }
 
 // ================= UTILITIES =================
