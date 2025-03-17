@@ -1,28 +1,80 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <base target="_top">
-  <title>Register - Safhanarizqi Enterprise</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Registration - Safhanarizqi Enterprise</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles/main.css">
   <style>
     .registration-page {
-      max-width: 500px;
-      animation: slideUp 0.3s ease-out;
+      max-width: 600px;
+      margin: 2rem auto;
+      padding: 1.5rem;
+      background: rgba(0, 0, 0, 0.8);
+      border-radius: 10px;
+      box-shadow: 0 0 15px rgba(197, 160, 71, 0.3);
     }
 
-    .password-rules {
-      font-size: 0.8em;
+    .input-group {
+      margin-bottom: 1.5rem;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 0.5rem;
       color: var(--gold);
-      margin: 5px 0 10px;
-      opacity: 0.8;
+    }
+
+    input, select, textarea {
+      width: 100%;
+      padding: 12px;
+      border: 1px solid var(--gold);
+      border-radius: 5px;
+      background: #333;
+      color: #fff;
+      font-size: 16px;
+    }
+
+    .file-input {
+      border: 2px dashed var(--gold);
+      padding: 1rem;
+      text-align: center;
+    }
+
+    .button-group {
+      display: flex;
+      gap: 1rem;
+      margin-top: 2rem;
+    }
+
+    button {
+      background: var(--gold);
+      color: #000;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 5px;
+      cursor: pointer;
+      font-weight: 600;
+      transition: opacity 0.3s;
+    }
+
+    button:hover {
+      opacity: 0.9;
+    }
+
+    .error-message {
+      color: #ff4444;
+      font-size: 0.9rem;
+      margin-top: 0.25rem;
+      display: none;
     }
 
     .status-message {
-      padding: 12px;
-      margin: 15px 0;
+      padding: 1rem;
+      margin: 1rem 0;
       border-radius: 5px;
       text-align: center;
-      font-size: 14px;
       display: none;
     }
 
@@ -30,408 +82,287 @@
       background: rgba(0, 200, 81, 0.1);
       border: 1px solid #00C851;
       color: #00C851;
-      display: block;
     }
 
     .status-message.error {
       background: rgba(255, 68, 68, 0.1);
       border: 1px solid #ff4444;
       color: #ff4444;
-      display: block;
-    }
-
-    @keyframes slideUp {
-      from { opacity: 0; transform: translateY(20px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-
-    @media (max-width: 480px) {
-      .registration-page {
-        padding: 15px;
-      }
-      
-      input {
-        padding: 10px;
-        font-size: 14px;
-      }
-      
-      button {
-        padding: 10px;
-        font-size: 14px;
-      }
-    }
-
-    body {
-      min-height: 100vh;
-      display: flex;
-      flex-direction: column;
-    }
-
-    .container {
-      flex: 1;
-    }
-
-    .button-loader {
-      display: inline-block;
-      width: 12px;
-      height: 12px;
-      border: 2px solid #fff;
-      border-radius: 50%;
-      border-top-color: transparent;
-      animation: spin 0.8s linear infinite;
-      margin-right: 8px;
-    }
-
-    @keyframes spin {
-      to { transform: rotate(360deg); }
     }
   </style>
 </head>
 <body>
-  <div class="container registration-page">
-    <h1>New Registration</h1>
-    
-    <div class="input-group">
-      <input type="tel" 
-             id="regPhone" 
-             placeholder="Phone (673/60 format)" 
-             pattern="^(673\d{7,}|60\d{9,})$" 
-             required>
-      <div class="error-message" id="phoneError"></div>
-    </div>
-    
-    <div class="input-group">
-      <input type="text" id="icNumber" placeholder="I.C Number" required>
-      <div class="error-message" id="icError"></div>
-    </div>
+  <div class="container">
+    <div class="registration-page">
+      <h1>New Account Registration</h1>
+      
+      <form id="registrationForm" enctype="multipart/form-data">
+        <!-- Phone Number -->
+        <div class="input-group">
+          <label for="regPhone">Phone Number (673/60 format)</label>
+          <input type="tel" id="regPhone" pattern="^(673\d{7,}|60\d{9,})$" required>
+          <div class="error-message" id="phoneError"></div>
+        </div>
 
-    <div class="input-group">
-      <label>Front I.C (Image/PDF):</label>
-      <input type="file" id="frontIc" accept="image/*,.pdf" required>
-      <div class="error-message" id="frontIcError"></div>
+        <!-- IC Number -->
+        <div class="input-group">
+          <label for="icNumber">I.C Number</label>
+          <input type="text" id="icNumber" required>
+          <div class="error-message" id="icError"></div>
+        </div>
+
+        <!-- IC Documents -->
+        <div class="input-group">
+          <label>Identity Documents</label>
+          <div class="file-input">
+            <label for="frontIc">Front IC (Image/PDF)</label>
+            <input type="file" id="frontIc" accept="image/*,.pdf" required>
+            <div class="error-message" id="frontIcError"></div>
+          </div>
+          <div class="file-input">
+            <label for="backIc">Back IC (Image/PDF)</label>
+            <input type="file" id="backIc" accept="image/*,.pdf" required>
+            <div class="error-message" id="backIcError"></div>
+          </div>
+        </div>
+
+        <!-- Personal Details -->
+        <div class="input-group">
+          <label for="fullName">Full Name</label>
+          <input type="text" id="fullName" required>
+          <div class="error-message" id="nameError"></div>
+        </div>
+
+        <div class="input-group">
+          <label for="address">Mailing Address</label>
+          <textarea id="address" required></textarea>
+          <div class="error-message" id="addressError"></div>
+        </div>
+
+        <div class="input-group">
+          <label for="postcode">Postcode</label>
+          <input type="text" id="postcode" pattern="\d{5}" required>
+          <div class="error-message" id="postcodeError"></div>
+        </div>
+
+        <!-- Account Details -->
+        <div class="input-group">
+          <label for="regPassword">Password</label>
+          <input type="password" id="regPassword" 
+                 pattern="^(?=.*[A-Z])(?=.*\d).{6,}$" required>
+          <div class="error-message" id="passError"></div>
+        </div>
+
+        <div class="input-group">
+          <label for="regConfirmPass">Confirm Password</label>
+          <input type="password" id="regConfirmPass" required>
+          <div class="error-message" id="confirmPassError"></div>
+        </div>
+
+        <div class="input-group">
+          <label for="regEmail">Email Address</label>
+          <input type="email" id="regEmail" required>
+          <div class="error-message" id="emailError"></div>
+        </div>
+
+        <div class="input-group">
+          <label for="regConfirmEmail">Confirm Email</label>
+          <input type="email" id="regConfirmEmail" required>
+          <div class="error-message" id="confirmEmailError"></div>
+        </div>
+
+        <!-- Form Actions -->
+        <div class="button-group">
+          <button type="button" onclick="handleRegistration()">Register</button>
+          <button type="button" class="secondary-btn" onclick="safeRedirect('login.html')">
+            Back to Login
+          </button>
+        </div>
+
+        <!-- Status Messages -->
+        <div id="registrationStatus" class="status-message"></div>
+      </form>
     </div>
-
-    <div class="input-group">
-      <label>Back I.C (Image/PDF):</label>
-      <input type="file" id="backIc" accept="image/*,.pdf" required>
-      <div class="error-message" id="backIcError"></div>
-    </div>
-
-    <div class="input-group">
-      <input type="text" id="fullName" placeholder="Full Name" required>
-      <div class="error-message" id="nameError"></div>
-    </div>
-
-    <div class="input-group">
-      <input type="text" id="address" placeholder="Mailing Address" required>
-      <div class="error-message" id="addressError"></div>
-    </div>
-
-    <div class="input-group">
-      <input type="text" id="postcode" placeholder="Postcode" pattern="\d{5}" required>
-      <div class="error-message" id="postcodeError"></div>
-    </div>
-
-    <div class="input-group">
-      <input type="password" 
-             id="regPassword" 
-             placeholder="Create Password"
-             pattern="^(?=.*[A-Z])(?=.*\d).{6,}$" 
-             required>
-      <div class="password-rules">6+ characters, 1 uppercase, 1 number</div>
-      <div class="error-message" id="passError"></div>
-    </div>
-
-    <div class="input-group">
-      <input type="password" 
-             id="regConfirmPass" 
-             placeholder="Confirm Password" 
-             required>
-      <div class="error-message" id="confirmPassError"></div>
-    </div>
-
-    <div class="input-group">
-      <input type="email" 
-             id="regEmail" 
-             placeholder="Email Address" 
-             required>
-      <div class="error-message" id="emailError"></div>
-    </div>
-
-    <div class="input-group">
-      <input type="email" 
-             id="regConfirmEmail" 
-             placeholder="Confirm Email" 
-             required>
-      <div class="error-message" id="confirmEmailError"></div>
-    </div>
-
-    <button onclick="handleRegistration()">Register</button>
-    <button class="secondary-btn" onclick="safeRedirect('login.html')" style="margin-top: 10px;">Back to Login</button>
-
-    <div id="registrationStatus" class="status-message"></div>
   </div>
 
-  <script src="scripts/app.js"></script>
   <script>
-    
-  // ================= UPDATED REGISTRATION HANDLER =================
-async function handleRegistration() {
-  const btn = document.querySelector('button');
-  const originalText = btn.innerHTML;
-  btn.disabled = true;
-  btn.innerHTML = '<div class="button-loader"></div> Registering...';
-  clearErrors();
-
-  try {
-    console.log('Starting registration process...');
-    
-    if (!validateRegistrationForm()) {
-      console.warn('Form validation failed');
-      return;
-    }
-
-    // Prepare form data with files
-    const formData = {
-      action: 'createAccount',
-      phone: document.getElementById('regPhone').value.trim(),
-      password: document.getElementById('regPassword').value,
-      email: document.getElementById('regEmail').value.trim(),
-      icNumber: document.getElementById('icNumber').value.trim(),
-      fullName: document.getElementById('fullName').value.trim(),
-      address: document.getElementById('address').value.trim(),
-      postcode: document.getElementById('postcode').value.trim(),
-      frontIc: await processFileInput('frontIc'),
-      backIc: await processFileInput('backIc')
+    const CONFIG = {
+      PROXY_URL: 'https://script.google.com/macros/s/AKfycbxIAX4irDMGRGzrQcnuQIP3-gAdMJ_tdAP9UDHr14s4deFBLu_-RjBRjZA8FgX3mrqtEQ/exec'
     };
 
-    console.log('Form payload prepared:', formData);
+    // ================= UPDATED REGISTRATION HANDLER =================
+    async function handleRegistration() {
+      const btn = document.querySelector('button');
+      const originalText = btn.innerHTML;
+      btn.disabled = true;
+      btn.innerHTML = '<div class="button-loader"></div> Registering...';
+      clearErrors();
 
-    // Initial fetch call with redirect handling
-    const response = await fetch(CONFIG.PROXY_URL, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-        'X-Requested-With': 'XMLHttpRequest'
-      },
-      body: `payload=${encodeURIComponent(JSON.stringify(formData))}`,
-      redirect: 'manual'
-    });
+      try {
+        if (!validateRegistrationForm()) return;
 
-    console.log('Initial response:', response);
+        const formData = new FormData();
+        
+        // Append all form fields
+        formData.append('action', 'createAccount');
+        formData.append('phone', document.getElementById('regPhone').value.trim());
+        formData.append('password', document.getElementById('regPassword').value);
+        formData.append('email', document.getElementById('regEmail').value.trim());
+        formData.append('icNumber', document.getElementById('icNumber').value.trim());
+        formData.append('fullName', document.getElementById('fullName').value.trim());
+        formData.append('address', document.getElementById('address').value.trim());
+        formData.append('postcode', document.getElementById('postcode').value.trim());
 
-    // Handle Google Scripts redirect
-    let result;
-    if (response.status === 0 || response.status === 307) {
-      const finalUrl = response.headers.get('Location');
-      if (!finalUrl) throw new Error('Missing redirect location');
-      
-      console.log('Redirecting to:', finalUrl);
-      const redirectedResponse = await fetch(finalUrl, {
-        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        // Append files
+        const frontIcFile = document.getElementById('frontIc').files[0];
+        const backIcFile = document.getElementById('backIc').files[0];
+        formData.append('frontIc', frontIcFile);
+        formData.append('backIc', backIcFile);
+
+        const response = await fetch(CONFIG.PROXY_URL, {
+          method: 'POST',
+          body: formData,
+          headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+          }
+        });
+
+        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+        
+        const result = await response.json();
+        
+        if (result.success) {
+          showStatus('✓ Registration successful! Redirecting...', 'success');
+          setTimeout(() => safeRedirect('login.html'), 1500);
+        } else {
+          showStatus(`❗ ${result.message || 'Registration failed'}`, 'error');
+        }
+      } catch (error) {
+        console.error('Registration error:', error);
+        showStatus(`❗ Error: ${error.message}`, 'error');
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = originalText;
+      }
+    }
+
+    // ================= VALIDATION FUNCTIONS =================
+    function validateRegistrationForm() {
+      let isValid = true;
+      clearErrors();
+
+      // Phone Validation
+      const phone = document.getElementById('regPhone').value;
+      if (!/^(673\d{7,}|60\d{9,})$/.test(phone)) {
+        showError('phoneError', 'Invalid phone format');
+        isValid = false;
+      }
+
+      // IC Validation
+      if (!document.getElementById('icNumber').value.trim()) {
+        showError('icError', 'IC number required');
+        isValid = false;
+      }
+
+      // Name Validation
+      const fullName = document.getElementById('fullName').value;
+      if (fullName.trim().length < 3) {
+        showError('nameError', 'Minimum 3 characters');
+        isValid = false;
+      }
+
+      // Address Validation
+      if (document.getElementById('address').value.trim().length < 5) {
+        showError('addressError', 'Minimum 5 characters');
+        isValid = false;
+      }
+
+      // Postcode Validation
+      if (!/^\d{5}$/.test(document.getElementById('postcode').value)) {
+        showError('postcodeError', '5-digit postcode required');
+        isValid = false;
+      }
+
+      // Password Validation
+      const password = document.getElementById('regPassword').value;
+      if (!/(?=.*[A-Z])(?=.*\d).{6,}/.test(password)) {
+        showError('passError', '6+ chars with 1 uppercase & 1 number');
+        isValid = false;
+      }
+
+      // Password Match
+      if (password !== document.getElementById('regConfirmPass').value) {
+        showError('confirmPassError', 'Passwords do not match');
+        isValid = false;
+      }
+
+      // Email Validation
+      const email = document.getElementById('regEmail').value;
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        showError('emailError', 'Invalid email format');
+        isValid = false;
+      }
+
+      // Email Match
+      if (email !== document.getElementById('regConfirmEmail').value) {
+        showError('confirmEmailError', 'Emails do not match');
+        isValid = false;
+      }
+
+      // File Validation
+      if (!document.getElementById('frontIc').files[0]) {
+        showError('frontIcError', 'Front IC required');
+        isValid = false;
+      }
+      if (!document.getElementById('backIc').files[0]) {
+        showError('backIcError', 'Back IC required');
+        isValid = false;
+      }
+
+      return isValid;
+    }
+
+    // ================= UTILITY FUNCTIONS =================
+    function showError(elementId, message) {
+      const element = document.getElementById(elementId);
+      if (element) {
+        element.textContent = message;
+        element.style.display = 'block';
+      }
+    }
+
+    function showStatus(message, type = 'info') {
+      const statusElement = document.getElementById('registrationStatus');
+      statusElement.textContent = message;
+      statusElement.className = `status-message ${type}`;
+      statusElement.style.display = 'block';
+    }
+
+    function clearErrors() {
+      document.querySelectorAll('.error-message').forEach(el => {
+        el.textContent = '';
+        el.style.display = 'none';
       });
-      
-      if (!redirectedResponse.ok) {
-        throw new Error(`Redirect failed: ${redirectedResponse.status}`);
-      }
-      
-      result = await redirectedResponse.json();
-    } else {
-      result = await response.json();
+      document.getElementById('registrationStatus').style.display = 'none';
     }
 
-    console.log('Final API Result:', result);
-
-    if (result.success) {
-      showError('✓ Registration successful! Redirecting...', 'registrationStatus');
-      setTimeout(() => safeRedirect('login.html'), 1500);
-    } else {
-      showError(`❗ ${result.message || 'Registration failed'}`, 'registrationStatus');
+    function safeRedirect(path) {
+      window.location.href = path;
     }
 
-  } catch (error) {
-    console.error('Registration error:', error);
-    showError(`❗ Error: ${error.message}`, 'registrationStatus');
-  } finally {
-    btn.disabled = false;
-    btn.innerHTML = originalText;
-    console.log('Registration process completed');
-  }
-}
-
-// ================= FILE PROCESSING UTILITIES =================
-async function processFileInput(elementId) {
-  const fileInput = document.getElementById(elementId);
-  if (!fileInput || !fileInput.files[0]) return null;
-  
-  try {
-    const file = fileInput.files[0];
-    return {
-      name: file.name,
-      type: file.type,
-      data: await readFileAsBase64(file)
-    };
-  } catch (error) {
-    console.error('File processing error:', error);
-    throw new Error(`Failed to process ${elementId} file`);
-  }
-}
-
-function readFileAsBase64(file) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => {
-      const result = reader.result;
-      if (!result) {
-        reject(new Error('Failed to read file'));
-        return;
-      }
-      resolve(result.split(',')[1]); // Remove data URL prefix
-    };
-    reader.onerror = error => reject(error);
-    reader.readAsDataURL(file);
-  });
-}
-
-// ================= CORRECTED VALIDATION FUNCTIONS =================
-function validatePhone(value) {
-  const cleanValue = String(value || '').trim().replace(/[^0-9]/g, '');
-  return /^(673\d{7,}|60\d{9,})$/.test(cleanValue);
-}
-
-function validatePassword(value) {
-  return /^(?=.*[A-Z])(?=.*\d).{6,}$/.test(value || '');
-}
-
-function validateEmail(value) {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value || '');
-}
-
-// ================= COMPLETE VALIDATION MATRIX =================
-function validateRegistrationForm() {
-  let isValid = true;
-  document.querySelectorAll('.error-message').forEach(el => el.textContent = '');
-
-  const validations = [
-    { id: 'regPhone', validator: validatePhone, errorId: 'phoneError' },
-    { id: 'fullName', validator: v => String(v || '').trim().length >= 3, errorId: 'nameError' },
-    { id: 'address', validator: v => String(v || '').trim().length >= 5, errorId: 'addressError' },
-    { id: 'postcode', validator: v => /^\d{5}$/.test(v || ''), errorId: 'postcodeError' },
-    { id: 'regPassword', validator: validatePassword, errorId: 'passError' },
-    { id: 'regConfirmPass', validator: v => v === (document.getElementById('regPassword')?.value || ''), errorId: 'confirmPassError' },
-    { id: 'regEmail', validator: validateEmail, errorId: 'emailError' },
-    { id: 'regConfirmEmail', validator: v => v === (document.getElementById('regEmail')?.value || ''), errorId: 'confirmEmailError' }
-  ];
-
-  validations.forEach(({ id, validator, errorId }) => {
-    const value = document.getElementById(id)?.value || '';
-    const valid = validator(value);
-    if (!valid) {
-      document.getElementById(errorId).textContent = getValidationMessage(id);
-      isValid = false;
-    }
-  });
-
-  // File validation
-  ['frontIc', 'backIc'].forEach(id => {
-    const fileInput = document.getElementById(id);
-    if (!fileInput?.files?.[0]) {
-      document.getElementById(`${id}Error`).textContent = `${id.replace('Ic', ' IC')} is required`;
-      isValid = false;
-    }
-  });
-
-  return isValid;
-}
-
-// ================= VALIDATION MESSAGES =================
-function getValidationMessage(fieldId) {
-  const messages = {
-    regPhone: 'Valid phone number required (673/60 format)',
-    fullName: 'Minimum 3 characters required',
-    address: 'Minimum 5 characters required',
-    postcode: '5-digit postcode required',
-    regPassword: '6+ characters with 1 uppercase and 1 number',
-    regConfirmPass: 'Passwords must match',
-    regEmail: 'Valid email required',
-    regConfirmEmail: 'Emails must match'
-  };
-  return messages[fieldId] || 'Invalid value';
-}
-
-// ================= UPDATED REAL-TIME VALIDATION =================
-document.getElementById('regPhone').addEventListener('input', function() {
-  const isValid = validatePhone(this.value);
-  this.setCustomValidity(isValid ? '' : 'Invalid format');
-  document.getElementById('phoneError').textContent = isValid ? '' : getValidationMessage('regPhone');
-});
-
-document.getElementById('fullName').addEventListener('input', function() {
-  const isValid = this.value.trim().length >= 3;
-  this.setCustomValidity(isValid ? '' : 'Too short');
-  document.getElementById('nameError').textContent = isValid ? '' : getValidationMessage('fullName');
-});
-
-document.getElementById('address').addEventListener('input', function() {
-  const isValid = this.value.trim().length >= 5;
-  this.setCustomValidity(isValid ? '' : 'Too short');
-  document.getElementById('addressError').textContent = isValid ? '' : getValidationMessage('address');
-});
-
-document.getElementById('postcode').addEventListener('input', function() {
-  const isValid = /^\d{5}$/.test(this.value);
-  this.setCustomValidity(isValid ? '' : 'Invalid postcode');
-  document.getElementById('postcodeError').textContent = isValid ? '' : getValidationMessage('postcode');
-});
-
-document.getElementById('regPassword').addEventListener('input', function() {
-  const isValid = validatePassword(this.value);
-  this.setCustomValidity(isValid ? '' : 'Invalid format');
-  document.getElementById('passError').textContent = isValid ? '' : getValidationMessage('regPassword');
-});
-
-document.getElementById('regConfirmPass').addEventListener('input', function() {
-  const isValid = this.value === document.getElementById('regPassword').value;
-  this.setCustomValidity(isValid ? '' : 'Mismatch');
-  document.getElementById('confirmPassError').textContent = isValid ? '' : getValidationMessage('regConfirmPass');
-});
-
-document.getElementById('regEmail').addEventListener('input', function() {
-  const isValid = validateEmail(this.value);
-  this.setCustomValidity(isValid ? '' : 'Invalid email');
-  document.getElementById('emailError').textContent = isValid ? '' : getValidationMessage('regEmail');
-});
-
-document.getElementById('regConfirmEmail').addEventListener('input', function() {
-  const isValid = this.value === document.getElementById('regEmail').value;
-  this.setCustomValidity(isValid ? '' : 'Mismatch');
-  document.getElementById('confirmEmailError').textContent = isValid ? '' : getValidationMessage('regConfirmEmail');
-});
-
-document.getElementById('frontIc').addEventListener('change', function() {
-  const isValid = this.files.length > 0;
-  this.setCustomValidity(isValid ? '' : 'Required');
-  document.getElementById('frontIcError').textContent = isValid ? '' : getValidationMessage('frontIc');
-});
-
-document.getElementById('backIc').addEventListener('change', function() {
-  const isValid = this.files.length > 0;
-  this.setCustomValidity(isValid ? '' : 'Required');
-  document.getElementById('backIcError').textContent = isValid ? '' : getValidationMessage('backIc');
-});
-
-// ================= UTILITIES =================
-function clearErrors() {
-  document.querySelectorAll('.error-message').forEach(el => {
-    el.textContent = '';
-  });
-  document.querySelectorAll('input').forEach(el => {
-    el.setCustomValidity('');
-  });
-}
-
+    // Initialize real-time validations
+    document.querySelectorAll('input, select').forEach(element => {
+      element.addEventListener('input', () => {
+        if (element.checkValidity) {
+          const errorId = `${element.id}Error`;
+          element.reportValidity();
+          document.getElementById(errorId).style.display = 
+            element.validity.valid ? 'none' : 'block';
+        }
+      });
+    });
   </script>
-  
+
   <div class="footer-text">
     Built by Omis Logistics. For more info 👉
     <a href="https://wa.me/6737187776" target="_blank" rel="noopener">here</a>
