@@ -130,68 +130,62 @@
   <div class="container registration-page">
     <h1>New Registration</h1>
     
-    <div class="input-group">
-      <input type="tel" 
-             id="regPhone" 
-             placeholder="Phone (673/60 format)" 
-             pattern="^(673\d{7,}|60\d{9,})$" 
-             required>
-      <div class="error-message" id="phoneError"></div>
-    </div>
+<form id="registrationForm" onsubmit="event.preventDefault(); handleRegistration()">
+  <div class="input-group">
+    <input type="tel" id="regPhone" required
+           pattern="^(673\d{7}|60\d{9})$"
+           placeholder="Phone (673/60 format)">
+    <div class="error-message" id="phoneError"></div>
+  </div>
 
-    <div class="input-group">
-      <input type="password" 
-             id="regPassword" 
-             placeholder="Create Password"
-             pattern="^(?=.*[A-Z])(?=.*\d).{6,}$" 
-             required>
-      <div class="password-rules">6+ characters, 1 uppercase, 1 number</div>
-      <div class="error-message" id="passError"></div>
-    </div>
+  <div class="input-group">
+    <input type="password" id="regPassword" required
+           pattern="^(?=.*[A-Z])(?=.*\d).{6,}$"
+           placeholder="Create Password">
+    <div class="error-message" id="passError"></div>
+  </div>
 
-    <div class="input-group">
-      <input type="password" 
-             id="regConfirmPass" 
-             placeholder="Confirm Password" 
-             required>
-      <div class="error-message" id="confirmPassError"></div>
-    </div>
+  <div class="input-group">
+    <input type="email" id="regEmail" required
+           placeholder="Email Address">
+    <div class="error-message" id="emailError"></div>
+  </div>
 
-    <div class="input-group">
-      <input type="email" 
-             id="regEmail" 
-             placeholder="Email Address" 
-             required>
-      <div class="error-message" id="emailError"></div>
-    </div>
-
-    <div class="input-group">
-      <input type="email" 
-             id="regConfirmEmail" 
-             placeholder="Confirm Email" 
-             required>
-      <div class="error-message" id="confirmEmailError"></div>
-    </div>
-
-    <button onclick="handleRegistration()">Register</button>
+  <button type="submit">Register</button>
     <button class="secondary-btn" onclick="safeRedirect('login.html')" style="margin-top: 10px;">
       Back to Login
     </button>
-
+</form>
     <div id="registrationStatus" class="status-message"></div>
   </div>
 
   <script src="scripts/app.js"></script>
   <script>
     async function handleRegistration() {
-  const btn = document.querySelector('button');
+  const btn = document.querySelector('.registration-page button');
+  const originalText = btn.innerHTML;
   btn.disabled = true;
-  
-  try {
-    // 1. Validate form
-    if (!validateRegistrationForm()) return;
+  btn.innerHTML = '<div class="button-loader"></div> Registering...';
 
-    // 2. Prepare payload
+  // Clear previous errors
+  document.querySelectorAll('.error-message').forEach(el => {
+    el.textContent = '';
+    el.style.display = 'none';
+  });
+  
+  const statusElement = document.getElementById('registrationStatus');
+  statusElement.className = '';
+  statusElement.textContent = '';
+
+  try {
+    // 1. Validate form inputs first
+    if (!validateRegistrationForm()) {
+      btn.disabled = false;
+      btn.innerHTML = originalText;
+      return;
+    }
+
+    // 2. Prepare properly structured payload
     const payload = {
       action: 'createAccount',
       data: {
@@ -201,27 +195,52 @@
       }
     };
 
-    // 3. Send request
+    // 3. Send to proxy endpoint
     const response = await fetch(CONFIG.PROXY_URL, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json'
+      },
       body: JSON.stringify(payload)
     });
 
     // 4. Handle response
-    const result = await response.json();
-    
-    if (result.success) {
-      alert('Registration successful!');
-      window.location.href = 'login.html';
-    } else {
-      showError(result.message);
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
     }
-    
+
+    const result = await response.json();
+
+    // 5. Show appropriate message
+    if (result.success) {
+      statusElement.className = 'status-message success';
+      statusElement.textContent = 'Registration successful! Redirecting...';
+      setTimeout(() => {
+        window.location.href = 'login.html';
+      }, 1500);
+    } else {
+      statusElement.className = 'status-message error';
+      statusElement.textContent = result.message || 'Registration failed';
+      
+      // Highlight specific field errors
+      if (result.message.includes('phone')) {
+        document.getElementById('phoneError').textContent = result.message;
+        document.getElementById('phoneError').style.display = 'block';
+      }
+    }
+
   } catch (error) {
-    showError('Registration failed - please try again');
+    console.error('Registration Error:', error);
+    statusElement.className = 'status-message error';
+    statusElement.textContent = 'Registration failed - please try again';
+    
+    // Show specific error for invalid JSON
+    if (error instanceof SyntaxError) {
+      statusElement.textContent = 'Invalid server response';
+    }
   } finally {
     btn.disabled = false;
+    btn.innerHTML = originalText;
   }
 }
 
