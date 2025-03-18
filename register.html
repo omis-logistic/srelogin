@@ -74,7 +74,8 @@
 <body>
   <div class="container registration-page">
     <h1>New Registration</h1>
-    
+
+    <form id="registrationForm" onsubmit="handleRegistration(event)">
     <div class="input-group">
       <input type="tel" 
              id="regPhone" 
@@ -118,71 +119,72 @@
       <div class="error-message" id="confirmEmailError"></div>
     </div>
 
-    <button onclick="handleRegistration()">Register</button>
-    <button class="secondary-btn" onclick="safeRedirect('login.html')" style="margin-top: 10px;">Back to Login</button>
+    <button type="submit">Register</button>
+      <button type="button" class="secondary-btn" onclick="safeRedirect('login.html')" style="margin-top: 10px;">
+        Back to Login
+      </button>
 
-    <div id="registrationStatus" class="status-message"></div>
+      <div id="registrationStatus" class="status-message"></div>
+    </form>
   </div>
 
   <script src="scripts/app.js"></script>
   <script>
-    function handleRegistration() {
-  const btn = document.querySelector('.registration-page button');
-  const originalText = btn.innerHTML;
-  btn.disabled = true;
-  btn.innerHTML = '<div class="button-loader"></div> Registering...';
+    function handleRegistration(e) {
+      e.preventDefault();
+      const btn = e.target.querySelector('button[type="submit"]');
+      const originalText = btn.innerHTML;
+      btn.disabled = true;
+      btn.innerHTML = '<div class="button-loader"></div> Registering...';
 
-  // Clear previous errors
-  document.querySelectorAll('.error-message').forEach(el => el.textContent = '');
-  const statusElement = document.getElementById('registrationStatus');
-  statusElement.className = '';
-  statusElement.textContent = '';
+      // Clear errors
+      document.querySelectorAll('.error-message').forEach(el => el.textContent = '');
+      const statusElement = document.getElementById('registrationStatus');
+      statusElement.className = '';
+      statusElement.textContent = '';
 
-  // Validate form first
-  if (!validateRegistrationForm()) {
-    btn.disabled = false;
-    btn.innerHTML = originalText;
-    return;
-  }
-
-  // Get form values
-  const phone = document.getElementById('regPhone').value;
-  const password = document.getElementById('regPassword').value;
-  const email = document.getElementById('regEmail').value;
-
-  // Create JSONP request
-  const callbackName = `jsonp_${Date.now()}`;
-  const script = document.createElement('script');
-  script.src = `${CONFIG.GAS_URL}?action=createAccount&phone=${encodeURIComponent(phone)}&password=${encodeURIComponent(password)}&email=${encodeURIComponent(email)}&callback=${callbackName}`;
-
-  window[callbackName] = (response) => {
-    // Cleanup and restore button
-    delete window[callbackName];
-    document.body.removeChild(script);
-    btn.disabled = false;
-    btn.innerHTML = originalText;
-
-    // Handle response
-    if (response.success) {
-      statusElement.className = 'status-message success';
-      statusElement.textContent = 'Registration successful! Redirecting...';
-      setTimeout(() => safeRedirect('login.html'), 1500);
-    } else {
-      statusElement.className = 'status-message error';
-      statusElement.textContent = response.message || 'Registration failed';
-      
-      // Highlight specific errors if available
-      if (response.errors) {
-        response.errors.forEach(error => {
-          const errorField = document.getElementById(`${error.field}Error`);
-          if (errorField) errorField.textContent = error.message;
-        });
+      // Validate form
+      if (!validateRegistrationForm()) {
+        btn.disabled = false;
+        btn.innerHTML = originalText;
+        return;
       }
-    }
-  };
 
-  document.body.appendChild(script);
-}
+      // Prepare payload
+      const payload = {
+        action: 'createAccount',
+        phone: document.getElementById('regPhone').value.trim(),
+        password: document.getElementById('regPassword').value,
+        email: document.getElementById('regEmail').value.trim()
+      };
+
+      // Submit via proxy
+      fetch(CONFIG.GAS_URL, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(payload)
+      })
+      .then(response => response.json())
+      .then(result => {
+        if (result.success) {
+          statusElement.className = 'status-message success';
+          statusElement.textContent = 'Registration successful! Redirecting...';
+          setTimeout(() => safeRedirect('login.html'), 1500);
+        } else {
+          statusElement.className = 'status-message error';
+          statusElement.textContent = result.message || 'Registration failed';
+        }
+      })
+      .catch(error => {
+        statusElement.className = 'status-message error';
+        statusElement.textContent = 'Registration failed - please try again';
+        console.error('Registration error:', error);
+      })
+      .finally(() => {
+        btn.disabled = false;
+        btn.innerHTML = originalText;
+      });
+    }
 
     document.getElementById('regPhone').addEventListener('input', function() {
       document.getElementById('phoneError').textContent = 
