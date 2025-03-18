@@ -151,13 +151,16 @@
 
   const payload = {
     action: 'createAccount',
-    data: { // NEST UNDER DATA KEY TO MATCH PARCEL DECLARATION PATTERN
+    data: { // Maintain this nested structure
       phone: document.getElementById('regPhone').value.trim(),
       password: document.getElementById('regPassword').value,
       email: document.getElementById('regEmail').value.trim()
     }
   };
 
+  // Add debug output
+  console.log('Submitting payload:', payload);
+  
   fetch(CONFIG.PROXY_URL, {
     method: 'POST',
     headers: {'Content-Type': 'application/x-www-form-urlencoded'},
