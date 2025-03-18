@@ -2,14 +2,12 @@
 <html>
 <head>
   <base target="_top">
-  <title>Register - Safhanarizqi Enterprise</title>
+  <title>Register - Safhanrizqi Enterprise</title>
   <link rel="stylesheet" href="styles/main.css">
   <style>
     .registration-page {
       max-width: 500px;
       animation: slideUp 0.3s ease-out;
-      padding: 20px;
-      margin: 0 auto;
     }
 
     .password-rules {
@@ -62,300 +60,156 @@
         font-size: 14px;
       }
     }
-
     body {
-      min-height: 100vh;
-      display: flex;
-      flex-direction: column;
-    }
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
 
-    .container {
-      flex: 1;
-    }
-
-    .footer-text {
-      text-align: center;
-      padding: 20px;
-      color: var(--text-light);
-      opacity: 0.8;
-      font-size: 0.9em;
-    }
-
-    .footer-text a {
-      color: var(--gold);
-      text-decoration: none;
-    }
-
-    .error-message {
-      color: #ff4444;
-      font-size: 0.8em;
-      margin-top: 4px;
-      display: none;
-    }
-
-    .input-group {
-      margin-bottom: 15px;
-    }
-
-    input, button {
-      width: 100%;
-      padding: 12px;
-      border-radius: 5px;
-      border: 1px solid var(--gold);
-      background: rgba(0,0,0,0.5);
-      color: var(--text-light);
-      margin-top: 5px;
-    }
-
-    button {
-      background: var(--gold);
-      color: var(--dark-bg);
-      border: none;
-      cursor: pointer;
-      transition: opacity 0.3s ease;
-    }
-
-    button:hover {
-      opacity: 0.9;
-    }
-
-    .secondary-btn {
-      background: transparent !important;
-      color: var(--gold) !important;
-      border: 1px solid var(--gold) !important;
-    }
+.container {
+  flex: 1;
+}
   </style>
 </head>
 <body>
   <div class="container registration-page">
     <h1>New Registration</h1>
     
-<form id="registrationForm" onsubmit="event.preventDefault(); handleRegistration()">
-  <!-- Phone Field -->
-  <div class="input-group">
-    <input type="tel" id="regPhone" required
-           pattern="^(673\d{7}|60\d{9})$"
-           placeholder="Phone (673/60 format)">
-    <div class="error-message" id="phoneError"></div>
-  </div>
+    <div class="input-group">
+      <input type="tel" 
+             id="regPhone" 
+             placeholder="Phone (673/60 format)" 
+             pattern="^(673\d{7,}|60\d{9,})$" 
+             required>
+      <div class="error-message" id="phoneError"></div>
+    </div>
 
-  <!-- Password Fields -->
-  <div class="input-group">
-    <input type="password" id="regPassword" required
-           pattern="^(?=.*[A-Z])(?=.*\d).{6,}$"
-           placeholder="Create Password">
-    <div class="error-message" id="passError"></div>
-  </div>
+    <div class="input-group">
+      <input type="password" 
+             id="regPassword" 
+             placeholder="Create Password"
+             pattern="^(?=.*[A-Z])(?=.*\d).{6,}$" 
+             required>
+      <div class="password-rules">6+ characters, 1 uppercase, 1 number</div>
+      <div class="error-message" id="passError"></div>
+    </div>
 
-  <div class="input-group">
-    <input type="password" id="regConfirmPass" required
-           placeholder="Confirm Password">
-    <div class="error-message" id="confirmPassError"></div>
-  </div>
+    <div class="input-group">
+      <input type="password" 
+             id="regConfirmPass" 
+             placeholder="Confirm Password" 
+             required>
+      <div class="error-message" id="confirmPassError"></div>
+    </div>
 
-  <!-- Email Fields -->
-  <div class="input-group">
-    <input type="email" id="regEmail" required
-           placeholder="Email Address">
-    <div class="error-message" id="emailError"></div>
-  </div>
+    <div class="input-group">
+      <input type="email" 
+             id="regEmail" 
+             placeholder="Email Address" 
+             required>
+      <div class="error-message" id="emailError"></div>
+    </div>
 
-  <div class="input-group">
-    <input type="email" id="regConfirmEmail" required
-           placeholder="Confirm Email">
-    <div class="error-message" id="confirmEmailError"></div>
-  </div>
+    <div class="input-group">
+      <input type="email" 
+             id="regConfirmEmail" 
+             placeholder="Confirm Email" 
+             required>
+      <div class="error-message" id="confirmEmailError"></div>
+    </div>
 
-  <button type="submit">Register</button>
-  <button class="secondary-btn" onclick="safeRedirect('login.html')" 
-          type="button" style="margin-top: 10px;">
-    Back to Login
-  </button>
-</form>
+    <button onclick="handleRegistration()">Register</button>
+    <button class="secondary-btn" onclick="safeRedirect('login.html')" style="margin-top: 10px;">Back to Login</button>
+
     <div id="registrationStatus" class="status-message"></div>
   </div>
 
   <script src="scripts/app.js"></script>
   <script>
-
-function validateRegistrationForm() {
-  const phone = document.getElementById('regPhone').value;
-  const password = document.getElementById('regPassword').value;
-  const confirmPass = document.getElementById('regConfirmPass').value;
-  const email = document.getElementById('regEmail').value;
-  const confirmEmail = document.getElementById('regConfirmEmail').value;
-
-  let isValid = true;
-  
-  // Clear previous errors
-  document.querySelectorAll('.error-message').forEach(el => {
-    el.textContent = '';
-    el.style.display = 'none';
-  });
-
-  // Phone validation
-  if (!validatePhone(phone)) {
-    document.getElementById('phoneError').textContent = 'Invalid phone format';
-    document.getElementById('phoneError').style.display = 'block';
-    isValid = false;
-  }
-
-  // Password validation
-  if (!validatePassword(password)) {
-    document.getElementById('passError').textContent = 'Password must contain 6+ characters with 1 uppercase and 1 number';
-    document.getElementById('passError').style.display = 'block';
-    isValid = false;
-  }
-
-  // Password match check
-  if (password !== confirmPass) {
-    document.getElementById('confirmPassError').textContent = 'Passwords do not match';
-    document.getElementById('confirmPassError').style.display = 'block';
-    isValid = false;
-  }
-
-  // Email validation
-  if (!validateEmail(email)) {
-    document.getElementById('emailError').textContent = 'Invalid email format';
-    document.getElementById('emailError').style.display = 'block';
-    isValid = false;
-  }
-
-  // Email match check
-  if (email !== confirmEmail) {
-    document.getElementById('confirmEmailError').textContent = 'Emails do not match';
-    document.getElementById('confirmEmailError').style.display = 'block';
-    isValid = false;
-  }
-
-  return isValid;
-}
-    
-    async function handleRegistration() {
+    function handleRegistration() {
   const btn = document.querySelector('.registration-page button');
   const originalText = btn.innerHTML;
   btn.disabled = true;
   btn.innerHTML = '<div class="button-loader"></div> Registering...';
 
   // Clear previous errors
-  document.querySelectorAll('.error-message').forEach(el => {
-    el.textContent = '';
-    el.style.display = 'none';
-  });
-  
+  document.querySelectorAll('.error-message').forEach(el => el.textContent = '');
   const statusElement = document.getElementById('registrationStatus');
   statusElement.className = '';
   statusElement.textContent = '';
 
-  try {
-    // 1. Validate form inputs first
-    if (!validateRegistrationForm()) {
-      btn.disabled = false;
-      btn.innerHTML = originalText;
-      return;
-    }
-
-    // 2. Prepare properly structured payload
-    const payload = {
-      action: 'createAccount',
-      data: {
-        phone: document.getElementById('regPhone').value.trim(),
-        password: document.getElementById('regPassword').value,
-        email: document.getElementById('regEmail').value.trim().toLowerCase()
-      }
-    };
-
-    // 3. Send to proxy endpoint
-    const response = await fetch(CONFIG.PROXY_URL, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(payload)
-    });
-
-    // 4. Handle response
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-
-    const result = await response.json();
-
-    // 5. Show appropriate message
-    if (result.success) {
-      statusElement.className = 'status-message success';
-      statusElement.textContent = 'Registration successful! Redirecting...';
-      setTimeout(() => {
-        window.location.href = 'login.html';
-      }, 1500);
-    } else {
-      statusElement.className = 'status-message error';
-      statusElement.textContent = result.message || 'Registration failed';
-      
-      // Highlight specific field errors
-      if (result.message.includes('phone')) {
-        document.getElementById('phoneError').textContent = result.message;
-        document.getElementById('phoneError').style.display = 'block';
-      }
-    }
-
-  } catch (error) {
-    console.error('Registration Error:', error);
-    statusElement.className = 'status-message error';
-    statusElement.textContent = 'Registration failed - please try again';
-    
-    // Show specific error for invalid JSON
-    if (error instanceof SyntaxError) {
-      statusElement.textContent = 'Invalid server response';
-    }
-  } finally {
+  // Validate form first
+  if (!validateRegistrationForm()) {
     btn.disabled = false;
     btn.innerHTML = originalText;
+    return;
   }
+
+  // Get form values
+  const phone = document.getElementById('regPhone').value;
+  const password = document.getElementById('regPassword').value;
+  const email = document.getElementById('regEmail').value;
+
+  // Create JSONP request
+  const callbackName = `jsonp_${Date.now()}`;
+  const script = document.createElement('script');
+  script.src = `${CONFIG.GAS_URL}?action=createAccount&phone=${encodeURIComponent(phone)}&password=${encodeURIComponent(password)}&email=${encodeURIComponent(email)}&callback=${callbackName}`;
+
+  window[callbackName] = (response) => {
+    // Cleanup and restore button
+    delete window[callbackName];
+    document.body.removeChild(script);
+    btn.disabled = false;
+    btn.innerHTML = originalText;
+
+    // Handle response
+    if (response.success) {
+      statusElement.className = 'status-message success';
+      statusElement.textContent = 'Registration successful! Redirecting...';
+      setTimeout(() => safeRedirect('login.html'), 1500);
+    } else {
+      statusElement.className = 'status-message error';
+      statusElement.textContent = response.message || 'Registration failed';
+      
+      // Highlight specific errors if available
+      if (response.errors) {
+        response.errors.forEach(error => {
+          const errorField = document.getElementById(`${error.field}Error`);
+          if (errorField) errorField.textContent = error.message;
+        });
+      }
+    }
+  };
+
+  document.body.appendChild(script);
 }
 
-    // Validation event listeners
     document.getElementById('regPhone').addEventListener('input', function() {
-      const errorField = document.getElementById('phoneError');
-      errorField.textContent = !validatePhone(this.value) ? 'Invalid phone format' : '';
-      errorField.style.display = !validatePhone(this.value) ? 'block' : 'none';
+      document.getElementById('phoneError').textContent = 
+        !validatePhone(this.value) ? 'Invalid phone format' : '';
     });
 
     document.getElementById('regPassword').addEventListener('input', function() {
-      const errorField = document.getElementById('passError');
-      errorField.textContent = !validatePassword(this.value) ? '6+ chars, 1 uppercase, 1 number' : '';
-      errorField.style.display = !validatePassword(this.value) ? 'block' : 'none';
+      document.getElementById('passError').textContent = 
+        !validatePassword(this.value) ? '6+ chars, 1 uppercase, 1 number' : '';
     });
 
     document.getElementById('regConfirmPass').addEventListener('input', function() {
-      const errorField = document.getElementById('confirmPassError');
-      const password = document.getElementById('regPassword').value;
-      errorField.textContent = this.value !== password ? 'Passwords mismatch' : '';
-      errorField.style.display = this.value !== password ? 'block' : 'none';
+      document.getElementById('confirmPassError').textContent = 
+        this.value !== document.getElementById('regPassword').value ? 'Passwords mismatch' : '';
     });
 
     document.getElementById('regEmail').addEventListener('input', function() {
-      const errorField = document.getElementById('emailError');
-      errorField.textContent = !validateEmail(this.value) ? 'Invalid email format' : '';
-      errorField.style.display = !validateEmail(this.value) ? 'block' : 'none';
+      document.getElementById('emailError').textContent = 
+        !validateEmail(this.value) ? 'Invalid email format' : '';
     });
 
     document.getElementById('regConfirmEmail').addEventListener('input', function() {
-      const errorField = document.getElementById('confirmEmailError');
-      const email = document.getElementById('regEmail').value;
-      errorField.textContent = this.value !== email ? 'Emails mismatch' : '';
-      errorField.style.display = this.value !== email ? 'block' : 'none';
-    });
-
-    // Enter key submission
-    document.addEventListener('keypress', function(e) {
-      if (e.key === 'Enter' && document.activeElement.tagName !== 'TEXTAREA') {
-        handleRegistration();
-      }
+      document.getElementById('confirmEmailError').textContent = 
+        this.value !== document.getElementById('regEmail').value ? 'Emails mismatch' : '';
     });
   </script>
-
-  <div class="footer-text">
+<div class="footer-text">
     Built by Omis Logistics. For more info 👉
     <a href="https://wa.me/6737187776" target="_blank" rel="noopener">here</a>
   </div>
