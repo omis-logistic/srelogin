@@ -131,6 +131,7 @@
     <h1>New Registration</h1>
     
 <form id="registrationForm" onsubmit="event.preventDefault(); handleRegistration()">
+  <!-- Phone Field -->
   <div class="input-group">
     <input type="tel" id="regPhone" required
            pattern="^(673\d{7}|60\d{9})$"
@@ -138,6 +139,7 @@
     <div class="error-message" id="phoneError"></div>
   </div>
 
+  <!-- Password Fields -->
   <div class="input-group">
     <input type="password" id="regPassword" required
            pattern="^(?=.*[A-Z])(?=.*\d).{6,}$"
@@ -146,15 +148,29 @@
   </div>
 
   <div class="input-group">
+    <input type="password" id="regConfirmPass" required
+           placeholder="Confirm Password">
+    <div class="error-message" id="confirmPassError"></div>
+  </div>
+
+  <!-- Email Fields -->
+  <div class="input-group">
     <input type="email" id="regEmail" required
            placeholder="Email Address">
     <div class="error-message" id="emailError"></div>
   </div>
 
+  <div class="input-group">
+    <input type="email" id="regConfirmEmail" required
+           placeholder="Confirm Email">
+    <div class="error-message" id="confirmEmailError"></div>
+  </div>
+
   <button type="submit">Register</button>
-    <button class="secondary-btn" onclick="safeRedirect('login.html')" style="margin-top: 10px;">
-      Back to Login
-    </button>
+  <button class="secondary-btn" onclick="safeRedirect('login.html')" 
+          type="button" style="margin-top: 10px;">
+    Back to Login
+  </button>
 </form>
     <div id="registrationStatus" class="status-message"></div>
   </div>
