@@ -135,68 +135,95 @@
   const form = e.target;
   const btn = form.querySelector('button[type="submit"]');
   const originalText = btn.innerHTML;
-  
-  // Clear previous messages
   const statusElement = document.getElementById('registrationStatus');
+
+  // Reset UI state
   statusElement.className = '';
   statusElement.textContent = '';
-
-  // Sanitize and structure payload
-  const payload = {
-    action: 'createAccount',
-    data: {
-      phone: document.getElementById('regPhone').value.trim().replace(/[^\d]/g, ''),
-      password: document.getElementById('regPassword').value,
-      email: document.getElementById('regEmail').value.trim().toLowerCase()
-    }
-  };
-
-  // Validate phone format
-  if (!/^(673\d{7}|60\d{9})$/.test(payload.data.phone)) {
-    showError('Invalid phone format. Use 673 (7 digits) or 60 (9 digits)', 'registrationStatus');
-    return;
-  }
-
-  // Validate email format
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(payload.data.email)) {
-    showError('Invalid email format', 'registrationStatus');
-    return;
-  }
-
-  // Validate password match
-  if (document.getElementById('regPassword').value !== document.getElementById('regConfirmPass').value) {
-    showError('Passwords do not match', 'registrationStatus');
-    return;
-  }
-
-  // Validate email match
-  if (payload.data.email !== document.getElementById('regConfirmEmail').value.toLowerCase().trim()) {
-    showError('Emails do not match', 'registrationStatus');
-    return;
-  }
-
   btn.disabled = true;
   btn.innerHTML = '<div class="loader"></div> Registering...';
 
-  console.log('Submission payload:', payload); // Debug log
+  // Sanitize inputs
+  const rawPhone = document.getElementById('regPhone').value.trim();
+  const cleanPhone = rawPhone.replace(/[^\d]/g, '');
+  const rawEmail = document.getElementById('regEmail').value.trim();
+  const cleanEmail = rawEmail.toLowerCase();
+  const password = document.getElementById('regPassword').value;
+  const confirmPass = document.getElementById('regConfirmPass').value;
+  const confirmEmail = document.getElementById('regConfirmEmail').value.trim();
 
+  // Client-side validation
+  const validationErrors = [];
+  
+  if (!/^(673\d{7}|60\d{9})$/.test(cleanPhone)) {
+    validationErrors.push('Invalid phone format (673XXXXXXX or 60XXXXXXXXX)');
+  }
+  
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail)) {
+    validationErrors.push('Invalid email address');
+  }
+  
+  if (password !== confirmPass) {
+    validationErrors.push('Passwords do not match');
+  }
+  
+  if (cleanEmail !== confirmEmail.toLowerCase()) {
+    validationErrors.push('Email addresses do not match');
+  }
+  
+  if (password.length < 6 || !/[A-Z]/.test(password) || !/\d/.test(password)) {
+    validationErrors.push('Password must be 6+ characters with 1 uppercase letter and 1 number');
+  }
+
+  if (validationErrors.length > 0) {
+    statusElement.className = 'status-message error';
+    statusElement.innerHTML = validationErrors.map(err => `• ${err}`).join('<br>');
+    btn.disabled = false;
+    btn.innerHTML = originalText;
+    return;
+  }
+
+  // Build payload
+  const payload = {
+    action: 'createAccount',
+    data: {
+      phone: cleanPhone,
+      password: password,
+      email: cleanEmail
+    }
+  };
+
+  // Execute fetch
   fetch(CONFIG.PROXY_URL, {
     method: 'POST',
-    headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-    body: `payload=${encodeURIComponent(JSON.stringify(payload))}`
+    mode: 'cors',
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded',
+      'X-Requested-With': 'XMLHttpRequest'
+    },
+    body: `payload=${encodeURIComponent(JSON.stringify(payload))}`,
+    referrerPolicy: 'strict-origin-when-cross-origin',
+    credentials: 'omit'
   })
   .then(response => {
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status} - ${response.statusText}`);
+    }
     return response.json().catch(() => {
       throw new Error('Invalid server response format');
     });
   })
   .then(result => {
-    console.log('API response:', result); // Debug log
     if (result.success) {
       statusElement.className = 'status-message success';
       statusElement.textContent = 'Registration successful! Redirecting...';
-      setTimeout(() => window.location.href = 'login.html?new_user=true', 1500);
+      
+      // Clear sensitive fields
+      document.querySelectorAll('input[type="password"]').forEach(f => f.value = '');
+      
+      setTimeout(() => {
+        window.location.href = `login.html?newuser=${encodeURIComponent(cleanPhone)}`;
+      }, 1500);
     } else {
       throw new Error(result.message || 'Registration failed');
     }
@@ -204,16 +231,18 @@
   .catch(error => {
     console.error('Registration Error:', error);
     statusElement.className = 'status-message error';
-    statusElement.textContent = error.message.includes('already registered') 
-      ? 'This phone number is already registered' 
-      : error.message;
+    statusElement.textContent = error.message.replace(/\.$/, ''); // Remove trailing period
+    
+    // Special case handling
+    if (error.message.includes('already exists')) {
+      document.getElementById('regPhone').focus();
+    } else if (error.message.includes('email')) {
+      document.getElementById('regEmail').focus();
+    }
   })
   .finally(() => {
     btn.disabled = false;
     btn.innerHTML = originalText;
-    // Clear sensitive fields
-    document.getElementById('regPassword').value = '';
-    document.getElementById('regConfirmPass').value = '';
   });
 }
 
