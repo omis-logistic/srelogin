@@ -130,65 +130,57 @@
 
   <script src="scripts/app.js"></script>
   <script>
-    function handleRegistration(e) {
+    async function handleRegistration(e) {
       e.preventDefault();
-      const btn = e.target.querySelector('button[type="submit"]');
+      const form = e.target;
+      const btn = form.querySelector('button[type="submit"]');
       const originalText = btn.innerHTML;
-      btn.disabled = true;
-      btn.innerHTML = '<div class="button-loader"></div> Registering...';
+      
+      try {
+        btn.disabled = true;
+        btn.innerHTML = '<div class="loader"></div> Processing...';
 
-      // Clear errors
-      document.querySelectorAll('.error-message').forEach(el => el.textContent = '');
-      const statusElement = document.getElementById('registrationStatus');
-      statusElement.className = '';
-      statusElement.textContent = '';
+        // Validate form
+        if (!validateRegistrationForm()) {
+          showError('Please fix form errors');
+          return;
+        }
 
-      // Validate form
-      if (!validateRegistrationForm()) {
-        btn.disabled = false;
-        btn.innerHTML = originalText;
-        return;
-      }
+        // Prepare payload
+        const payload = {
+          action: 'createAccount',
+          phone: document.getElementById('regPhone').value.trim(),
+          password: document.getElementById('regPassword').value,
+          email: document.getElementById('regEmail').value.trim()
+        };
 
-      // Prepare payload
-      const payload = {
-        action: 'createAccount',
-        phone: document.getElementById('regPhone').value.trim(),
-        password: document.getElementById('regPassword').value,
-        email: document.getElementById('regEmail').value.trim()
-      };
+        // Send through proxy
+        const response = await fetch(CONFIG.PROXY_URL, {
+          method: 'POST',
+          headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+          body: `payload=${encodeURIComponent(JSON.stringify(payload))}`
+        });
 
-      // Submit via proxy
-      fetch(CONFIG.PROXY_URL, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8'
-        },
-        body: `payload=${encodeURIComponent(JSON.stringify(payload))}`
-      })
-      .then(response => {
-        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-        return response.json();
-      })
-      .then(result => {
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status} - ${response.statusText}`);
+        }
+
+        const result = await response.json();
+        
         if (result.success) {
-          statusElement.className = 'status-message success';
-          statusElement.textContent = 'Registration successful! Redirecting...';
+          showError('Registration successful! Redirecting...', 'registrationStatus');
           setTimeout(() => safeRedirect('login.html'), 1500);
         } else {
-          statusElement.className = 'status-message error';
-          statusElement.textContent = result.message || 'Registration failed';
+          showError(result.message || 'Registration failed', 'registrationStatus');
         }
-      })
-      .catch(error => {
-        statusElement.className = 'status-message error';
-        statusElement.textContent = 'Registration failed - please try again';
+
+      } catch (error) {
         console.error('Registration error:', error);
-      })
-      .finally(() => {
+        showError('Registration failed. Please try again later.', 'registrationStatus');
+      } finally {
         btn.disabled = false;
         btn.innerHTML = originalText;
-      });
+      }
     }
 
     document.getElementById('regPhone').addEventListener('input', function() {
