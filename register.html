@@ -184,72 +184,46 @@
   <script src="scripts/app.js"></script>
   <script>
     async function handleRegistration() {
-      const btn = document.querySelector('.registration-page button');
-      const originalText = btn.innerHTML;
-      btn.disabled = true;
-      btn.innerHTML = '<div class="button-loader"></div> Registering...';
-
-      // Clear previous errors
-      document.querySelectorAll('.error-message').forEach(el => {
-        el.textContent = '';
-        el.style.display = 'none';
-      });
-      
-      const statusElement = document.getElementById('registrationStatus');
-      statusElement.className = '';
-      statusElement.textContent = '';
-
-      // Validate form first
-      if (!validateRegistrationForm()) {
-        btn.disabled = false;
-        btn.innerHTML = originalText;
-        return;
-      }
-
-      // Prepare payload with correct field names
-      const payload = {
-  action: 'createAccount',
-  data: {
-    phone: document.getElementById('regPhone').value.trim(),
-    password: document.getElementById('regPassword').value,
-    email: document.getElementById('regEmail').value.trim().toLowerCase()
-  }
-};
-
+  const btn = document.querySelector('button');
+  btn.disabled = true;
+  
   try {
+    // 1. Validate form
+    if (!validateRegistrationForm()) return;
+
+    // 2. Prepare payload
+    const payload = {
+      action: 'createAccount',
+      data: {
+        phone: document.getElementById('regPhone').value.trim(),
+        password: document.getElementById('regPassword').value,
+        email: document.getElementById('regEmail').value.trim().toLowerCase()
+      }
+    };
+
+    // 3. Send request
     const response = await fetch(CONFIG.PROXY_URL, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json' // Changed to JSON
-      },
-      body: JSON.stringify(payload) // Send raw JSON
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
     });
 
-        // Handle Google's URL redirection
-        const result = await response.json();
-
-        if (result.success) {
-          statusElement.className = 'status-message success';
-          statusElement.textContent = 'Registration successful! Redirecting...';
-          setTimeout(() => safeRedirect('login.html'), 1500);
-        } else {
-          statusElement.className = 'status-message error';
-          statusElement.textContent = result.message || 'Registration failed';
-          
-          if (result.message?.includes('phone number')) {
-            document.getElementById('phoneError').textContent = result.message;
-            document.getElementById('phoneError').style.display = 'block';
-          }
-        }
-      } catch (error) {
-        console.error('Registration error:', error);
-        statusElement.className = 'status-message error';
-        statusElement.textContent = 'Registration failed - please try again';
-      } finally {
-        btn.disabled = false;
-        btn.innerHTML = originalText;
-      }
+    // 4. Handle response
+    const result = await response.json();
+    
+    if (result.success) {
+      alert('Registration successful!');
+      window.location.href = 'login.html';
+    } else {
+      showError(result.message);
     }
+    
+  } catch (error) {
+    showError('Registration failed - please try again');
+  } finally {
+    btn.disabled = false;
+  }
+}
 
     // Validation event listeners
     document.getElementById('regPhone').addEventListener('input', function() {
