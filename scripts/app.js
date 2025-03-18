@@ -739,35 +739,50 @@ function validateEmail(email) {
 function validateRegistrationForm() {
   const phone = document.getElementById('regPhone').value;
   const password = document.getElementById('regPassword').value;
-  const confirmPassword = document.getElementById('regConfirmPass').value;
+  const confirmPass = document.getElementById('regConfirmPass').value;
   const email = document.getElementById('regEmail').value;
   const confirmEmail = document.getElementById('regConfirmEmail').value;
 
   let isValid = true;
-  document.querySelectorAll('.error-message').forEach(el => el.textContent = '');
 
+  // Clear previous errors
+  document.querySelectorAll('.error-message').forEach(el => {
+    el.textContent = '';
+    el.style.display = 'none';
+  });
+
+  // Phone validation
   if (!validatePhone(phone)) {
     document.getElementById('phoneError').textContent = 'Invalid phone format';
+    document.getElementById('phoneError').style.display = 'block';
     isValid = false;
   }
 
+  // Password validation
   if (!validatePassword(password)) {
     document.getElementById('passError').textContent = '6+ chars, 1 uppercase, 1 number';
+    document.getElementById('passError').style.display = 'block';
     isValid = false;
   }
 
-  if (password !== confirmPassword) {
-    document.getElementById('confirmPassError').textContent = 'Passwords mismatch';
+  // Password match
+  if (password !== confirmPass) {
+    document.getElementById('confirmPassError').textContent = 'Passwords must match';
+    document.getElementById('confirmPassError').style.display = 'block';
     isValid = false;
   }
 
+  // Email validation
   if (!validateEmail(email)) {
     document.getElementById('emailError').textContent = 'Invalid email format';
+    document.getElementById('emailError').style.display = 'block';
     isValid = false;
   }
 
+  // Email match
   if (email !== confirmEmail) {
-    document.getElementById('confirmEmailError').textContent = 'Emails mismatch';
+    document.getElementById('confirmEmailError').textContent = 'Emails must match';
+    document.getElementById('confirmEmailError').style.display = 'block';
     isValid = false;
   }
 
