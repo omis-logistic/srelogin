@@ -1,8 +1,8 @@
 //scripts/app.js
 // ================= CONFIGURATION =================
 const CONFIG = {
-  GAS_URL: 'https://script.google.com/macros/s/AKfycbxrAtGcZIdRA-0boixya-7mBakv3EHyOx4Dq19GsdGCKC7HM9cUvIQfnnvJ3zzl_HuT2Q/exec',
-  PROXY_URL: 'https://script.google.com/macros/s/AKfycbxR6zJsOI4G9kFkX8sA9a7oeQVwBTK4U6MAcmQ4CW_gHu2716tldmmp3a1pP6V5kIRl/exec',
+  GAS_URL: 'https://script.google.com/macros/s/AKfycbxU5_a7HBQCW0JhRYavkau_jYSOz1v9TBIRsMuCeiOGNkLufnD6YzbGg-NBvwPxvHfMmQ/exec',
+  PROXY_URL: 'https://script.google.com/macros/s/AKfycbzLr8naxCQbag5YJbmnWc2KN144UGdWl22l33KH6fL6iEejTwWFP-VmknLhO10zVn_i/exec',
   SESSION_TIMEOUT: 3600,
   MAX_FILE_SIZE: 5 * 1024 * 1024,
   ALLOWED_FILE_TYPES: ['image/jpeg', 'image/png', 'application/pdf'],
@@ -737,36 +737,42 @@ function validateEmail(email) {
 }
 
 function validateRegistrationForm() {
-  const phone = document.getElementById('regPhone').value;
-  const password = document.getElementById('regPassword').value;
-  const confirmPassword = document.getElementById('regConfirmPass').value;
-  const email = document.getElementById('regEmail').value;
-  const confirmEmail = document.getElementById('regConfirmEmail').value;
-
-  let isValid = true;
+  // Clear previous errors
   document.querySelectorAll('.error-message').forEach(el => el.textContent = '');
 
-  if (!validatePhone(phone)) {
-    document.getElementById('phoneError').textContent = 'Invalid phone format';
+  const payload = {
+    phone: document.getElementById('regPhone').value.trim().replace(/[^\d]/g, ''),
+    password: document.getElementById('regPassword').value,
+    email: document.getElementById('regEmail').value.trim().toLowerCase()
+  };
+
+  let isValid = true;
+
+  // Phone validation
+  if (!/^(673\d{7}|60\d{9})$/.test(payload.phone)) {
+    document.getElementById('phoneError').textContent = 'Invalid 673/60 format';
     isValid = false;
   }
 
-  if (!validatePassword(password)) {
-    document.getElementById('passError').textContent = '6+ chars, 1 uppercase, 1 number';
+  // Password validation
+  if (!/^(?=.*[A-Z])(?=.*\d).{6,}$/.test(payload.password)) {
+    document.getElementById('passError').textContent = 'Needs 1 uppercase, 1 number';
     isValid = false;
   }
 
-  if (password !== confirmPassword) {
-    document.getElementById('confirmPassError').textContent = 'Passwords mismatch';
-    isValid = false;
-  }
-
-  if (!validateEmail(email)) {
+  // Email validation
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(payload.email)) {
     document.getElementById('emailError').textContent = 'Invalid email format';
     isValid = false;
   }
 
-  if (email !== confirmEmail) {
+  // Confirmations
+  if (payload.password !== document.getElementById('regConfirmPass').value) {
+    document.getElementById('confirmPassError').textContent = 'Passwords mismatch';
+    isValid = false;
+  }
+
+  if (payload.email !== document.getElementById('regConfirmEmail').value.toLowerCase().trim()) {
     document.getElementById('confirmEmailError').textContent = 'Emails mismatch';
     isValid = false;
   }
