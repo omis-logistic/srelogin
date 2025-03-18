@@ -182,15 +182,14 @@
 
   fetch(CONFIG.PROXY_URL, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8'
-    },
+    headers: {'Content-Type': 'application/x-www-form-urlencoded'},
     body: `payload=${encodeURIComponent(JSON.stringify(payload))}`
   })
   .then(response => {
-    console.log('Raw response:', response); // Debug log
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    return response.json();
+    return response.json().catch(() => {
+      throw new Error('Invalid server response format');
+    });
   })
   .then(result => {
     console.log('API response:', result); // Debug log
