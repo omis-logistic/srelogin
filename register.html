@@ -216,14 +216,14 @@
   }
 };
 
-      try {
-        const response = await fetch(CONFIG.PROXY_URL, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8'
-          },
-          body: `payload=${encodeURIComponent(JSON.stringify(payload))}`
-        });
+  try {
+    const response = await fetch(CONFIG.PROXY_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json' // Changed to JSON
+      },
+      body: JSON.stringify(payload) // Send raw JSON
+    });
 
         // Handle Google's URL redirection
         const result = await response.json();
