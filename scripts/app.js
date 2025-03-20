@@ -767,10 +767,22 @@ function validateRegistrationForm() {
   return isValid;
 }
 
+// File type detection helper
+function getFileType(filename) {
+  const ext = filename.split('.').pop().toLowerCase();
+  return {
+    'jpg': 'image/jpeg',
+    'jpeg': 'image/jpeg',
+    'png': 'image/png',
+    'pdf': 'application/pdf'
+  }[ext] || 'application/octet-stream';
+}
+
 async function fileToBase64(file) {
-  return new Promise((resolve) => {
+  return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = () => resolve(reader.result.split(',')[1]);
+    reader.onerror = error => reject(error);
     reader.readAsDataURL(file);
   });
 }
@@ -1002,9 +1014,14 @@ function validateRegistrationFiles() {
     message = 'Both IC documents are required';
     isValid = false;
   }
-  else if(!validTypes.includes(frontIC.type) || !validTypes.includes(backIC.type)) {
-    message = 'Only JPG, PNG, or PDF files allowed';
-    isValid = false;
+  else {
+    const frontType = frontIC.type || getFileType(frontIC.name);
+    const backType = backIC.type || getFileType(backIC.name);
+    
+    if(!validTypes.includes(frontType) || !validTypes.includes(backType)) {
+      message = 'Only JPG, PNG, or PDF files allowed';
+      isValid = false;
+    }
   }
   
   errorElement.textContent = message;
@@ -1016,7 +1033,7 @@ async function handleRegistrationSubmit(e) {
   showLoading(true);
 
   try {
-    // Validate all fields
+    // Validate all fields first
     const validations = [
       validateRegistrationPhone(),
       validateRegistrationPassword(),
@@ -1026,12 +1043,16 @@ async function handleRegistrationSubmit(e) {
       validateRegistrationFiles()
     ];
 
-    if(!validations.every(v => v)) {
-      showError('Please fix form errors');
+    if (!validations.every(v => v)) {
+      showError('Please fix all form errors before submitting');
       return;
     }
 
-    // Prepare form data
+    // Get file inputs
+    const frontFile = document.getElementById('frontIC').files[0];
+    const backFile = document.getElementById('backIC').files[0];
+
+    // Prepare form data with fallback types
     const formData = {
       icNumber: document.getElementById('icNumber').value,
       phone: document.getElementById('phone').value,
@@ -1040,23 +1061,24 @@ async function handleRegistrationSubmit(e) {
       fullName: document.getElementById('fullName').value,
       address: document.getElementById('address').value,
       postcode: document.getElementById('postcode').value,
-      frontIC: await fileToBase64(document.getElementById('frontIC').files[0]),
-      backIC: await fileToBase64(document.getElementById('backIC').files[0]),
-      frontICType: document.getElementById('frontIC').files[0].type,
-      backICType: document.getElementById('backIC').files[0].type
+      frontIC: await fileToBase64(frontFile),
+      backIC: await fileToBase64(backFile),
+      frontICType: frontFile.type || getFileType(frontFile.name),
+      backICType: backFile.type || getFileType(backFile.name)
     };
 
     // Submit to backend
     const response = await callAPI('registerUser', formData);
     
-    if(response.success) {
+    if (response.success) {
       showSuccessMessage('Registration successful! Redirecting...');
       setTimeout(() => safeRedirect('login.html'), 2000);
     } else {
-      showError(response.message || 'Registration failed');
+      showError(response.message || 'Registration failed. Please try again.');
     }
-  } catch(error) {
-    showError(`Registration Error: ${error.message}`);
+  } catch (error) {
+    console.error('Registration Error:', error);
+    showError(`Registration failed: ${error.message}`);
   } finally {
     showLoading(false);
   }
