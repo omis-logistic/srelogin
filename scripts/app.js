@@ -1,7 +1,7 @@
 //scripts/app.js
 // ================= CONFIGURATION =================
 const CONFIG = {
-  GAS_URL: 'https://script.google.com/macros/s/AKfycbwTfuTPTBreZY-nqfsINx6XO9wFStOHWBxCk5wQnNDx-Kv9eO20ohpEWXl2PZVsLDs82w/exec',
+  GAS_URL: 'https://script.google.com/macros/s/AKfycbxW6oHHMeZJjPD6o43ZDj-Mwdiuu8WXPXGilj4QHTcrf0JFxQSAUJjyNlXlyAR4fPXi/exec',
   PROXY_URL: 'https://script.google.com/macros/s/AKfycbzmg7w7vZV-vQPhyELUZMWVoZdx_Bu8Mbz7w9PlXOgBNro4EuIv3uqoUlUzBOwfrGzO/exec',
   SESSION_TIMEOUT: 3600,
   MAX_FILE_SIZE: 5 * 1024 * 1024,
@@ -1022,33 +1022,37 @@ async function handleRegistrationSubmit(e) {
   showLoading(true);
 
   try {
-    // 1. Get files FIRST with null checks
-    const getFile = (id) => {
-      const input = document.getElementById(id);
-      return input.files[0] || null;
-    };
-
-    const frontFile = getFile('frontIC');
-    const backFile = getFile('backIC');
-
-    // 2. Immediate file check
-    if (!frontFile || !backFile) {
-      showError('Both IC documents are required');
-      return;
-    }
-
-    // 3. Validate other fields
+    // 1. Validate all fields first
     const validations = [
       validateRegistrationPhone(),
       validateRegistrationPassword(),
       validateRegistrationConfirmPassword(),
       validateRegistrationEmail(),
-      validateRegistrationIC()
+      validateRegistrationIC(),
+      validateRegistrationFiles()
     ];
 
-    if (!validations.every(v => v)) return;
+    if (!validations.every(v => v)) {
+      showError('Please fix all form errors');
+      return;
+    }
 
-    // 4. Prepare data with SAFE type handling
+    // 2. Safely get files with null checks
+    const getFileSafe = (id) => {
+      const input = document.getElementById(id);
+      return input?.files?.[0] || null;
+    };
+
+    const frontFile = getFileSafe('frontIC');
+    const backFile = getFileSafe('backIC');
+
+    // 3. Final file verification
+    if (!frontFile || !backFile) {
+      showError('Both IC documents are required');
+      return;
+    }
+
+    // 4. Prepare data with guaranteed file types
     const formData = {
       icNumber: document.getElementById('icNumber').value,
       phone: document.getElementById('phone').value,
@@ -1059,37 +1063,49 @@ async function handleRegistrationSubmit(e) {
       postcode: document.getElementById('postcode').value,
       frontIC: await fileToBase64(frontFile),
       backIC: await fileToBase64(backFile),
-      frontICType: frontFile.type || getFileTypeFromName(frontFile.name),
-      backICType: backFile.type || getFileTypeFromName(backFile.name)
+      frontICType: getFileType(frontFile),
+      backICType: getFileType(backFile)
     };
 
-    // 5. Send to backend
-    const response = await callAPI('registerUser', formData);
+    // 5. Submit to backend
+    const response = await fetch(CONFIG.GAS_URL, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        action: 'registerUser',
+        data: formData
+      })
+    });
+
+    const result = await response.json();
     
-    if (response.success) {
+    if (result.success) {
       showSuccessMessage('Registration successful! Redirecting...');
       setTimeout(() => safeRedirect('login.html'), 2000);
     } else {
-      showError(response.message || 'Registration failed');
+      showError(result.message || 'Registration failed');
     }
   } catch (error) {
-    showError(`Error: ${error.message}`);
-    console.error('Registration Error:', error);
+    showError(`Registration Error: ${error.message}`);
   } finally {
     showLoading(false);
   }
 }
 
-// New bulletproof type detection
-function getFileTypeFromName(filename) {
-  const ext = filename.split('.').pop().toLowerCase();
-  return {
-    jpg: 'image/jpeg',
-    jpeg: 'image/jpeg',
-    png: 'image/png',
-    pdf: 'application/pdf'
-  }[ext] || 'application/octet-stream';
-}
+// Robust file type detector
+function getFileType(file) {
+  try {
+    // First try official MIME type
+    if (file?.type) return file.type;
+    
+    // Fallback to extension detection
+    const ext = file.name.split('.').pop().toLowerCase();
+    const typeMap = {
+      jpg: 'image/jpeg',
+      jpeg: 'image/jpeg',
+      png: 'image/png',
+      pdf: 'application/pdf'
+    };
     
     return typeMap[ext] || 'application/octet-stream';
   } catch (e) {
