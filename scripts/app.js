@@ -1,7 +1,7 @@
 //scripts/app.js
 // ================= CONFIGURATION =================
 const CONFIG = {
-  GAS_URL: 'https://script.google.com/macros/s/AKfycbxtackSollSbf7f6cVAMMt5D-fv5as7QaQJnZRL6073vIEAh79LhQ7EogZZDqLlH7VPsA/exec',
+  GAS_URL: 'https://script.google.com/macros/s/AKfycbzS_RS5abEGK7L-0z-FB-xJbLXuq52mXy_6lGYU5IQvchIzyPvftV1YtQpWC8Tk4yl3aQ/exec',
   PROXY_URL: 'https://script.google.com/macros/s/AKfycbzmg7w7vZV-vQPhyELUZMWVoZdx_Bu8Mbz7w9PlXOgBNro4EuIv3uqoUlUzBOwfrGzO/exec',
   SESSION_TIMEOUT: 3600,
   MAX_FILE_SIZE: 5 * 1024 * 1024,
@@ -1022,7 +1022,7 @@ async function handleRegistrationSubmit(e) {
   showLoading(true);
 
   try {
-    // Validate all fields first
+    // 1. Validate all fields first
     const validations = [
       validateRegistrationPhone(),
       validateRegistrationPassword(),
@@ -1033,22 +1033,26 @@ async function handleRegistrationSubmit(e) {
     ];
 
     if (!validations.every(v => v)) {
-      showError('Please fix all form errors before submitting');
+      showError('Please fix all form errors');
       return;
     }
 
-    // Get files with null checks
-    const frontFileInput = document.getElementById('frontIC');
-    const backFileInput = document.getElementById('backIC');
-    const frontFile = frontFileInput.files[0];
-    const backFile = backFileInput.files[0];
+    // 2. Safely get files with null checks
+    const getFileSafe = (id) => {
+      const input = document.getElementById(id);
+      return input?.files?.[0] || null;
+    };
 
+    const frontFile = getFileSafe('frontIC');
+    const backFile = getFileSafe('backIC');
+
+    // 3. Final file verification
     if (!frontFile || !backFile) {
-      showError('Please upload both IC documents');
+      showError('Both IC documents are required');
       return;
     }
 
-    // Prepare form data with safe type handling
+    // 4. Prepare data with guaranteed file types
     const formData = {
       icNumber: document.getElementById('icNumber').value,
       phone: document.getElementById('phone').value,
@@ -1063,39 +1067,49 @@ async function handleRegistrationSubmit(e) {
       backICType: getFileType(backFile)
     };
 
-    // Submit to backend
-    const response = await callAPI('registerUser', formData);
+    // 5. Submit to backend
+    const response = await fetch(CONFIG.GAS_URL, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        action: 'registerUser',
+        data: formData
+      })
+    });
+
+    const result = await response.json();
     
-    if (response.success) {
+    if (result.success) {
       showSuccessMessage('Registration successful! Redirecting...');
       setTimeout(() => safeRedirect('login.html'), 2000);
     } else {
-      showError(response.message || 'Registration failed. Please try again.');
+      showError(result.message || 'Registration failed');
     }
   } catch (error) {
-    console.error('Registration Error:', error);
-    showError(`Registration failed: ${error.message}`);
+    showError(`Registration Error: ${error.message}`);
   } finally {
     showLoading(false);
   }
 }
 
-// Improved file type detection
+// Robust file type detector
 function getFileType(file) {
   try {
-    // First try reported MIME type
-    if (file.type) return file.type;
+    // First try official MIME type
+    if (file?.type) return file.type;
     
     // Fallback to extension detection
     const ext = file.name.split('.').pop().toLowerCase();
-    return {
-      'jpg': 'image/jpeg',
-      'jpeg': 'image/jpeg',
-      'png': 'image/png',
-      'pdf': 'application/pdf'
-    }[ext] || 'application/octet-stream';
+    const typeMap = {
+      jpg: 'image/jpeg',
+      jpeg: 'image/jpeg',
+      png: 'image/png',
+      pdf: 'application/pdf'
+    };
+    
+    return typeMap[ext] || 'application/octet-stream';
   } catch (e) {
-    console.warn('File type detection failed:', e);
+    console.error('File type detection failed:', e);
     return 'application/octet-stream';
   }
 }
