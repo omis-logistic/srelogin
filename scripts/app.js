@@ -877,10 +877,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // New functions for category requirements =================
 function checkCategoryRequirements() {
-  const category = document.getElementById('itemCategory')?.value || '';
-  const fileInput = document.getElementById('fileUpload');
-  const fileHelp = document.getElementById('fileHelp');
+  const categorySelect = document.getElementById('itemCategory');
+  const fileInput = document.getElementById('invoiceFiles');
   
+  if(!categorySelect || !fileInput) return; // Add null check
+
+  const category = categorySelect.value;
+  const fileHelp = document.getElementById('fileHelp');
+
   const starredCategories = [
     '*Books', '*Cosmetics/Skincare/Bodycare',
     '*Food Beverage/Drinks', '*Gadgets',
@@ -905,3 +909,168 @@ function setupCategoryChangeListener() {
   }
 }
 
+// Add to app.js
+function initRegistration() {
+  const form = document.getElementById('registrationForm');
+  if(form) {
+    // Initialize event listeners
+    form.addEventListener('submit', handleRegistrationSubmit);
+    setupICFormatting();
+    
+    // Real-time validations
+    document.getElementById('phone').addEventListener('input', validateRegistrationPhone);
+    document.getElementById('password').addEventListener('input', validateRegistrationPassword);
+    document.getElementById('confirmPassword').addEventListener('input', validateRegistrationConfirmPassword);
+    document.getElementById('email').addEventListener('input', validateRegistrationEmail);
+    document.getElementById('confirmEmail').addEventListener('input', validateRegistrationEmail);
+    document.getElementById('icNumber').addEventListener('input', validateRegistrationIC);
+  }
+}
+
+function setupICFormatting() {
+  const icInput = document.getElementById('icNumber');
+  if(icInput) {
+    icInput.addEventListener('input', function(e) {
+      let value = e.target.value.replace(/-/g, '');
+      if (value.length > 2 && value.length <= 8) {
+        value = value.slice(0,2) + '-' + value.slice(2);
+      } else if (value.length > 8) {
+        value = value.slice(0,6) + '-' + value.slice(6,8) + '-' + value.slice(8,12);
+      }
+      e.target.value = value;
+    });
+  }
+}
+
+function validateRegistrationPhone() {
+  const phone = document.getElementById('phone');
+  const errorElement = document.getElementById('phoneError');
+  const isValid = /^(673\d{7}|60\d{9,})$/.test(phone.value);
+  
+  errorElement.textContent = isValid ? '' : 'Invalid phone format';
+  return isValid;
+}
+
+function validateRegistrationPassword() {
+  const password = document.getElementById('password');
+  const errorElement = document.getElementById('passwordError');
+  const isValid = /^(?=.*[A-Z])(?=.*\d).{6,}$/.test(password.value);
+  
+  errorElement.textContent = isValid ? '' : '6+ chars with 1 uppercase and 1 number';
+  return isValid;
+}
+
+function validateRegistrationConfirmPassword() {
+  const password = document.getElementById('password').value;
+  const confirm = document.getElementById('confirmPassword').value;
+  const errorElement = document.getElementById('confirmPasswordError');
+  const isValid = password === confirm;
+  
+  errorElement.textContent = isValid ? '' : 'Passwords do not match';
+  return isValid;
+}
+
+function validateRegistrationEmail() {
+  const email = document.getElementById('email').value;
+  const confirm = document.getElementById('confirmEmail').value;
+  const errorElement = document.getElementById('emailError');
+  const isValid = email === confirm && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  
+  errorElement.textContent = isValid ? '' : 'Emails do not match or invalid format';
+  return isValid;
+}
+
+function validateRegistrationIC() {
+  const icNumber = document.getElementById('icNumber').value;
+  const errorElement = document.getElementById('icError');
+  const isValid = /^\d{2}-\d{6}$|^\d{6}-\d{2}-\d{4}$/.test(icNumber);
+  
+  errorElement.textContent = isValid ? '' : 'Invalid IC format';
+  return isValid;
+}
+
+function validateRegistrationFiles() {
+  const frontIC = document.getElementById('frontIC').files[0];
+  const backIC = document.getElementById('backIC').files[0];
+  const errorElement = document.getElementById('fileError');
+  const validTypes = ['image/jpeg', 'image/png', 'application/pdf'];
+  
+  let isValid = true;
+  let message = '';
+  
+  if(!frontIC || !backIC) {
+    message = 'Both IC documents are required';
+    isValid = false;
+  }
+  else if(!validTypes.includes(frontIC.type) || !validTypes.includes(backIC.type)) {
+    message = 'Only JPG, PNG, or PDF files allowed';
+    isValid = false;
+  }
+  
+  errorElement.textContent = message;
+  return isValid;
+}
+
+async function handleRegistrationSubmit(e) {
+  e.preventDefault();
+  showLoading(true);
+
+  try {
+    // Validate all fields
+    const validations = [
+      validateRegistrationPhone(),
+      validateRegistrationPassword(),
+      validateRegistrationConfirmPassword(),
+      validateRegistrationEmail(),
+      validateRegistrationIC(),
+      validateRegistrationFiles()
+    ];
+
+    if(!validations.every(v => v)) {
+      showError('Please fix form errors');
+      return;
+    }
+
+    // Prepare form data
+    const formData = {
+      icNumber: document.getElementById('icNumber').value,
+      phone: document.getElementById('phone').value,
+      password: document.getElementById('password').value,
+      email: document.getElementById('email').value,
+      fullName: document.getElementById('fullName').value,
+      address: document.getElementById('address').value,
+      postcode: document.getElementById('postcode').value,
+      frontIC: await fileToBase64(document.getElementById('frontIC').files[0]),
+      backIC: await fileToBase64(document.getElementById('backIC').files[0]),
+      frontICType: document.getElementById('frontIC').files[0].type,
+      backICType: document.getElementById('backIC').files[0].type
+    };
+
+    // Submit to backend
+    const response = await callAPI('registerUser', formData);
+    
+    if(response.success) {
+      showSuccessMessage('Registration successful! Redirecting...');
+      setTimeout(() => safeRedirect('login.html'), 2000);
+    } else {
+      showError(response.message || 'Registration failed');
+    }
+  } catch(error) {
+    showError(`Registration Error: ${error.message}`);
+  } finally {
+    showLoading(false);
+  }
+}
+
+// Update DOMContentLoaded in app.js
+document.addEventListener('DOMContentLoaded', () => {
+  detectViewMode();
+  initValidationListeners();
+  initRegistration(); // Add this line
+  createLoaderElement();
+  
+  // Initialize category requirements only on parcel declaration page
+  if(document.getElementById('itemCategory')) {
+    checkCategoryRequirements();
+  }
+});
