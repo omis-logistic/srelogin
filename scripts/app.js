@@ -1,7 +1,7 @@
 //scripts/app.js
 // ================= CONFIGURATION =================
 const CONFIG = {
-  GAS_URL: 'https://script.google.com/macros/s/AKfycbyNjkVkEzn2SwZjTJ59LwZvp3WoxyjzOapwLkkt6M9v785zdorrzrRWllHaJW1jZVkzcA/exec',
+  GAS_URL: 'https://script.google.com/macros/s/AKfycby-KvxwkE1THoFswJJ8AoD4wpvW2JWiWyD_54If-ouB4m-L4cBacQi73JLb3OwAu2wq-g/exec',
   PROXY_URL: 'https://script.google.com/macros/s/AKfycbzmg7w7vZV-vQPhyELUZMWVoZdx_Bu8Mbz7w9PlXOgBNro4EuIv3uqoUlUzBOwfrGzO/exec',
   SESSION_TIMEOUT: 3600,
   MAX_FILE_SIZE: 5 * 1024 * 1024,
@@ -721,63 +721,58 @@ async function handlePasswordReset() {
 }
 
 // ================= FORM VALIDATION =================
-function validatePhone(phone) {
-  const regex = /^(673\d{7,}|60\d{9,})$/;
-  return regex.test(phone);
-}
-
-function validatePassword(password) {
-  const regex = /^(?=.*[A-Z])(?=.*\d).{6,}$/;
-  return regex.test(password);
-}
-
-function validateEmail(email) {
-  const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  return regex.test(email);
-}
-
 function validateRegistrationForm() {
+  let isValid = true;
+  
   // Clear previous errors
   document.querySelectorAll('.error-message').forEach(el => el.textContent = '');
 
-  const payload = {
-    phone: document.getElementById('regPhone').value.trim().replace(/[^\d]/g, ''),
-    password: document.getElementById('regPassword').value,
-    email: document.getElementById('regEmail').value.trim().toLowerCase()
-  };
-
-  let isValid = true;
-
   // Phone validation
-  if (!/^(673\d{7}|60\d{9})$/.test(payload.phone)) {
-    document.getElementById('phoneError').textContent = 'Invalid 673/60 format';
+  const phone = document.getElementById('phone').value;
+  if(!/^(673\d{7}|60\d{9,})$/.test(phone)) {
+    showError('Invalid phone format', 'phoneError');
     isValid = false;
   }
 
   // Password validation
-  if (!/^(?=.*[A-Z])(?=.*\d).{6,}$/.test(payload.password)) {
-    document.getElementById('passError').textContent = 'Needs 1 uppercase, 1 number';
+  const password = document.getElementById('password').value;
+  if(!/(?=.*[A-Z])(?=.*\d).{6,}/.test(password)) {
+    showError('6+ chars with 1 uppercase and 1 number', 'passwordError');
     isValid = false;
   }
 
-  // Email validation
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(payload.email)) {
-    document.getElementById('emailError').textContent = 'Invalid email format';
+  // Email matching
+  const email = document.getElementById('email').value;
+  const confirmEmail = document.getElementById('confirmEmail').value;
+  if(email !== confirmEmail) {
+    showError('Emails do not match', 'emailError');
     isValid = false;
   }
 
-  // Confirmations
-  if (payload.password !== document.getElementById('regConfirmPass').value) {
-    document.getElementById('confirmPassError').textContent = 'Passwords mismatch';
+  // IC validation
+  const icNumber = document.getElementById('icNumber').value;
+  if(!/^\d{2}-\d{6}$|^\d{6}-\d{2}-\d{4}$/.test(icNumber)) {
+    showError('Invalid IC format', 'icError');
     isValid = false;
   }
 
-  if (payload.email !== document.getElementById('regConfirmEmail').value.toLowerCase().trim()) {
-    document.getElementById('confirmEmailError').textContent = 'Emails mismatch';
+  // File validation
+  const frontIC = document.getElementById('frontIC').files[0];
+  const backIC = document.getElementById('backIC').files[0];
+  if(!frontIC || !backIC) {
+    showError('Both IC files required', 'fileError');
     isValid = false;
   }
 
   return isValid;
+}
+
+async function fileToBase64(file) {
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result.split(',')[1]);
+    reader.readAsDataURL(file);
+  });
 }
 
 // ================= UTILITIES =================
