@@ -767,17 +767,6 @@ function validateRegistrationForm() {
   return isValid;
 }
 
-// File type detection helper
-function getFileType(filename) {
-  const ext = filename.split('.').pop().toLowerCase();
-  return {
-    'jpg': 'image/jpeg',
-    'jpeg': 'image/jpeg',
-    'png': 'image/png',
-    'pdf': 'application/pdf'
-  }[ext] || 'application/octet-stream';
-}
-
 async function fileToBase64(file) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -1048,11 +1037,18 @@ async function handleRegistrationSubmit(e) {
       return;
     }
 
-    // Get file inputs
-    const frontFile = document.getElementById('frontIC').files[0];
-    const backFile = document.getElementById('backIC').files[0];
+    // Get files with null checks
+    const frontFileInput = document.getElementById('frontIC');
+    const backFileInput = document.getElementById('backIC');
+    const frontFile = frontFileInput.files[0];
+    const backFile = backFileInput.files[0];
 
-    // Prepare form data with fallback types
+    if (!frontFile || !backFile) {
+      showError('Please upload both IC documents');
+      return;
+    }
+
+    // Prepare form data with safe type handling
     const formData = {
       icNumber: document.getElementById('icNumber').value,
       phone: document.getElementById('phone').value,
@@ -1063,8 +1059,8 @@ async function handleRegistrationSubmit(e) {
       postcode: document.getElementById('postcode').value,
       frontIC: await fileToBase64(frontFile),
       backIC: await fileToBase64(backFile),
-      frontICType: frontFile.type || getFileType(frontFile.name),
-      backICType: backFile.type || getFileType(backFile.name)
+      frontICType: getFileType(frontFile),
+      backICType: getFileType(backFile)
     };
 
     // Submit to backend
@@ -1081,6 +1077,26 @@ async function handleRegistrationSubmit(e) {
     showError(`Registration failed: ${error.message}`);
   } finally {
     showLoading(false);
+  }
+}
+
+// Improved file type detection
+function getFileType(file) {
+  try {
+    // First try reported MIME type
+    if (file.type) return file.type;
+    
+    // Fallback to extension detection
+    const ext = file.name.split('.').pop().toLowerCase();
+    return {
+      'jpg': 'image/jpeg',
+      'jpeg': 'image/jpeg',
+      'png': 'image/png',
+      'pdf': 'application/pdf'
+    }[ext] || 'application/octet-stream';
+  } catch (e) {
+    console.warn('File type detection failed:', e);
+    return 'application/octet-stream';
   }
 }
 
