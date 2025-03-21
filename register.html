@@ -3,94 +3,118 @@
 <head>
     <title>Registration Portal</title>
     <style>
-        .container { 
-            max-width: 600px; 
-            margin: 20px auto; 
-            padding: 20px; 
-            box-shadow: 0 0 10px rgba(0,0,0,0.1); 
-            font-family: Arial, sans-serif;
-        }
-        .form-group { 
-            margin-bottom: 20px; 
-        }
-        label { 
-            display: block; 
-            margin-bottom: 5px; 
-            font-weight: bold; 
-            color: #333;
-        }
-        input, button { 
-            width: 100%; 
-            padding: 12px; 
-            margin-top: 5px; 
-            border: 2px solid #ddd; 
-            border-radius: 5px; 
-            box-sizing: border-box;
-        }
-        button { 
-            background: #4285f4; 
-            color: white; 
-            border: none; 
-            cursor: pointer; 
-            font-size: 16px;
-            transition: background 0.3s;
-        }
-        button:hover { 
-            background: #357abd; 
-        }
-        .error { 
-            color: #ff4444; 
-            margin-top: 10px; 
-            font-size: 0.9em;
-        }
-        .file-input { 
-            padding: 3px; 
-        }
-        .validation-message {
-            font-size: 0.85em;
-            margin-top: 5px;
-            display: block;
-        }
-        .valid { color: #00C851; }
-        .invalid { color: #ff4444; }
-        input:invalid { border-color: #ff4444; }
-        input:valid { border-color: #00C851; }
-        .ic-input {
-            font-family: monospace;
-            letter-spacing: 0.1em;
-        }
-        .loader {
-            border: 4px solid #f3f3f3;
-            border-top: 4px solid #4285f4;
-            border-radius: 50%;
-            width: 30px;
-            height: 30px;
-            animation: spin 1s linear infinite;
-            display: none;
-            margin: 20px auto;
-        }
+    .container { 
+        max-width: 600px; 
+        margin: 20px auto; 
+        padding: 20px; 
+        box-shadow: 0 0 10px rgba(0,0,0,0.1); 
+        font-family: Arial, sans-serif;
+        position: relative;
+        min-height: 400px;
+    }
 
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
+    /* Loading Spinner */
+    #loadingSpinner {
+        border: 4px solid #f3f3f3;
+        border-top: 4px solid #4285f4;
+        border-radius: 50%;
+        width: 40px;
+        height: 40px;
+        animation: spin 1s linear infinite;
+        display: none;
+        position: absolute;
+        left: 50%;
+        top: 50%;
+        transform: translate(-50%, -50%);
+    }
 
-        .success-message {
-            display: none;
-            color: #00C851;
-            text-align: center;
-            font-size: 1.2em;
-            margin: 20px 0;
-        }
+    @keyframes spin {
+        0% { transform: translate(-50%, -50%) rotate(0deg); }
+        100% { transform: translate(-50%, -50%) rotate(360deg); }
+    }
 
-        .hidden {
-            display: none !important;
-        }
+    /* Success Message */
+    #successMessage {
+        display: none;
+        text-align: center;
+        position: absolute;
+        left: 50%;
+        top: 50%;
+        transform: translate(-50%, -50%);
+        width: 100%;
+        padding: 0 20px;
+    }
 
-        .back-button {
-            display: none; /* Start hidden by default */
-        }
-    </style>
+    .success-checkmark {
+        font-size: 48px;
+        color: #00C851;
+        margin-bottom: 15px;
+    }
+
+    /* Back Button */
+    #backButton {
+        display: none;
+        width: 200px;
+        margin: 30px auto 0;
+        padding: 12px;
+        background: #4285f4;
+        color: white;
+        text-align: center;
+        text-decoration: none;
+        border-radius: 25px;
+        font-weight: bold;
+        transition: all 0.3s ease;
+        position: absolute;
+        left: 50%;
+        top: 60%;
+        transform: translateX(-50%);
+    }
+
+    #backButton:hover {
+        background: #357abd;
+        transform: translateX(-50%) scale(1.05);
+    }
+
+    /* Form States */
+    .form-hidden {
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.3s ease;
+    }
+
+    .visible {
+        display: block !important;
+    }
+
+    /* Existing form styles remain unchanged */
+    .form-group { margin-bottom: 20px; }
+    label { display: block; margin-bottom: 5px; font-weight: bold; color: #333; }
+    input, button { 
+        width: 100%; 
+        padding: 12px; 
+        margin-top: 5px; 
+        border: 2px solid #ddd; 
+        border-radius: 5px; 
+        box-sizing: border-box; 
+    }
+    button { 
+        background: #4285f4; 
+        color: white; 
+        border: none; 
+        cursor: pointer; 
+        font-size: 16px;
+        transition: background 0.3s;
+    }
+    button:hover { background: #357abd; }
+    .error { color: #ff4444; margin-top: 10px; font-size: 0.9em; }
+    .file-input { padding: 3px; }
+    .validation-message { font-size: 0.85em; margin-top: 5px; display: block; }
+    .valid { color: #00C851; }
+    .invalid { color: #ff4444; }
+    input:invalid { border-color: #ff4444; }
+    input:valid { border-color: #00C851; }
+    .ic-input { font-family: monospace; letter-spacing: 0.1em; }
+</style>
 </head>
 <body>
     <div class="container">
