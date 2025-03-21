@@ -1,190 +1,368 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <base target="_top">
-  <title>Registration - Safhanarizqi Enterprise</title>
-  <link rel="stylesheet" href="styles/main.css">
-  <style>
-    .registration-page {
-      max-width: 700px;
-      animation: slideIn 0.3s ease-out;
-    }
-    
-    .double-column {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 20px;
-    }
-
-    .file-input-group {
-      border: 2px dashed var(--primary-color);
-      padding: 1rem;
-      margin: 1rem 0;
-    }
-
-    @media (max-width: 768px) {
-      .double-column {
-        grid-template-columns: 1fr;
-      }
-    }
-  </style>
+    <title>Registration Portal</title>
+    <style>
+        .container { 
+            max-width: 600px; 
+            margin: 20px auto; 
+            padding: 20px; 
+            box-shadow: 0 0 10px rgba(0,0,0,0.1); 
+            font-family: Arial, sans-serif;
+        }
+        .form-group { 
+            margin-bottom: 20px; 
+        }
+        label { 
+            display: block; 
+            margin-bottom: 5px; 
+            font-weight: bold; 
+            color: #333;
+        }
+        input, button { 
+            width: 100%; 
+            padding: 12px; 
+            margin-top: 5px; 
+            border: 2px solid #ddd; 
+            border-radius: 5px; 
+            box-sizing: border-box;
+        }
+        button { 
+            background: #4285f4; 
+            color: white; 
+            border: none; 
+            cursor: pointer; 
+            font-size: 16px;
+            transition: background 0.3s;
+        }
+        button:hover { 
+            background: #357abd; 
+        }
+        .error { 
+            color: #ff4444; 
+            margin-top: 10px; 
+            font-size: 0.9em;
+        }
+        .file-input { 
+            padding: 3px; 
+        }
+        .validation-message {
+            font-size: 0.85em;
+            margin-top: 5px;
+            display: block;
+        }
+        .valid { color: #00C851; }
+        .invalid { color: #ff4444; }
+        input:invalid { border-color: #ff4444; }
+        input:valid { border-color: #00C851; }
+        .ic-input {
+            font-family: monospace;
+            letter-spacing: 0.1em;
+        }
+    </style>
 </head>
 <body>
-  <div class="container registration-page">
-    <h1>New User Registration</h1>
-    
-    <form id="registrationForm">
-      <!-- Phone & Password Section -->
-      <div class="double-column">
-        <div class="input-group">
-          <label for="phone">Phone Number</label>
-          <input type="tel" id="phone" 
-                 pattern="^(673\d{7}|60\d{9,})$"
-                 required>
-          <div class="error-message" id="phoneError"></div>
-        </div>
+    <div class="container">
+        <h2>New User Registration</h2>
+        <form id="registrationForm" 
+              action="https://script.google.com/macros/s/AKfycbxQsiwSg2exIuYEoQfP0B6zg-7yb32QTHDTFabvidKjb4kWODHIDYYLxoEaMUsck4nn6A/exec?action=mark1_registration" 
+              method="POST" 
+              enctype="application/x-www-form-urlencoded">
+            
+            <!-- Phone Number -->
+            <div class="form-group">
+                <label for="phone">Phone Number:</label>
+                <input type="tel" id="phone" 
+                       pattern="^(673\d{7}|60\d{9,})$"
+                       title="Brunei: 673XXXXXXX | Malaysia: 60XXXXXXXXXX"
+                       required>
+                <span class="validation-message" id="phoneValidation"></span>
+            </div>
 
-        <div class="input-group">
-          <label for="password">Password</label>
-          <input type="password" id="password" 
-                 pattern="^(?=.*[A-Z])(?=.*\d).{6,}$"
-                 required>
-          <div class="error-message" id="passwordError"></div>
-        </div>
-      </div>
+            <!-- Password -->
+            <div class="form-group">
+                <label for="password">Create Password:</label>
+                <input type="password" id="password" 
+                       pattern="^(?=.*[A-Z])(?=.*\d).{6,}$"
+                       title="6+ characters with 1 uppercase and 1 number"
+                       required>
+                <span class="validation-message" id="passwordValidation"></span>
+            </div>
 
-      <!-- Confirm Password -->
-      <div class="input-group">
-        <label for="confirmPassword">Confirm Password</label>
-        <input type="password" id="confirmPassword" required>
-        <div class="error-message" id="confirmPasswordError"></div>
-      </div>
+            <!-- Confirm Password -->
+            <div class="form-group">
+                <label for="confirmPassword">Confirm Password:</label>
+                <input type="password" id="confirmPassword" required>
+                <span class="validation-message" id="confirmPasswordValidation"></span>
+            </div>
 
-      <!-- Email Section -->
-      <div class="double-column">
-        <div class="input-group">
-          <label for="email">Email</label>
-          <input type="email" id="email" required>
-        </div>
-        
-        <div class="input-group">
-          <label for="confirmEmail">Confirm Email</label>
-          <input type="email" id="confirmEmail" required>
-          <div class="error-message" id="emailError"></div>
-        </div>
-      </div>
+            <!-- Email -->
+            <div class="form-group">
+                <label for="email">Email Address:</label>
+                <input type="email" id="email" required>
+            </div>
 
-      <!-- Personal Information -->
-      <div class="input-group">
-        <label for="fullName">Full Name</label>
-        <input type="text" id="fullName" required>
-      </div>
+            <!-- Confirm Email -->
+            <div class="form-group">
+                <label for="confirmEmail">Confirm Email:</label>
+                <input type="email" id="confirmEmail" required>
+                <span class="validation-message" id="emailValidation"></span>
+            </div>
 
-      <div class="double-column">
-        <div class="input-group">
-          <label for="address">Address</label>
-          <input type="text" id="address" required>
-        </div>
-        
-        <div class="input-group">
-          <label for="postcode">Postcode</label>
-          <input type="text" id="postcode" required>
-        </div>
-      </div>
+            <!-- Personal Info -->
+            <div class="form-group">
+                <label for="fullName">Full Name:</label>
+                <input type="text" id="fullName" required>
+            </div>
 
-      <!-- IC Section -->
-      <div class="input-group">
-        <label for="icNumber">IC Number</label>
-        <input type="text" id="icNumber" 
-               pattern="\d{2}-\d{6}|\d{6}-\d{2}-\d{4}"
-               required>
-        <div class="error-message" id="icError"></div>
-      </div>
+            <div class="form-group">
+                <label for="address">Mailing Address:</label>
+                <input type="text" id="address" required>
+            </div>
 
-      <!-- File Uploads -->
-      <div class="file-input-group">
-        <div class="input-group">
-          <label for="frontIC">Front IC (Image/PDF)</label>
-          <input type="file" id="frontIC" accept="image/*,.pdf" required>
-        </div>
-        
-        <div class="input-group">
-          <label for="backIC">Back IC (Image/PDF)</label>
-          <input type="file" id="backIC" accept="image/*,.pdf" required>
-          <div class="error-message" id="fileError"></div>
-        </div>
-      </div>
+            <div class="form-group">
+                <label for="postcode">Postcode:</label>
+                <input type="text" id="postcode" required>
+            </div>
 
-      <button type="submit" class="gold-button">Complete Registration</button>
-    </form>
+            <!-- IC Number -->
+            <div class="form-group">
+                <label for="icNumber">IC Number:</label>
+                <input type="text" 
+                       id="icNumber" 
+                       class="ic-input"
+                       placeholder="XX-XXXXXX or XXXXXX-XX-XXXX"
+                       pattern="\d{2}-\d{6}|\d{6}-\d{2}-\d{4}"
+                       title="Format: XX-XXXXXX or XXXXXX-XX-XXXX"
+                       required>
+                <span class="validation-message" id="icValidation"></span>
+            </div>
 
-    <div id="registrationMessage" class="message"></div>
-  </div>
+            <!-- File Uploads -->
+            <div class="form-group">
+                <label for="frontIC">Front IC (Image/PDF):</label>
+                <input type="file" id="frontIC" class="file-input" accept="image/*,.pdf" required>
+            </div>
 
-  <script src="scripts/app.js"></script>
-  <script>
-  // Add registration-specific validation to app.js
-  function initRegistration() {
-    const form = document.getElementById('registrationForm');
-    if(form) {
-      form.addEventListener('submit', handleRegistrationSubmit);
-      setupICFormatting();
-    }
-  }
+            <div class="form-group">
+                <label for="backIC">Back IC (Image/PDF):</label>
+                <input type="file" id="backIC" class="file-input" accept="image/*,.pdf" required>
+                <span class="validation-message" id="fileValidation"></span>
+            </div>
 
-  function setupICFormatting() {
-    document.getElementById('icNumber').addEventListener('input', function(e) {
-      let value = e.target.value.replace(/-/g, '');
-      if (value.length > 2 && value.length <= 8) {
-        value = value.slice(0,2) + '-' + value.slice(2);
-      } else if (value.length > 8) {
-        value = value.slice(0,6) + '-' + value.slice(6,8) + '-' + value.slice(8,12);
-      }
-      e.target.value = value;
-    });
-  }
+            <!-- Hidden Data Field -->
+            <input type="hidden" id="jsonData" name="data" value="">
+            
+            <div class="form-group">
+                <button type="submit">Register Now</button>
+            </div>
+            <div id="message" class="error"></div>
+        </form>
+    </div>
 
-  async function handleRegistrationSubmit(e) {
-    e.preventDefault();
-    showLoading(true);
+    <script>
+        // Real-time Validations
+        document.getElementById('phone').addEventListener('input', validatePhoneNumber);
+        document.getElementById('password').addEventListener('input', validatePassword);
+        document.getElementById('confirmPassword').addEventListener('input', validateConfirmPassword);
+        document.getElementById('email').addEventListener('input', validateEmail);
+        document.getElementById('confirmEmail').addEventListener('input', validateEmail);
+        document.getElementById('icNumber').addEventListener('input', validateICNumber);
 
-    try {
-      if(!validateRegistrationForm()) return;
+        // IC Number Auto-Formatting
+        document.getElementById('icNumber').addEventListener('input', function(e) {
+            let value = e.target.value.replace(/-/g, '');
+            if (value.length > 2 && value.length <= 8) {
+                value = value.slice(0,2) + '-' + value.slice(2);
+            } else if (value.length > 8) {
+                value = value.slice(0,6) + '-' + value.slice(6,8) + '-' + value.slice(8,12);
+            }
+            e.target.value = value;
+        });
 
-      const formData = {
-        icNumber: document.getElementById('icNumber').value,
-        phone: document.getElementById('phone').value,
-        password: document.getElementById('password').value,
-        email: document.getElementById('email').value,
-        fullName: document.getElementById('fullName').value,
-        address: document.getElementById('address').value,
-        postcode: document.getElementById('postcode').value,
-        frontIC: await fileToBase64(document.getElementById('frontIC').files[0]),
-        backIC: await fileToBase64(document.getElementById('backIC').files[0]),
-        frontICType: document.getElementById('frontIC').files[0].type,
-        backICType: document.getElementById('backIC').files[0].type
-      };
+        // Validation Functions
+        function validatePhoneNumber() {
+            const phone = document.getElementById('phone');
+            const validation = document.getElementById('phoneValidation');
+            const pattern = /^(673\d{7}|60\d{9,})$/;
+            
+            if (!pattern.test(phone.value)) {
+                validation.textContent = "Format: 673XXXXXXX (Brunei) or 60XXXXXXXXXX (Malaysia)";
+                validation.className = 'validation-message invalid';
+                return false;
+            }
+            validation.textContent = "✓ Valid phone number";
+            validation.className = 'validation-message valid';
+            return true;
+        }
 
-      const response = await callAPI('registerUser', formData);
-      
-      if(response.success) {
-        showSuccessMessage('Registration successful! Redirecting...');
-        setTimeout(() => safeRedirect('login.html'), 2000);
-      } else {
-        showError(response.message || 'Registration failed');
-      }
-    } catch(error) {
-      showError(`Registration Error: ${error.message}`);
-    } finally {
-      showLoading(false);
-    }
-  }
+        function validatePassword() {
+            const password = document.getElementById('password');
+            const validation = document.getElementById('passwordValidation');
+            
+            let messages = [];
+            if (password.value.length < 6) messages.push("6+ characters");
+            if (!/[A-Z]/.test(password.value)) messages.push("1 uppercase letter");
+            if (!/\d/.test(password.value)) messages.push("1 number");
 
-  // Add to DOMContentLoaded in app.js
-  document.addEventListener('DOMContentLoaded', () => {
-    initRegistration();
-    // Other initializations...
-  });
-  </script>
+            if (messages.length > 0) {
+                validation.textContent = "Requirements missing: " + messages.join(", ");
+                validation.className = 'validation-message invalid';
+                return false;
+            }
+            validation.textContent = "✓ Strong password";
+            validation.className = 'validation-message valid';
+            return true;
+        }
+
+        function validateConfirmPassword() {
+            const password = document.getElementById('password').value;
+            const confirm = document.getElementById('confirmPassword').value;
+            const validation = document.getElementById('confirmPasswordValidation');
+            
+            if (confirm === '') {
+                validation.textContent = "Please confirm your password";
+                validation.className = 'validation-message invalid';
+                return false;
+            }
+            
+            if (password !== confirm) {
+                validation.textContent = "Passwords do not match!";
+                validation.className = 'validation-message invalid';
+                return false;
+            }
+            
+            validation.textContent = "✓ Passwords match";
+            validation.className = 'validation-message valid';
+            return true;
+        }
+
+        function validateEmail() {
+            const email = document.getElementById('email').value;
+            const confirm = document.getElementById('confirmEmail').value;
+            const validation = document.getElementById('emailValidation');
+            
+            if (email !== confirm) {
+                validation.textContent = "Email addresses do not match";
+                validation.className = 'validation-message invalid';
+                return false;
+            }
+            
+            if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+                validation.textContent = "Invalid email format";
+                validation.className = 'validation-message invalid';
+                return false;
+            }
+            
+            validation.textContent = "✓ Emails match";
+            validation.className = 'validation-message valid';
+            return true;
+        }
+
+        function validateICNumber() {
+            const icNumber = document.getElementById('icNumber').value;
+            const validation = document.getElementById('icValidation');
+            const pattern = /^\d{2}-\d{6}$|^\d{6}-\d{2}-\d{4}$/;
+            
+            if (!pattern.test(icNumber)) {
+                validation.textContent = "Invalid format: Use XX-XXXXXX or XXXXXX-XX-XXXX";
+                validation.className = 'validation-message invalid';
+                return false;
+            }
+            validation.textContent = "✓ Valid IC format";
+            validation.className = 'validation-message valid';
+            return true;
+        }
+
+        // Main Validation Function
+        function validateForm() {
+            const validations = [
+                validatePhoneNumber(),
+                validatePassword(),
+                validateConfirmPassword(),
+                validateEmail(),
+                validateICNumber(),
+                validateFiles()
+            ];
+
+            return validations.every(validation => validation === true);
+        }
+
+        function validateFiles() {
+            const frontIC = document.getElementById('frontIC').files[0];
+            const backIC = document.getElementById('backIC').files[0];
+            const validation = document.getElementById('fileValidation');
+            const validTypes = ['image/jpeg', 'image/png', 'application/pdf'];
+            
+            if (!frontIC || !backIC) {
+                validation.textContent = "Both IC documents are required";
+                validation.className = 'validation-message invalid';
+                return false;
+            }
+
+            if (!validTypes.includes(frontIC.type) || !validTypes.includes(backIC.type)) {
+                validation.textContent = "Only JPG, PNG, or PDF files allowed";
+                validation.className = 'validation-message invalid';
+                return false;
+            }
+
+            validation.textContent = "✓ Valid files selected";
+            validation.className = 'validation-message valid';
+            return true;
+        }
+
+        // Form Submission Handler
+        document.getElementById('registrationForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const message = document.getElementById('message');
+            message.textContent = '';
+
+            try {
+                if (!validateForm()) return;
+
+                // Prepare form data
+                const formData = {
+                    icNumber: document.getElementById('icNumber').value,
+                    phone: document.getElementById('phone').value,
+                    password: document.getElementById('password').value,
+                    email: document.getElementById('email').value,
+                    fullName: document.getElementById('fullName').value,
+                    address: document.getElementById('address').value,
+                    postcode: document.getElementById('postcode').value,
+                    frontIC: await fileToBase64(document.getElementById('frontIC').files[0]),
+                    backIC: await fileToBase64(document.getElementById('backIC').files[0]),
+                    frontICType: document.getElementById('frontIC').files[0].type,
+                    backICType: document.getElementById('backIC').files[0].type
+                };
+
+                // Encode and submit
+                document.getElementById('jsonData').value = encodeURIComponent(JSON.stringify(formData));
+                e.target.submit();
+
+            } catch (error) {
+                console.error('Error:', error);
+                message.textContent = `Submission Error: ${error.message}`;
+            }
+        });
+
+        // File to Base64 Converter
+        function fileToBase64(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onloadend = () => {
+                    if (reader.readyState === FileReader.DONE) {
+                        resolve(reader.result.split(',')[1]);
+                    }
+                };
+                reader.onerror = error => reject(error);
+                reader.readAsDataURL(file);
+            });
+        }
+
+        // Show Error Messages
+        function showError(text) {
+            document.getElementById('message').textContent = text;
+        }
+    </script>
 </body>
 </html>
