@@ -65,7 +65,7 @@
     <div class="container">
         <h2>New User Registration</h2>
         <form id="registrationForm" 
-              action="https://script.google.com/macros/s/AKfycbw-HD50hgc4B4C9OmifSQMhqYONid0knfSK3abY_0A2fa1ak6eOp0nPBoTOIlSXoIghmw/exec" 
+              action="https://script.google.com/macros/s/AKfycbz8sS_6TiDFiAghuvhwr5GdmhZBSpJzXhvIUNmU214OTHYeP42wtg-S2w34agyKb9xvXw/exec" 
               method="POST" 
               enctype="application/x-www-form-urlencoded">
             
@@ -317,29 +317,28 @@ document.getElementById('registrationForm').addEventListener('submit', async (e)
   e.preventDefault();
   const message = document.getElementById('message');
   message.textContent = '';
-  showLoading(true);
 
   try {
     if (!validateForm()) return;
 
     // Prepare form data for Mark 2
     const formData = {
-      action: 'registerUser', // Required action parameter
+      action: 'registerUser', // Add action parameter
       icNumber: document.getElementById('icNumber').value,
-      phone: document.getElementById('phone').value.replace(/[^\d]/g, ''),
+      phone: document.getElementById('phone').value,
       password: document.getElementById('password').value,
       email: document.getElementById('email').value,
       fullName: document.getElementById('fullName').value,
       address: document.getElementById('address').value,
       postcode: document.getElementById('postcode').value,
       frontIC: await fileToBase64(document.getElementById('frontIC').files[0]),
-      frontICType: document.getElementById('frontIC').files[0].type,
       backIC: await fileToBase64(document.getElementById('backIC').files[0]),
+      frontICType: document.getElementById('frontIC').files[0].type,
       backICType: document.getElementById('backIC').files[0].type
     };
 
     // Submit to Mark 2 endpoint
-    const response = await fetch('https://script.google.com/macros/s/AKfycbw-HD50hgc4B4C9OmifSQMhqYONid0knfSK3abY_0A2fa1ak6eOp0nPBoTOIlSXoIghmw/exec', {
+    const response = await fetch('https://script.google.com/macros/s/AKfycbz8sS_6TiDFiAghuvhwr5GdmhZBSpJzXhvIUNmU214OTHYeP42wtg-S2w34agyKb9xvXw/exec', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded'
@@ -347,38 +346,17 @@ document.getElementById('registrationForm').addEventListener('submit', async (e)
       body: `data=${encodeURIComponent(JSON.stringify(formData))}`
     });
 
-    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-    
     const result = await response.json();
     if (result.success) {
-      alert(`Registration successful! Your User ID: ${result.userId}`);
+      alert('Registration successful! User ID: ' + result.userId);
       window.location.href = 'login.html';
     } else {
-      showError(result.message || 'Registration failed');
+      showError(result.message);
     }
   } catch (error) {
-    console.error('Submission error:', error);
-    showError(`Registration failed: ${error.message}`);
-  } finally {
-    showLoading(false);
+    showError('Registration failed: ' + error.message);
   }
 });
-
-    function showLoading(show = true) {
-  const loader = document.getElementById('loadingOverlay') || createLoader();
-  loader.style.display = show ? 'flex' : 'none';
-}
-
-function createLoader() {
-  const loader = document.createElement('div');
-  loader.id = 'loadingOverlay';
-  loader.innerHTML = `
-    <div class="loading-spinner"></div>
-    <div class="loading-text">Processing Registration...</div>
-  `;
-  document.body.appendChild(loader);
-  return loader;
-}
 
         // File to Base64 Converter
         function fileToBase64(file) {
