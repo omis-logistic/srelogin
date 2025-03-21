@@ -65,7 +65,7 @@
     <div class="container">
         <h2>New User Registration</h2>
         <form id="registrationForm" 
-              action="https://script.google.com/macros/s/AKfycbx45LQfjMwwT9F-cR_z8daS3LjdehgCsK1xV1QMNK1dkFFu48vhvx-VXFZCBzxbs7kuVw/exec" 
+              action="https://script.google.com/macros/s/AKfycbwNyH7jq34j9yGO2rdCMc0qeRtyko8Dth4pJRSKkhTmGdz4VpUy_PUh3HIIeFH31RPG0A/exec" 
               method="POST" 
               enctype="application/x-www-form-urlencoded">
             
@@ -312,38 +312,51 @@
         }
 
         // Form Submission Handler
-        document.getElementById('registrationForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const message = document.getElementById('message');
-            message.textContent = '';
+        // In the form submission handler
+document.getElementById('registrationForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const message = document.getElementById('message');
+  message.textContent = '';
 
-            try {
-                if (!validateForm()) return;
+  try {
+    if (!validateForm()) return;
 
-                // Prepare form data
-                const formData = {
-                    icNumber: document.getElementById('icNumber').value,
-                    phone: document.getElementById('phone').value,
-                    password: document.getElementById('password').value,
-                    email: document.getElementById('email').value,
-                    fullName: document.getElementById('fullName').value,
-                    address: document.getElementById('address').value,
-                    postcode: document.getElementById('postcode').value,
-                    frontIC: await fileToBase64(document.getElementById('frontIC').files[0]),
-                    backIC: await fileToBase64(document.getElementById('backIC').files[0]),
-                    frontICType: document.getElementById('frontIC').files[0].type,
-                    backICType: document.getElementById('backIC').files[0].type
-                };
+    // Prepare form data for Mark 2
+    const formData = {
+      action: 'registerUser', // Add action parameter
+      icNumber: document.getElementById('icNumber').value,
+      phone: document.getElementById('phone').value,
+      password: document.getElementById('password').value,
+      email: document.getElementById('email').value,
+      fullName: document.getElementById('fullName').value,
+      address: document.getElementById('address').value,
+      postcode: document.getElementById('postcode').value,
+      frontIC: await fileToBase64(document.getElementById('frontIC').files[0]),
+      backIC: await fileToBase64(document.getElementById('backIC').files[0]),
+      frontICType: document.getElementById('frontIC').files[0].type,
+      backICType: document.getElementById('backIC').files[0].type
+    };
 
-                // Encode and submit
-                document.getElementById('jsonData').value = encodeURIComponent(JSON.stringify(formData));
-                e.target.submit();
+    // Submit to Mark 2 endpoint
+    const response = await fetch('YOUR_DEPLOYMENT_URL', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded'
+      },
+      body: `data=${encodeURIComponent(JSON.stringify(formData))}`
+    });
 
-            } catch (error) {
-                console.error('Error:', error);
-                message.textContent = `Submission Error: ${error.message}`;
-            }
-        });
+    const result = await response.json();
+    if (result.success) {
+      alert('Registration successful! User ID: ' + result.userId);
+      window.location.href = 'login.html';
+    } else {
+      showError(result.message);
+    }
+  } catch (error) {
+    showError('Registration failed: ' + error.message);
+  }
+});
 
         // File to Base64 Converter
         function fileToBase64(file) {
