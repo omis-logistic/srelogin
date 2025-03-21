@@ -1,7 +1,7 @@
 //scripts/app.js
 // ================= CONFIGURATION =================
 const CONFIG = {
-  GAS_URL: 'https://script.google.com/macros/s/AKfycbwLuOmM3gObK97sQS4xSC_b-siCnBWEj2T2HL5DyqIVyKOjjG4x2tUlaaZlH55KE4rH_w/exec',
+  GAS_URL: 'https://script.google.com/macros/s/AKfycbwzN0Midjbj6mgJi1oiDGFP-R9UiHOOESARb2-7WjJhadJP8STz9se_vPHxkIqVdA5Psw/exec',
   PROXY_URL: 'https://script.google.com/macros/s/AKfycbxrpfk7eNEJk2_xHTaYjkby4n1daHSiARZrc7oJT4-RA9aYoW9ZYivQjZe63nJH2nU-/exec',
   SESSION_TIMEOUT: 3600,
   MAX_FILE_SIZE: 5 * 1024 * 1024,
@@ -121,29 +121,19 @@ function handleLogout() {
 // ================= API HANDLER =================
 async function callAPI(action, payload) {
   try {
-    const formData = new FormData();
-    
-    if (payload.files) {
-      payload.files.forEach((file, index) => {
-        const blob = new Blob(
-          [Uint8Array.from(atob(file.base64), c => c.charCodeAt(0))],
-          { type: file.type }
-        );
-        formData.append(`file${index}`, blob, file.name);
-      });
-    }
-
-    formData.append('data', JSON.stringify(payload.data));
-
     const response = await fetch(CONFIG.GAS_URL, {
       method: 'POST',
-      body: formData
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        action: action,
+        data: payload
+      })
     });
-
+    
     return await response.json();
   } catch (error) {
     console.error('API Call Failed:', error);
-    return { success: false, message: error.message };
+    return { success: false, message: 'Network error' };
   }
 }
 
@@ -659,49 +649,71 @@ async function handleLogin() {
 }
 
 async function handleRegistration() {
-  if (!validateRegistrationForm()) return;
+    console.log('Registration initiated'); // Add this
+  const registerForm = document.getElementById('registrationForm');
+  if (!registerForm) return;
 
-  const formData = {
-    phone: document.getElementById('regPhone').value.trim(),
-    password: document.getElementById('regPassword').value,
-    email: document.getElementById('regEmail').value.trim()
-  };
+  const phone = document.getElementById('regPhone').value.trim();
+  const password = document.getElementById('regPassword').value;
+  const email = document.getElementById('regEmail').value.trim();
 
   try {
-    const result = await callAPI('createAccount', formData);
+    showLoading(true);
+    const response = await fetch(CONFIG.GAS_URL, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        action: 'createAccount',
+        data: { phone, password, email }
+      })
+    });
+
+    const result = await response.json();
     
     if (result.success) {
-      alert('Registration successful! Please login.');
-      safeRedirect('login.html');
+      showError('Registration successful! Redirecting...', 'status-message success');
+      setTimeout(() => safeRedirect('login.html'), 2000);
     } else {
       showError(result.message || 'Registration failed');
     }
   } catch (error) {
-    showError('Registration failed - please try again');
+    showError(`Registration Error: ${error.message}`);
+  } finally {
+    showLoading(false);
   }
 }
 
 // ================= PASSWORD MANAGEMENT =================
 async function handlePasswordRecovery() {
+  const recoveryForm = document.getElementById('recoveryForm');
+  if (!recoveryForm) return;
+
   const phone = document.getElementById('recoveryPhone').value.trim();
   const email = document.getElementById('recoveryEmail').value.trim();
 
-  if (!validatePhone(phone) || !validateEmail(email)) {
-    showError('Please check your inputs');
-    return;
-  }
-
   try {
-    const result = await callAPI('initiatePasswordReset', { phone, email });
+    showLoading(true);
+    const response = await fetch(CONFIG.GAS_URL, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        action: 'initiatePasswordReset',
+        data: { phone, email }
+      })
+    });
+
+    const result = await response.json();
     
     if (result.success) {
-      alert('Temporary password sent to your email!');
-      safeRedirect('login.html');
+      showError('Password reset instructions sent!', 'status-message success');
+      setTimeout(() => safeRedirect('login.html'), 2000);
     } else {
       showError(result.message || 'Password recovery failed');
     }
   } catch (error) {
-    showError('Password recovery failed - please try again');
+    showError(`Password Recovery Error: ${error.message}`);
+  } finally {
+    showLoading(false);
   }
 }
 
@@ -842,34 +854,35 @@ function formatDate(dateString) {
 
 // ================= INITIALIZATION =================
 document.addEventListener('DOMContentLoaded', () => {
+  // Core initialization
   detectViewMode();
   initValidationListeners();
   createLoaderElement();
 
-  // Initialize category requirements on page load
-  checkCategoryRequirements();
-
-  // Initialize parcel declaration form
-  const parcelForm = document.getElementById('declarationForm');
-  if (parcelForm) {
-    parcelForm.addEventListener('submit', handleParcelSubmission);
-    
-    // Set up category change listener
-    const categorySelect = document.getElementById('itemCategory');
-    if (categorySelect) {
-      categorySelect.addEventListener('change', checkCategoryRequirements);
-    }
-
-    // Phone field setup
-    const phoneField = document.getElementById('phone');
-    if (phoneField) {
-      const userData = checkSession();
-      phoneField.value = userData?.phone || '';
-      phoneField.readOnly = true;
-    }
+  // Authentication handlers
+  const loginForm = document.getElementById('loginForm');
+  if(loginForm) {
+    loginForm.addEventListener('submit', handleLogin);
   }
 
-  // Session management
+  // Add these event listeners for registration/password recovery
+  const registerBtn = document.getElementById('registerBtn');
+  if(registerBtn) {
+    registerBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      handleRegistration();
+    });
+  }
+
+  const forgotPassBtn = document.getElementById('forgotPassBtn');
+  if(forgotPassBtn) {
+    forgotPassBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      handlePasswordRecovery();
+    });
+  }
+
+  // Session validation
   const publicPages = ['login.html', 'register.html', 'forgot-password.html'];
   const isPublicPage = publicPages.some(page => 
     window.location.pathname.includes(page)
@@ -884,6 +897,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
+  // Other initializations
   window.addEventListener('beforeunload', () => {
     const errorElement = document.getElementById('error-message');
     if (errorElement) errorElement.style.display = 'none';
