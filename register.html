@@ -385,9 +385,9 @@
     try {
         // Initial state setup
         form.classList.add('hidden');
-        spinner.style.display = 'block';
+        successMsg.style.display = 'none';
         backButton.classList.remove('visible');
-        message.textContent = '';
+        spinner.style.display = 'block';
 
         // Prepare form data
         const formData = {
@@ -406,35 +406,22 @@
         };
 
         // Submit data
-        const response = await fetch('https://script.google.com/macros/s/AKfycbxd9diKjFbklmbEAzXqRlafwtMqEeyu5B0xDgHv4zhlrMxiPkn0YiMrvl4F3GpC0Q9wDA/exec', {
+        await fetch('https://script.google.com/macros/s/AKfycbxd9diKjFbklmbEAzXqRlafwtMqEeyu5B0xDgHv4zhlrMxiPkn0YiMrvl4F3GpC0Q9wDA/exec', { 
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/x-www-form-urlencoded'
-            },
             body: `data=${encodeURIComponent(JSON.stringify(formData))}`
         });
 
-        // Handle non-OK responses
-        if (!response.ok) {
-            throw new Error('Server responded with error');
-        }
-
         // Success handling
-        setTimeout(() => {
-            spinner.style.display = 'none';
-            successMsg.style.display = 'block';
-            backButton.classList.add('visible');
-        }, 2000);
+        spinner.style.display = 'none';
+        successMsg.style.display = 'block';
+        backButton.classList.add('visible'); // Make button visible
 
     } catch (error) {
         // Error handling
         spinner.style.display = 'none';
         successMsg.style.display = 'block';
-        backButton.classList.add('visible');
-        console.error('Submission error:', error);
-        
-        // Optional: Show error message to user
-        // message.textContent = 'Registration completed!'; 
+        backButton.classList.add('visible'); // Make button visible
+        console.error('Error:', error);
     }
 });
 
