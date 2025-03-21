@@ -1,7 +1,7 @@
 //scripts/app.js
 // ================= CONFIGURATION =================
 const CONFIG = {
-  GAS_URL: 'https://script.google.com/macros/s/AKfycbwzN0Midjbj6mgJi1oiDGFP-R9UiHOOESARb2-7WjJhadJP8STz9se_vPHxkIqVdA5Psw/exec',
+  GAS_URL: 'https://script.google.com/macros/s/AKfycbwnf3faw5JyZK3Nyhgn415Uk44QlY63CPaDaDfzkMjmSCvQRZU4AC-SHhFDUlQWUXSm2A/exec',
   PROXY_URL: 'https://script.google.com/macros/s/AKfycbxrpfk7eNEJk2_xHTaYjkby4n1daHSiARZrc7oJT4-RA9aYoW9ZYivQjZe63nJH2nU-/exec',
   SESSION_TIMEOUT: 3600,
   MAX_FILE_SIZE: 5 * 1024 * 1024,
@@ -73,43 +73,26 @@ function createErrorElement() {
 const checkSession = () => {
   const sessionData = sessionStorage.getItem('userData');
   const lastActivity = localStorage.getItem('lastActivity');
-  
+
   if (!sessionData) {
     handleLogout();
     return null;
   }
 
-  // Add this new verification block
-  try {
-    const userData = JSON.parse(sessionData);
-    
-    // Server-side validation API call
-    const validationResponse = await fetch(`${CONFIG.GAS_URL}?action=validateSession&phone=${encodeURIComponent(userData.phone)}`);
-    const { valid } = await validationResponse.json();
-
-    if (!valid) {
-      handleLogout();
-      return null;
-    }
-
-    if (lastActivity && Date.now() - lastActivity > CONFIG.SESSION_TIMEOUT * 1000) {
-      handleLogout();
-      return null;
-    }
-
-    localStorage.setItem('lastActivity', Date.now());
-    
-    if (userData?.tempPassword && !window.location.pathname.includes('password-reset.html')) {
-      handleLogout();
-      return null;
-    }
-
-    return userData;
-    
-  } catch (error) {
+  if (lastActivity && Date.now() - lastActivity > CONFIG.SESSION_TIMEOUT * 1000) {
     handleLogout();
     return null;
   }
+
+  localStorage.setItem('lastActivity', Date.now());
+  const userData = JSON.parse(sessionData);
+  
+  if (userData?.tempPassword && !window.location.pathname.includes('password-reset.html')) {
+    handleLogout();
+    return null;
+  }
+
+  return userData;
 };
 
 function handleLogout() {
@@ -121,19 +104,29 @@ function handleLogout() {
 // ================= API HANDLER =================
 async function callAPI(action, payload) {
   try {
+    const formData = new FormData();
+    
+    if (payload.files) {
+      payload.files.forEach((file, index) => {
+        const blob = new Blob(
+          [Uint8Array.from(atob(file.base64), c => c.charCodeAt(0))],
+          { type: file.type }
+        );
+        formData.append(`file${index}`, blob, file.name);
+      });
+    }
+
+    formData.append('data', JSON.stringify(payload.data));
+
     const response = await fetch(CONFIG.GAS_URL, {
       method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({
-        action: action,
-        data: payload
-      })
+      body: formData
     });
-    
+
     return await response.json();
   } catch (error) {
     console.error('API Call Failed:', error);
-    return { success: false, message: 'Network error' };
+    return { success: false, message: error.message };
   }
 }
 
@@ -649,71 +642,49 @@ async function handleLogin() {
 }
 
 async function handleRegistration() {
-    console.log('Registration initiated'); // Add this
-  const registerForm = document.getElementById('registrationForm');
-  if (!registerForm) return;
+  if (!validateRegistrationForm()) return;
 
-  const phone = document.getElementById('regPhone').value.trim();
-  const password = document.getElementById('regPassword').value;
-  const email = document.getElementById('regEmail').value.trim();
+  const formData = {
+    phone: document.getElementById('regPhone').value.trim(),
+    password: document.getElementById('regPassword').value,
+    email: document.getElementById('regEmail').value.trim()
+  };
 
   try {
-    showLoading(true);
-    const response = await fetch(CONFIG.GAS_URL, {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({
-        action: 'createAccount',
-        data: { phone, password, email }
-      })
-    });
-
-    const result = await response.json();
+    const result = await callAPI('createAccount', formData);
     
     if (result.success) {
-      showError('Registration successful! Redirecting...', 'status-message success');
-      setTimeout(() => safeRedirect('login.html'), 2000);
+      alert('Registration successful! Please login.');
+      safeRedirect('login.html');
     } else {
       showError(result.message || 'Registration failed');
     }
   } catch (error) {
-    showError(`Registration Error: ${error.message}`);
-  } finally {
-    showLoading(false);
+    showError('Registration failed - please try again');
   }
 }
 
 // ================= PASSWORD MANAGEMENT =================
 async function handlePasswordRecovery() {
-  const recoveryForm = document.getElementById('recoveryForm');
-  if (!recoveryForm) return;
-
   const phone = document.getElementById('recoveryPhone').value.trim();
   const email = document.getElementById('recoveryEmail').value.trim();
 
-  try {
-    showLoading(true);
-    const response = await fetch(CONFIG.GAS_URL, {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({
-        action: 'initiatePasswordReset',
-        data: { phone, email }
-      })
-    });
+  if (!validatePhone(phone) || !validateEmail(email)) {
+    showError('Please check your inputs');
+    return;
+  }
 
-    const result = await response.json();
+  try {
+    const result = await callAPI('initiatePasswordReset', { phone, email });
     
     if (result.success) {
-      showError('Password reset instructions sent!', 'status-message success');
-      setTimeout(() => safeRedirect('login.html'), 2000);
+      alert('Temporary password sent to your email!');
+      safeRedirect('login.html');
     } else {
       showError(result.message || 'Password recovery failed');
     }
   } catch (error) {
-    showError(`Password Recovery Error: ${error.message}`);
-  } finally {
-    showLoading(false);
+    showError('Password recovery failed - please try again');
   }
 }
 
@@ -750,59 +721,57 @@ async function handlePasswordReset() {
 }
 
 // ================= FORM VALIDATION =================
+function validatePhone(phone) {
+  const regex = /^(673\d{7,}|60\d{9,})$/;
+  return regex.test(phone);
+}
+
+function validatePassword(password) {
+  const regex = /^(?=.*[A-Z])(?=.*\d).{6,}$/;
+  return regex.test(password);
+}
+
+function validateEmail(email) {
+  const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return regex.test(email);
+}
+
 function validateRegistrationForm() {
+  const phone = document.getElementById('regPhone').value;
+  const password = document.getElementById('regPassword').value;
+  const confirmPassword = document.getElementById('regConfirmPass').value;
+  const email = document.getElementById('regEmail').value;
+  const confirmEmail = document.getElementById('regConfirmEmail').value;
+
   let isValid = true;
-  
-  // Clear previous errors
   document.querySelectorAll('.error-message').forEach(el => el.textContent = '');
 
-  // Phone validation
-  const phone = document.getElementById('phone').value;
-  if(!/^(673\d{7}|60\d{9,})$/.test(phone)) {
-    showError('Invalid phone format', 'phoneError');
+  if (!validatePhone(phone)) {
+    document.getElementById('phoneError').textContent = 'Invalid phone format';
     isValid = false;
   }
 
-  // Password validation
-  const password = document.getElementById('password').value;
-  if(!/(?=.*[A-Z])(?=.*\d).{6,}/.test(password)) {
-    showError('6+ chars with 1 uppercase and 1 number', 'passwordError');
+  if (!validatePassword(password)) {
+    document.getElementById('passError').textContent = '6+ chars, 1 uppercase, 1 number';
     isValid = false;
   }
 
-  // Email matching
-  const email = document.getElementById('email').value;
-  const confirmEmail = document.getElementById('confirmEmail').value;
-  if(email !== confirmEmail) {
-    showError('Emails do not match', 'emailError');
+  if (password !== confirmPassword) {
+    document.getElementById('confirmPassError').textContent = 'Passwords mismatch';
     isValid = false;
   }
 
-  // IC validation
-  const icNumber = document.getElementById('icNumber').value;
-  if(!/^\d{2}-\d{6}$|^\d{6}-\d{2}-\d{4}$/.test(icNumber)) {
-    showError('Invalid IC format', 'icError');
+  if (!validateEmail(email)) {
+    document.getElementById('emailError').textContent = 'Invalid email format';
     isValid = false;
   }
 
-  // File validation
-  const frontIC = document.getElementById('frontIC').files[0];
-  const backIC = document.getElementById('backIC').files[0];
-  if(!frontIC || !backIC) {
-    showError('Both IC files required', 'fileError');
+  if (email !== confirmEmail) {
+    document.getElementById('confirmEmailError').textContent = 'Emails mismatch';
     isValid = false;
   }
 
   return isValid;
-}
-
-async function fileToBase64(file) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result.split(',')[1]);
-    reader.onerror = error => reject(error);
-    reader.readAsDataURL(file);
-  });
 }
 
 // ================= UTILITIES =================
@@ -854,35 +823,34 @@ function formatDate(dateString) {
 
 // ================= INITIALIZATION =================
 document.addEventListener('DOMContentLoaded', () => {
-  // Core initialization
   detectViewMode();
   initValidationListeners();
   createLoaderElement();
 
-  // Authentication handlers
-  const loginForm = document.getElementById('loginForm');
-  if(loginForm) {
-    loginForm.addEventListener('submit', handleLogin);
+  // Initialize category requirements on page load
+  checkCategoryRequirements();
+
+  // Initialize parcel declaration form
+  const parcelForm = document.getElementById('declarationForm');
+  if (parcelForm) {
+    parcelForm.addEventListener('submit', handleParcelSubmission);
+    
+    // Set up category change listener
+    const categorySelect = document.getElementById('itemCategory');
+    if (categorySelect) {
+      categorySelect.addEventListener('change', checkCategoryRequirements);
+    }
+
+    // Phone field setup
+    const phoneField = document.getElementById('phone');
+    if (phoneField) {
+      const userData = checkSession();
+      phoneField.value = userData?.phone || '';
+      phoneField.readOnly = true;
+    }
   }
 
-  // Add these event listeners for registration/password recovery
-  const registerBtn = document.getElementById('registerBtn');
-  if(registerBtn) {
-    registerBtn.addEventListener('click', (e) => {
-      e.preventDefault();
-      handleRegistration();
-    });
-  }
-
-  const forgotPassBtn = document.getElementById('forgotPassBtn');
-  if(forgotPassBtn) {
-    forgotPassBtn.addEventListener('click', (e) => {
-      e.preventDefault();
-      handlePasswordRecovery();
-    });
-  }
-
-  // Session validation
+  // Session management
   const publicPages = ['login.html', 'register.html', 'forgot-password.html'];
   const isPublicPage = publicPages.some(page => 
     window.location.pathname.includes(page)
@@ -897,7 +865,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  // Other initializations
   window.addEventListener('beforeunload', () => {
     const errorElement = document.getElementById('error-message');
     if (errorElement) errorElement.style.display = 'none';
@@ -909,14 +876,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // New functions for category requirements =================
 function checkCategoryRequirements() {
-  const categorySelect = document.getElementById('itemCategory');
-  const fileInput = document.getElementById('invoiceFiles');
-  
-  if(!categorySelect || !fileInput) return; // Add null check
-
-  const category = categorySelect.value;
+  const category = document.getElementById('itemCategory')?.value || '';
+  const fileInput = document.getElementById('fileUpload');
   const fileHelp = document.getElementById('fileHelp');
-
+  
   const starredCategories = [
     '*Books', '*Cosmetics/Skincare/Bodycare',
     '*Food Beverage/Drinks', '*Gadgets',
@@ -940,220 +903,3 @@ function setupCategoryChangeListener() {
     categorySelect.addEventListener('change', checkCategoryRequirements);
   }
 }
-
-// Add to app.js
-function initRegistration() {
-  const form = document.getElementById('registrationForm');
-  if(form) {
-    // Initialize event listeners
-    form.addEventListener('submit', handleRegistrationSubmit);
-    setupICFormatting();
-    
-    // Real-time validations
-    document.getElementById('phone').addEventListener('input', validateRegistrationPhone);
-    document.getElementById('password').addEventListener('input', validateRegistrationPassword);
-    document.getElementById('confirmPassword').addEventListener('input', validateRegistrationConfirmPassword);
-    document.getElementById('email').addEventListener('input', validateRegistrationEmail);
-    document.getElementById('confirmEmail').addEventListener('input', validateRegistrationEmail);
-    document.getElementById('icNumber').addEventListener('input', validateRegistrationIC);
-  }
-}
-
-function setupICFormatting() {
-  const icInput = document.getElementById('icNumber');
-  if(icInput) {
-    icInput.addEventListener('input', function(e) {
-      let value = e.target.value.replace(/-/g, '');
-      if (value.length > 2 && value.length <= 8) {
-        value = value.slice(0,2) + '-' + value.slice(2);
-      } else if (value.length > 8) {
-        value = value.slice(0,6) + '-' + value.slice(6,8) + '-' + value.slice(8,12);
-      }
-      e.target.value = value;
-    });
-  }
-}
-
-function validateRegistrationPhone() {
-  const phone = document.getElementById('phone');
-  const errorElement = document.getElementById('phoneError');
-  const isValid = /^(673\d{7}|60\d{9,})$/.test(phone.value);
-  
-  errorElement.textContent = isValid ? '' : 'Invalid phone format';
-  return isValid;
-}
-
-function validateRegistrationPassword() {
-  const password = document.getElementById('password');
-  const errorElement = document.getElementById('passwordError');
-  const isValid = /^(?=.*[A-Z])(?=.*\d).{6,}$/.test(password.value);
-  
-  errorElement.textContent = isValid ? '' : '6+ chars with 1 uppercase and 1 number';
-  return isValid;
-}
-
-function validateRegistrationConfirmPassword() {
-  const password = document.getElementById('password').value;
-  const confirm = document.getElementById('confirmPassword').value;
-  const errorElement = document.getElementById('confirmPasswordError');
-  const isValid = password === confirm;
-  
-  errorElement.textContent = isValid ? '' : 'Passwords do not match';
-  return isValid;
-}
-
-function validateRegistrationEmail() {
-  const email = document.getElementById('email').value;
-  const confirm = document.getElementById('confirmEmail').value;
-  const errorElement = document.getElementById('emailError');
-  const isValid = email === confirm && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-  
-  errorElement.textContent = isValid ? '' : 'Emails do not match or invalid format';
-  return isValid;
-}
-
-function validateRegistrationIC() {
-  const icNumber = document.getElementById('icNumber').value;
-  const errorElement = document.getElementById('icError');
-  const isValid = /^\d{2}-\d{6}$|^\d{6}-\d{2}-\d{4}$/.test(icNumber);
-  
-  errorElement.textContent = isValid ? '' : 'Invalid IC format';
-  return isValid;
-}
-
-function validateRegistrationFiles() {
-  const frontIC = document.getElementById('frontIC').files[0];
-  const backIC = document.getElementById('backIC').files[0];
-  const errorElement = document.getElementById('fileError');
-  const validTypes = ['image/jpeg', 'image/png', 'application/pdf'];
-  
-  let isValid = true;
-  let message = '';
-  
-  if(!frontIC || !backIC) {
-    message = 'Both IC documents are required';
-    isValid = false;
-  }
-  else {
-    const frontType = frontIC.type || getFileType(frontIC.name);
-    const backType = backIC.type || getFileType(backIC.name);
-    
-    if(!validTypes.includes(frontType) || !validTypes.includes(backType)) {
-      message = 'Only JPG, PNG, or PDF files allowed';
-      isValid = false;
-    }
-  }
-  
-  errorElement.textContent = message;
-  return isValid;
-}
-
-async function handleRegistrationSubmit(e) {
-  e.preventDefault();
-  showLoading(true);
-
-  try {
-    // 1. Validate all fields first
-    const validations = [
-      validateRegistrationPhone(),
-      validateRegistrationPassword(),
-      validateRegistrationConfirmPassword(),
-      validateRegistrationEmail(),
-      validateRegistrationIC(),
-      validateRegistrationFiles()
-    ];
-
-    if (!validations.every(v => v)) {
-      showError('Please fix all form errors');
-      return;
-    }
-
-    // 2. Safely get files with null checks
-    const getFileSafe = (id) => {
-      const input = document.getElementById(id);
-      return input?.files?.[0] || null;
-    };
-
-    const frontFile = getFileSafe('frontIC');
-    const backFile = getFileSafe('backIC');
-
-    // 3. Final file verification
-    if (!frontFile || !backFile) {
-      showError('Both IC documents are required');
-      return;
-    }
-
-    // 4. Prepare data with guaranteed file types
-    const formData = {
-      icNumber: document.getElementById('icNumber').value,
-      phone: document.getElementById('phone').value,
-      password: document.getElementById('password').value,
-      email: document.getElementById('email').value,
-      fullName: document.getElementById('fullName').value,
-      address: document.getElementById('address').value,
-      postcode: document.getElementById('postcode').value,
-      frontIC: await fileToBase64(frontFile),
-      backIC: await fileToBase64(backFile),
-      frontICType: getFileType(frontFile),
-      backICType: getFileType(backFile)
-    };
-
-    // 5. Submit to backend
-    const response = await fetch(CONFIG.GAS_URL, {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({
-        action: 'registerUser',
-        data: formData
-      })
-    });
-
-    const result = await response.json();
-    
-    if (result.success) {
-      showSuccessMessage('Registration successful! Redirecting...');
-      setTimeout(() => safeRedirect('login.html'), 2000);
-    } else {
-      showError(result.message || 'Registration failed');
-    }
-  } catch (error) {
-    showError(`Registration Error: ${error.message}`);
-  } finally {
-    showLoading(false);
-  }
-}
-
-// Robust file type detector
-function getFileType(file) {
-  try {
-    // First try official MIME type
-    if (file?.type) return file.type;
-    
-    // Fallback to extension detection
-    const ext = file.name.split('.').pop().toLowerCase();
-    const typeMap = {
-      jpg: 'image/jpeg',
-      jpeg: 'image/jpeg',
-      png: 'image/png',
-      pdf: 'application/pdf'
-    };
-    
-    return typeMap[ext] || 'application/octet-stream';
-  } catch (e) {
-    console.error('File type detection failed:', e);
-    return 'application/octet-stream';
-  }
-}
-
-// Update DOMContentLoaded in app.js
-document.addEventListener('DOMContentLoaded', () => {
-  detectViewMode();
-  initValidationListeners();
-  initRegistration(); // Add this line
-  createLoaderElement();
-  
-  // Initialize category requirements only on parcel declaration page
-  if(document.getElementById('itemCategory')) {
-    checkCategoryRequirements();
-  }
-});
