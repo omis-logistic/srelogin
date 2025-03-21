@@ -1,7 +1,7 @@
 //scripts/app.js
 // ================= CONFIGURATION =================
 const CONFIG = {
-  GAS_URL: 'https://script.google.com/macros/s/AKfycbxQsiwSg2exIuYEoQfP0B6zg-7yb32QTHDTFabvidKjb4kWODHIDYYLxoEaMUsck4nn6A/exec',
+  GAS_URL: 'https://script.google.com/macros/s/AKfycbwLuOmM3gObK97sQS4xSC_b-siCnBWEj2T2HL5DyqIVyKOjjG4x2tUlaaZlH55KE4rH_w/exec',
   PROXY_URL: 'https://script.google.com/macros/s/AKfycbxrpfk7eNEJk2_xHTaYjkby4n1daHSiARZrc7oJT4-RA9aYoW9ZYivQjZe63nJH2nU-/exec',
   SESSION_TIMEOUT: 3600,
   MAX_FILE_SIZE: 5 * 1024 * 1024,
@@ -73,26 +73,43 @@ function createErrorElement() {
 const checkSession = () => {
   const sessionData = sessionStorage.getItem('userData');
   const lastActivity = localStorage.getItem('lastActivity');
-
+  
   if (!sessionData) {
     handleLogout();
     return null;
   }
 
-  if (lastActivity && Date.now() - lastActivity > CONFIG.SESSION_TIMEOUT * 1000) {
+  // Add this new verification block
+  try {
+    const userData = JSON.parse(sessionData);
+    
+    // Server-side validation API call
+    const validationResponse = await fetch(`${CONFIG.GAS_URL}?action=validateSession&phone=${encodeURIComponent(userData.phone)}`);
+    const { valid } = await validationResponse.json();
+
+    if (!valid) {
+      handleLogout();
+      return null;
+    }
+
+    if (lastActivity && Date.now() - lastActivity > CONFIG.SESSION_TIMEOUT * 1000) {
+      handleLogout();
+      return null;
+    }
+
+    localStorage.setItem('lastActivity', Date.now());
+    
+    if (userData?.tempPassword && !window.location.pathname.includes('password-reset.html')) {
+      handleLogout();
+      return null;
+    }
+
+    return userData;
+    
+  } catch (error) {
     handleLogout();
     return null;
   }
-
-  localStorage.setItem('lastActivity', Date.now());
-  const userData = JSON.parse(sessionData);
-  
-  if (userData?.tempPassword && !window.location.pathname.includes('password-reset.html')) {
-    handleLogout();
-    return null;
-  }
-
-  return userData;
 };
 
 function handleLogout() {
