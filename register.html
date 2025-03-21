@@ -65,7 +65,7 @@
     <div class="container">
         <h2>New User Registration</h2>
         <form id="registrationForm" 
-              action="https://script.google.com/macros/s/AKfycbxsxSUTt6UV-3Yixgfz6pBIlFNKKALNuovE892ERL1IumCfPX6Bf9WsEN-eF-1kJzjNgQ/exec" 
+              action="https://script.google.com/macros/s/AKfycbwtRp5NZ9SEqO8Wx5qUuxnl4iuPvNudLnf6LZ7KAioW1eN0BP0Jfl77R7RU_YNeL3s9MA/exec" 
               method="POST" 
               enctype="application/x-www-form-urlencoded">
             
@@ -315,47 +315,42 @@
         // In the form submission handler
 document.getElementById('registrationForm').addEventListener('submit', async (e) => {
   e.preventDefault();
-  const message = document.getElementById('message');
-  message.textContent = '';
+  
+  // Create hidden iframe for submission
+  const iframe = document.createElement('iframe');
+  iframe.name = 'hiddenFrame';
+  iframe.style.display = 'none';
+  
+  // Create form
+  const form = document.createElement('form');
+  form.action = 'https://script.google.com/macros/s/AKfycbwtRp5NZ9SEqO8Wx5qUuxnl4iuPvNudLnf6LZ7KAioW1eN0BP0Jfl77R7RU_YNeL3s9MA/exec';
+  form.method = 'POST';
+  form.target = 'hiddenFrame';
+  
+  // Add hidden input for data
+  const input = document.createElement('input');
+  input.type = 'hidden';
+  input.name = 'data';
+  input.value = encodeURIComponent(JSON.stringify(formData));
+  
+  form.appendChild(input);
+  document.body.appendChild(iframe);
+  document.body.appendChild(form);
+  form.submit();
 
-  try {
-    if (!validateForm()) return;
-
-    // Prepare form data for Mark 2
-    const formData = {
-      action: 'registerUser', // Add action parameter
-      icNumber: document.getElementById('icNumber').value,
-      phone: document.getElementById('phone').value,
-      password: document.getElementById('password').value,
-      email: document.getElementById('email').value,
-      fullName: document.getElementById('fullName').value,
-      address: document.getElementById('address').value,
-      postcode: document.getElementById('postcode').value,
-      frontIC: await fileToBase64(document.getElementById('frontIC').files[0]),
-      backIC: await fileToBase64(document.getElementById('backIC').files[0]),
-      frontICType: document.getElementById('frontIC').files[0].type,
-      backICType: document.getElementById('backIC').files[0].type
-    };
-
-    // Submit to Mark 2 endpoint
-    const response = await fetch('https://script.google.com/macros/s/AKfycbxsxSUTt6UV-3Yixgfz6pBIlFNKKALNuovE892ERL1IumCfPX6Bf9WsEN-eF-1kJzjNgQ/exec', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded'
-      },
-      body: `data=${encodeURIComponent(JSON.stringify(formData))}`
-    });
-
-    const result = await response.json();
-    if (result.success) {
-      alert('Registration successful! User ID: ' + result.userId);
-      window.location.href = 'login.html';
-    } else {
-      showError(result.message);
+  // Listen for message from iframe
+  window.addEventListener('message', (event) => {
+    if (event.source === iframe.contentWindow) {
+      if (event.data.success) {
+        alert('Registration successful!');
+        window.location.href = 'login.html';
+      } else {
+        showError(event.data.message);
+      }
+      document.body.removeChild(iframe);
+      document.body.removeChild(form);
     }
-  } catch (error) {
-    showError('Registration failed: ' + error.message);
-  }
+  });
 });
 
         // File to Base64 Converter
