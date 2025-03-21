@@ -84,20 +84,11 @@
         }
 
         .hidden {
-            display: none;
+            display: none !important;
         }
 
-        /* Add back button styles */
         .back-button {
-            display: block;
-            width: 200px;
-            margin: 20px auto;
-            padding: 10px;
-            background: #4285f4;
-            color: white;
-            text-align: center;
-            text-decoration: none;
-            border-radius: 5px;
+            display: none; /* Start hidden by default */
         }
     </style>
 </head>
@@ -364,21 +355,22 @@
         // Form Submission Handler
         // In the form submission handler
         document.getElementById('registrationForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const form = e.target;
-            const message = document.getElementById('message');
-            const spinner = document.getElementById('loadingSpinner');
-            const successMsg = document.getElementById('successMessage');
-            const backButton = document.getElementById('backButton');
+        e.preventDefault();
+        const form = e.target;
+        const message = document.getElementById('message');
+        const spinner = document.getElementById('loadingSpinner');
+        const successMsg = document.getElementById('successMessage');
+        const backButton = document.getElementById('backButton');
 
-            try {
-                // Show loading spinner
-                spinner.style.display = 'block';
-                form.classList.add('hidden');
+        try {
+            // Show loading spinner and hide form
+            spinner.style.display = 'block';
+            form.classList.add('hidden');
+            backButton.classList.add('hidden');
 
-                // Prepare form data
-                const formData = {
-                    action: 'registerUser',
+            // Prepare and submit form data
+            const formData = {
+                action: 'registerUser',
                     icNumber: document.getElementById('icNumber').value,
                     phone: document.getElementById('phone').value,
                     password: document.getElementById('password').value,
@@ -394,32 +386,28 @@
 
                 // Submit form
                 await fetch('https://script.google.com/macros/s/AKfycbxd9diKjFbklmbEAzXqRlafwtMqEeyu5B0xDgHv4zhlrMxiPkn0YiMrvl4F3GpC0Q9wDA/exec', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/x-www-form-urlencoded'
-                    },
-                    body: `data=${encodeURIComponent(JSON.stringify(formData))}`
-                });
+                method: 'POST',
+                headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+                body: `data=${encodeURIComponent(JSON.stringify(formData))}`
+            });
 
-                // Always show success message
-                successMsg.style.display = 'block';
-                backButton.classList.remove('hidden');
+            // Show success message
+            successMsg.style.display = 'block';
 
-                // Hide spinner after 2 seconds
-                setTimeout(() => {
-                    spinner.style.display = 'none';
-                }, 2000);
-
-            } catch (error) {
-                // Hide spinner and log error without showing to user
+            // Hide spinner after 2 seconds and show back button
+            setTimeout(() => {
                 spinner.style.display = 'none';
-                console.error('Submission error:', error);
-                
-                // Still show success message
-                successMsg.style.display = 'block';
                 backButton.classList.remove('hidden');
-            }
-        });
+            }, 2000);
+
+        } catch (error) {
+            // Hide spinner immediately and show back button
+            spinner.style.display = 'none';
+            successMsg.style.display = 'block';
+            backButton.classList.remove('hidden');
+            console.error('Submission error:', error);
+        }
+    });
 
         // File to Base64 Converter
         function fileToBase64(file) {
