@@ -135,11 +135,10 @@
       <button onclick="handleLogin()">LOGIN</button>
       
       <div class="auth-links">
-        <button onclick="safeRedirect('register.html')">CREATE ACCOUNT</button>
-        <button class="secondary-btn" 
-                onclick="showForgotPassword()">
-          FORGOT PASSWORD?
-        </button>
+        <button id="registerBtn" onclick="handleRegistration()">CREATE ACCOUNT</button>
+<button id="forgotPassBtn" class="secondary-btn" onclick="handlePasswordRecovery()">
+  FORGOT PASSWORD?
+</button>
       </div>
     </div>
   </div>
