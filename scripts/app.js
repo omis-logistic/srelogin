@@ -2,7 +2,7 @@
 // ================= CONFIGURATION =================
 const CONFIG = {
   GAS_URL: 'https://script.google.com/macros/s/AKfycbz3NvefwWuximmi6D3WzCk83fdMMV0cIELq8RgzuTgS4Yt_APf-VKnj8PPU_Cvz-RyuhQ/exec',
-  PROXY_URL: 'https://script.google.com/macros/s/AKfycbxrpfk7eNEJk2_xHTaYjkby4n1daHSiARZrc7oJT4-RA9aYoW9ZYivQjZe63nJH2nU-/exec',
+  PROXY_URL: 'https://script.google.com/macros/s/AKfycbxIAX4irDMGRGzrQcnuQIP3-gAdMJ_tdAP9UDHr14s4deFBLu_-RjBRjZA8FgX3mrqtEQ/exec',
   SESSION_TIMEOUT: 3600,
   MAX_FILE_SIZE: 5 * 1024 * 1024,
   ALLOWED_FILE_TYPES: ['image/jpeg', 'image/png', 'application/pdf'],
@@ -69,41 +69,30 @@ function createErrorElement() {
   return errorDiv;
 }
 
-// ================= ENHANCED SESSION CHECK =================
+// ================= SESSION MANAGEMENT =================
 const checkSession = () => {
   const sessionData = sessionStorage.getItem('userData');
   const lastActivity = localStorage.getItem('lastActivity');
 
-  // 1. No session exists
   if (!sessionData) {
     handleLogout();
     return null;
   }
 
-  const userData = JSON.parse(sessionData);
-
-  // 2. Session timeout check (15 minutes)
-  const inactiveDuration = Date.now() - parseInt(lastActivity || '0');
-  if (inactiveDuration > CONFIG.SESSION_TIMEOUT * 1000) {
+  if (lastActivity && Date.now() - lastActivity > CONFIG.SESSION_TIMEOUT * 1000) {
     handleLogout();
     return null;
   }
 
-  // 3. Temp password force redirect
+  localStorage.setItem('lastActivity', Date.now());
+  const userData = JSON.parse(sessionData);
+  
   if (userData?.tempPassword && !window.location.pathname.includes('password-reset.html')) {
-    window.location.href = `password-reset.html?force=true&phone=${encodeURIComponent(userData.phone)}`;
+    handleLogout();
     return null;
   }
 
-  // 4. Update activity timestamp
-  localStorage.setItem('lastActivity', Date.now());
-
-  // 5. Return validated user data
-  return {
-    phone: userData.phone,
-    email: userData.email,
-    tempPassword: userData.tempPassword || false
-  };
+  return userData;
 };
 
 function handleLogout() {
