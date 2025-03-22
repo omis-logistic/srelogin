@@ -87,10 +87,8 @@ const checkSession = () => {
   localStorage.setItem('lastActivity', Date.now());
   const userData = JSON.parse(sessionData);
   
-  // BLOCK dashboard access if temp password exists
-  if (userData.tempPassword && !window.location.href.includes("password-reset")) {
-    console.warn("Temp password user trying to access non-reset page");
-    window.location.href = "password-reset.html?force=true";
+  if (userData?.tempPassword && !window.location.pathname.includes('password-reset.html')) {
+    handleLogout();
     return null;
   }
 
