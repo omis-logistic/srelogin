@@ -1,7 +1,7 @@
 //scripts/app.js
 // ================= CONFIGURATION =================
 const CONFIG = {
-  GAS_URL: 'https://script.google.com/macros/s/AKfycbxfK7yWv7nForR2sNUKpBu7ORbfSFr2zXx4YvPgG9U__x38Oy2i32CWdhQ0U3-08pe6CA/exec',
+  GAS_URL: 'https://script.google.com/macros/s/AKfycbz3ftyMTMDSeVdVwlkDsF7WtUQ5iHcBu5LnkAgwUOwe8mjfR0QNqpDsVA7SASBgpFb-5A/exec',
   PROXY_URL: 'https://script.google.com/macros/s/AKfycbxrpfk7eNEJk2_xHTaYjkby4n1daHSiARZrc7oJT4-RA9aYoW9ZYivQjZe63nJH2nU-/exec',
   SESSION_TIMEOUT: 3600,
   MAX_FILE_SIZE: 5 * 1024 * 1024,
@@ -69,30 +69,41 @@ function createErrorElement() {
   return errorDiv;
 }
 
-// ================= SESSION MANAGEMENT =================
+// ================= ENHANCED SESSION CHECK =================
 const checkSession = () => {
   const sessionData = sessionStorage.getItem('userData');
   const lastActivity = localStorage.getItem('lastActivity');
 
+  // 1. No session exists
   if (!sessionData) {
     handleLogout();
     return null;
   }
 
-  if (lastActivity && Date.now() - lastActivity > CONFIG.SESSION_TIMEOUT * 1000) {
-    handleLogout();
-    return null;
-  }
-
-  localStorage.setItem('lastActivity', Date.now());
   const userData = JSON.parse(sessionData);
-  
-  if (userData?.tempPassword && !window.location.pathname.includes('password-reset.html')) {
+
+  // 2. Session timeout check (15 minutes)
+  const inactiveDuration = Date.now() - parseInt(lastActivity || '0');
+  if (inactiveDuration > CONFIG.SESSION_TIMEOUT * 1000) {
     handleLogout();
     return null;
   }
 
-  return userData;
+  // 3. Temp password force redirect
+  if (userData?.tempPassword && !window.location.pathname.includes('password-reset.html')) {
+    window.location.href = `password-reset.html?force=true&phone=${encodeURIComponent(userData.phone)}`;
+    return null;
+  }
+
+  // 4. Update activity timestamp
+  localStorage.setItem('lastActivity', Date.now());
+
+  // 5. Return validated user data
+  return {
+    phone: userData.phone,
+    email: userData.email,
+    tempPassword: userData.tempPassword || false
+  };
 };
 
 function handleLogout() {
@@ -608,31 +619,29 @@ function initValidationListeners() {
 
 // ================= AUTHENTICATION HANDLERS =================
 async function handleLogin() {
-  try {
-    const result = await callAPI('processLogin', { 
-      phone: document.getElementById('phone').value,
-      password: document.getElementById('password').value
-    });
+  const phone = document.getElementById('phone').value;
+  const password = document.getElementById('password').value;
 
+  try {
+    const result = await callAPI('processLogin', { phone, password });
+    
     if (result.success) {
-      console.log('Login result:', result); // Debug log
-      
       sessionStorage.setItem('userData', JSON.stringify({
         phone: result.phone,
-        tempPassword: result.tempPassword // Critical
+        tempPassword: result.tempPassword // Ensure temp flag is stored
       }));
 
-      // FORCE redirect without conditional
-      window.location.href = result.tempPassword 
-        ? 'password-reset.html?force=true' 
-        : 'dashboard.html';
-      
+      // Force redirect without conditions
+      if (result.tempPassword) {
+        window.location.href = 'password-reset.html?force=true';
+      } else {
+        window.location.href = 'dashboard.html?fresh=1';
+      }
     } else {
-      showError(result.message);
+      showError(result.message || 'Authentication failed');
     }
   } catch (error) {
-    console.error('Login error:', error);
-    showError('Connection failed');
+    showError('Login failed - please try again');
   }
 }
 
