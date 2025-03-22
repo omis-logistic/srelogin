@@ -137,9 +137,9 @@
           }));
           
           // FORCE REDIRECT WITHOUT CONDITIONALS
-    window.location.href = response.tempPassword 
-      ? 'password-reset.html?force=true'
-      : 'dashboard.html';
+          window.location.href = response.tempPassword 
+            ? 'password-reset.html?force=true'
+            : 'dashboard.html?fresh=1';
           
         } else {
           document.getElementById('password').value = '';
