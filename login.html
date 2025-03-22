@@ -129,19 +129,16 @@
       script.src = `${CONFIG.GAS_URL}?action=processLogin&phone=${encodeURIComponent(phone)}&password=${encodeURIComponent(password)}&callback=${callbackName}`;
 
       window[callbackName] = (response) => {
-        if (response.success) {
-          // CORRECTED SESSION STORAGE
-          sessionStorage.setItem('userData', JSON.stringify({
-            phone: response.phone,
-            tempPassword: response.tempPassword // Critical security flag
-          }));
-          
-          // FORCE REDIRECT WITHOUT CONDITIONALS
-          window.location.href = response.tempPassword 
-            ? 'password-reset.html?force=true'
-            : 'dashboard.html?fresh=1';
-          
-        } else {
+  if (response.success) {
+    console.log('TempPassword flag:', response.tempPassword); // Debug log
+    sessionStorage.setItem('userData', JSON.stringify({
+      phone: response.phone,
+      tempPassword: response.tempPassword
+    }));
+    window.location.href = response.tempPassword 
+      ? 'password-reset.html?force=true'
+      : 'dashboard.html?fresh=1';
+  } else {
           document.getElementById('password').value = '';
           showError(response.message || 'Authentication failed');
         }
