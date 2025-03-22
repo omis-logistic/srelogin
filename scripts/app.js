@@ -1,7 +1,7 @@
 //scripts/app.js
 // ================= CONFIGURATION =================
 const CONFIG = {
-  GAS_URL: 'https://script.google.com/macros/s/AKfycbwmRJ8rcJWA4t4P29Ba3O8G15FcnrozKWP3C7pfIoPVUQg2zVp_agCPsvW9k9I-sRBm/exec',
+  GAS_URL: 'https://script.google.com/macros/s/AKfycbzBFWkaQli2OZW7ZrRtd0VGnGsEsWjvTk9n6h6RoNplf9farLMjCfhgNjtoyW6xHhm1MA/exec',
   PROXY_URL: 'https://script.google.com/macros/s/AKfycbxrpfk7eNEJk2_xHTaYjkby4n1daHSiARZrc7oJT4-RA9aYoW9ZYivQjZe63nJH2nU-/exec',
   SESSION_TIMEOUT: 3600,
   MAX_FILE_SIZE: 5 * 1024 * 1024,
@@ -610,16 +610,6 @@ function initValidationListeners() {
 async function handleLogin() {
   const phone = document.getElementById('phone').value.trim();
   const password = document.getElementById('password').value;
-
-  if (!validatePhone(phone)) {
-    showError('Invalid phone number format');
-    return;
-  }
-
-  if (!password) {
-    showError('Please enter your password');
-    return;
-  }
 
   try {
     const result = await callAPI('processLogin', { phone, password });
