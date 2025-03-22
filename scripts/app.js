@@ -1,7 +1,7 @@
 //scripts/app.js
 // ================= CONFIGURATION =================
 const CONFIG = {
-  GAS_URL: 'https://script.google.com/macros/s/AKfycby6p-wAmrJUNvkpqHWTT5kYb4hj1_Nf6vPLifhSN9DY6bPKq0rrRh7au7jJ3qt0_NAmUw/exec',
+  GAS_URL: 'https://script.google.com/macros/s/AKfycbxZ-NvEl0P8k0Lc5Yzc9IzhzwIXzDSiKQuZ2cjiR6ISy2mDuz0wH_8y1IAUbQ0nxgWsIQ/exec',
   PROXY_URL: 'https://script.google.com/macros/s/AKfycbxrpfk7eNEJk2_xHTaYjkby4n1daHSiARZrc7oJT4-RA9aYoW9ZYivQjZe63nJH2nU-/exec',
   SESSION_TIMEOUT: 3600,
   MAX_FILE_SIZE: 5 * 1024 * 1024,
@@ -87,8 +87,10 @@ const checkSession = () => {
   localStorage.setItem('lastActivity', Date.now());
   const userData = JSON.parse(sessionData);
   
-  if (userData?.tempPassword && !window.location.pathname.includes('password-reset.html')) {
-    handleLogout();
+  // BLOCK dashboard access if temp password exists
+  if (userData.tempPassword && !window.location.href.includes("password-reset")) {
+    console.warn("Temp password user trying to access non-reset page");
+    window.location.href = "password-reset.html?force=true";
     return null;
   }
 
