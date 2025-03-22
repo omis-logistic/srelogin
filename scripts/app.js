@@ -611,23 +611,35 @@ async function handleLogin() {
   const phone = document.getElementById('phone').value.trim();
   const password = document.getElementById('password').value;
 
+  if (!phone || !password) {
+    showError('Please fill in all fields');
+    return;
+  }
+
   try {
-    const result = await callAPI('processLogin', { phone, password });
-    
+    const response = await fetch(`${CONFIG.GAS_URL}?action=processLogin&phone=${encodeURIComponent(phone)}&password=${encodeURIComponent(password)}`);
+    const result = await response.json();
+
     if (result.success) {
-      sessionStorage.setItem('userData', JSON.stringify(result));
-      localStorage.setItem('lastActivity', Date.now());
+      // Store session data with temp password flag
+      sessionStorage.setItem('userData', JSON.stringify({
+        phone: result.phone,
+        email: result.email,
+        userId: result.userId,
+        tempPassword: result.tempPassword
+      }));
       
+      // Immediate redirect based on temp password status
       if (result.tempPassword) {
-        safeRedirect('password-reset.html');
+        window.location.href = 'password-reset.html?force=true';
       } else {
-        safeRedirect('dashboard.html');
+        window.location.href = 'dashboard.html';
       }
     } else {
       showError(result.message || 'Authentication failed');
     }
   } catch (error) {
-    showError('Login failed - please try again');
+    showError('Login service unavailable. Please try later.');
   }
 }
 
