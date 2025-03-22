@@ -619,23 +619,30 @@ function initValidationListeners() {
 
 // ================= AUTHENTICATION HANDLERS =================
 async function handleLogin() {
-  const phone = document.getElementById('phone').value;
+  const phone = document.getElementById('phone').value.trim();
   const password = document.getElementById('password').value;
+
+  if (!validatePhone(phone)) {
+    showError('Invalid phone number format');
+    return;
+  }
+
+  if (!password) {
+    showError('Please enter your password');
+    return;
+  }
 
   try {
     const result = await callAPI('processLogin', { phone, password });
     
     if (result.success) {
-      sessionStorage.setItem('userData', JSON.stringify({
-        phone: result.phone,
-        tempPassword: result.tempPassword // Ensure temp flag is stored
-      }));
-
-      // Force redirect without conditions
+      sessionStorage.setItem('userData', JSON.stringify(result));
+      localStorage.setItem('lastActivity', Date.now());
+      
       if (result.tempPassword) {
-        window.location.href = 'password-reset.html?force=true';
+        safeRedirect('password-reset.html');
       } else {
-        window.location.href = 'dashboard.html?fresh=1';
+        safeRedirect('dashboard.html');
       }
     } else {
       showError(result.message || 'Authentication failed');
