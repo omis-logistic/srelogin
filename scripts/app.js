@@ -1,7 +1,7 @@
 //scripts/app.js
 // ================= CONFIGURATION =================
 const CONFIG = {
-  GAS_URL: 'https://script.google.com/macros/s/AKfycbxho-1eVskUXHas_n_013LFktZTiiJn47eBFYeip3sBADsAE48IZFknmYVhYHnVZydkgg/exec',
+  GAS_URL: 'https://script.google.com/macros/s/AKfycbxfK7yWv7nForR2sNUKpBu7ORbfSFr2zXx4YvPgG9U__x38Oy2i32CWdhQ0U3-08pe6CA/exec',
   PROXY_URL: 'https://script.google.com/macros/s/AKfycbxrpfk7eNEJk2_xHTaYjkby4n1daHSiARZrc7oJT4-RA9aYoW9ZYivQjZe63nJH2nU-/exec',
   SESSION_TIMEOUT: 3600,
   MAX_FILE_SIZE: 5 * 1024 * 1024,
@@ -608,38 +608,31 @@ function initValidationListeners() {
 
 // ================= AUTHENTICATION HANDLERS =================
 async function handleLogin() {
-  const phone = document.getElementById('phone').value.trim();
-  const password = document.getElementById('password').value;
-
-  if (!phone || !password) {
-    showError('Please fill in all fields');
-    return;
-  }
-
   try {
-    const response = await fetch(`${CONFIG.GAS_URL}?action=processLogin&phone=${encodeURIComponent(phone)}&password=${encodeURIComponent(password)}`);
-    const result = await response.json();
+    const result = await callAPI('processLogin', { 
+      phone: document.getElementById('phone').value,
+      password: document.getElementById('password').value
+    });
 
     if (result.success) {
-      // Store session data with temp password flag
+      console.log('Login result:', result); // Debug log
+      
       sessionStorage.setItem('userData', JSON.stringify({
         phone: result.phone,
-        email: result.email,
-        userId: result.userId,
-        tempPassword: result.tempPassword
+        tempPassword: result.tempPassword // Critical
       }));
+
+      // FORCE redirect without conditional
+      window.location.href = result.tempPassword 
+        ? 'password-reset.html?force=true' 
+        : 'dashboard.html';
       
-      // Immediate redirect based on temp password status
-      if (result.tempPassword) {
-        window.location.href = 'password-reset.html?force=true';
-      } else {
-        window.location.href = 'dashboard.html';
-      }
     } else {
-      showError(result.message || 'Authentication failed');
+      showError(result.message);
     }
   } catch (error) {
-    showError('Login service unavailable. Please try later.');
+    console.error('Login error:', error);
+    showError('Connection failed');
   }
 }
 
