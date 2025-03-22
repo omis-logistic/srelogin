@@ -72,30 +72,94 @@ input[readonly] {
   background-color: #f5f5f5 !important;
   border-color: #ddd !important;
 }
+    .user-info-section {
+      background: rgba(255,255,255,0.05);
+      padding: 20px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+    }
+    
+    .editable-field-group {
+      position: relative;
+      margin: 15px 0;
+    }
+    
+    .edit-icon {
+      position: absolute;
+      right: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+      cursor: pointer;
+      color: var(--gold);
+      display: none;
+    }
+    
+    .editable-field-group:hover .edit-icon {
+      display: block;
+    }
+    
+    .save-section {
+      border-top: 1px solid var(--gold);
+      padding-top: 20px;
+      margin-top: 20px;
+    }
   </style>
 </head>
 <body>
   <div class="container my-info-page">
-  <h1>My Information</h1>
-  
-  <!-- New Read-only Fields -->
-  <div class="input-group">
-    <input type="text" id="infoFullName" placeholder="Full Name" readonly>
-  </div>
-  
-  <div class="input-group">
-    <input type="text" id="infoICNumber" placeholder="I.C Number" readonly>
-  </div>
+    <h1>My Information</h1>
+    
+    <div class="user-info-section">
+      <!-- Read-only Fields -->
+      <div class="input-group">
+        <label>User ID:</label>
+        <input type="text" id="userId" readonly>
+      </div>
+      
+      <div class="input-group">
+        <label>IC Number:</label>
+        <input type="text" id="icNumber" readonly>
+      </div>
 
-  <div class="input-group">
-    <label>Front I.C:</label>
-    <a id="frontICLink" target="_blank" class="file-link">View Document</a>
-  </div>
+      <div class="input-group">
+        <label>Front IC:</label>
+        <a id="frontIC" target="_blank" class="file-link">View Document</a>
+      </div>
 
-  <div class="input-group">
-    <label>Back I.C:</label>
-    <a id="backICLink" target="_blank" class="file-link">View Document</a>
-  </div>
+      <div class="input-group">
+        <label>Back IC:</label>
+        <a id="backIC" target="_blank" class="file-link">View Document</a>
+      </div>
+
+      <div class="input-group">
+        <label>Full Name:</label>
+        <input type="text" id="fullName" readonly>
+      </div>
+
+      <!-- Editable Fields -->
+      <div class="editable-field-group">
+        <label>Mailing Address:</label>
+        <input type="text" id="address" readonly>
+        <span class="edit-icon" onclick="enableEditing('address')">✏️</span>
+      </div>
+
+      <div class="editable-field-group">
+        <label>Postcode:</label>
+        <input type="text" id="postcode" readonly>
+        <span class="edit-icon" onclick="enableEditing('postcode')">✏️</span>
+      </div>
+
+      <!-- Save Section -->
+      <div class="save-section" id="saveSection" style="display: none;">
+        <div class="input-group">
+          <input type="password" id="verifyPassword" 
+                 placeholder="Enter password to save changes">
+          <div class="error-message" id="passwordError"></div>
+        </div>
+        <button onclick="saveChanges()" class="gold-btn">Save Changes</button>
+        <button onclick="cancelEditing()" class="secondary-btn">Cancel</button>
+      </div>
+    </div>
     
     <div class="input-group">
       <input type="tel" id="infoPhone" placeholder="Phone Number" readonly>
@@ -157,171 +221,195 @@ input[readonly] {
   </div>
 
   <script src="scripts/app.js"></script>
-  <script>
-    // JSONP Handler (same as password-reset.html)
+<script>
+    // JSONP Handler
     function createJsonpRequest(action, params, callback) {
-      const script = document.createElement('script');
-      const callbackName = `jsonp_${Date.now()}`;
-      const urlParams = new URLSearchParams({
-        ...params,
-        action: action,
-        callback: callbackName
-      });
-      
-      script.src = `${CONFIG.GAS_URL}?${urlParams}`;
-      
-      window[callbackName] = (response) => {
-        delete window[callbackName];
-        document.body.removeChild(script);
-        callback(response);
-      };
-      
-      document.body.appendChild(script);
+        const script = document.createElement('script');
+        const callbackName = `jsonp_${Date.now()}`;
+        const urlParams = new URLSearchParams({
+            ...params,
+            action: action,
+            callback: callbackName
+        });
+        
+        script.src = `${CONFIG.GAS_URL}?${urlParams}`;
+        
+        window[callbackName] = (response) => {
+            delete window[callbackName];
+            document.body.removeChild(script);
+            callback(response);
+        };
+        
+        document.body.appendChild(script);
     }
 
-    document.addEventListener('DOMContentLoaded', () => {
-      const userData = checkSession();
-      if(!userData) return safeRedirect('login.html');
+    // User Info Functions
+    function loadUserInfo() {
+        const userData = JSON.parse(sessionStorage.getItem('userData'));
+        if(!userData) return;
 
-      // Initialize user info
-      document.getElementById('infoPhone').value = userData.phone;
-      document.getElementById('currentEmail').textContent = userData.email;
+        createJsonpRequest('getUserInfo', { phone: userData.phone }, (response) => {
+            if(response.success) {
+                // Populate all fields
+                document.getElementById('userId').value = response.data.userId || 'N/A';
+                document.getElementById('icNumber').value = response.data.icNumber || 'N/A';
+                document.getElementById('frontIC').href = response.data.frontIC || '#';
+                document.getElementById('backIC').href = response.data.backIC || '#';
+                document.getElementById('fullName').value = response.data.fullName || 'N/A';
+                document.getElementById('address').value = response.data.address || '';
+                document.getElementById('postcode').value = response.data.postcode || '';
+                document.getElementById('infoPhone').value = response.data.phone || 'N/A';
+                document.getElementById('currentEmail').textContent = response.data.email || 'N/A';
+            } else {
+                showError('Failed to load user data');
+            }
+        });
+    }
 
-      // Section toggles
-      document.getElementById('changePassBtn').addEventListener('click', () => {
-        const section = document.getElementById('changePasswordSection');
-        section.style.display = section.style.display === 'none' ? 'block' : 'none';
-      });
+    function enableEditing(fieldId) {
+        const field = document.getElementById(fieldId);
+        field.readOnly = false;
+        field.focus();
+        document.getElementById('saveSection').style.display = 'block';
+    }
 
-      document.getElementById('changeEmailBtn').addEventListener('click', () => {
-        const section = document.getElementById('changeEmailSection');
-        section.style.display = section.style.display === 'none' ? 'block' : 'none';
-      });
-    });
+    function cancelEditing() {
+        document.querySelectorAll('.editable-field input').forEach(input => {
+            input.readOnly = true;
+        });
+        document.getElementById('saveSection').style.display = 'none';
+        document.getElementById('verifyPassword').value = '';
+        loadUserInfo(); // Reset to original values
+    }
 
+    function saveChanges() {
+        const userData = JSON.parse(sessionStorage.getItem('userData'));
+        const password = document.getElementById('verifyPassword').value;
+        const address = document.getElementById('address').value;
+        const postcode = document.getElementById('postcode').value;
+
+        if(!password) {
+            showError('Password required to save changes', 'passwordError');
+            return;
+        }
+
+        createJsonpRequest('updateAddress', {
+            phone: userData.phone,
+            address: address,
+            postcode: postcode,
+            password: password
+        }, (response) => {
+            if(response.success) {
+                showError('Changes saved successfully!', 'success');
+                cancelEditing();
+            } else {
+                showError(response.message || 'Save failed', 'passwordError');
+            }
+        });
+    }
+
+    // Password/Email Functions
     function handleChangePassword() {
-  const btn = document.querySelector('#changePasswordSection button');
-  const originalText = btn.innerHTML;
-  btn.disabled = true;
-  btn.innerHTML = '<div class="button-loader"></div> Updating...';
+        const btn = document.querySelector('#changePasswordSection button');
+        const originalText = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = '<div class="button-loader"></div> Updating...';
 
-  clearErrors();
-  const currentPass = document.getElementById('currentPassword').value;
-  const newPass = document.getElementById('newPassword').value;
-  const repeatPass = document.getElementById('repeatNewPassword').value;
-  const userData = JSON.parse(sessionStorage.getItem('userData'));
+        clearErrors();
+        const currentPass = document.getElementById('currentPassword').value;
+        const newPass = document.getElementById('newPassword').value;
+        const repeatPass = document.getElementById('repeatNewPassword').value;
+        const userData = JSON.parse(sessionStorage.getItem('userData'));
 
-  // Validation
-  if (!currentPass) {
-    showError('Current password required', 'currentPasswordError');
-    btn.disabled = false;
-    btn.innerHTML = originalText;
-    return;
-  }
-  if (!validatePassword(newPass)) {
-    showError('Invalid password format', 'newPasswordError');
-    btn.disabled = false;
-    btn.innerHTML = originalText;
-    return;
-  }
-  if (newPass !== repeatPass) {
-    showError('Passwords do not match', 'repeatNewPasswordError');
-    btn.disabled = false;
-    btn.innerHTML = originalText;
-    return;
-  }
+        if (!validatePassword(newPass) {
+            showError('Invalid password format', 'newPasswordError');
+            btn.disabled = false;
+            btn.innerHTML = originalText;
+            return;
+        }
 
-  createJsonpRequest('updatePassword', {
-    phone: userData.phone,
-    currentPassword: currentPass,
-    newPassword: newPass,
-    confirmPassword: repeatPass
-  }, (response) => {
-    btn.disabled = false;
-    btn.innerHTML = originalText;
-    
-    if (response.success) {
-      alert('Password updated! Please login again.');
-      handleLogout();
-    } else {
-      showError(response.message || 'Password update failed');
-      
-      // Handle specific field errors
-      if (response.errors) {
-        response.errors.forEach(error => {
-          const errorField = document.getElementById(`${error.field}Error`);
-          if (errorField) errorField.textContent = error.message;
+        createJsonpRequest('updatePassword', {
+            phone: userData.phone,
+            currentPassword: currentPass,
+            newPassword: newPass,
+            confirmPassword: repeatPass
+        }, (response) => {
+            btn.disabled = false;
+            btn.innerHTML = originalText;
+            
+            if(response.success) {
+                alert('Password updated! Please login again.');
+                handleLogout();
+            } else {
+                showError(response.message || 'Password update failed');
+            }
         });
-      }
     }
-  });
-}
 
-function handleChangeEmail() {
-  const btn = document.querySelector('#changeEmailSection button');
-  const originalText = btn.innerHTML;
-  btn.disabled = true;
-  btn.innerHTML = '<div class="button-loader"></div> Updating...';
+    function handleChangeEmail() {
+        const btn = document.querySelector('#changeEmailSection button');
+        const originalText = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = '<div class="button-loader"></div> Updating...';
 
-  clearErrors();
-  const currentPass = document.getElementById('verifyPassword').value;
-  const newEmail = document.getElementById('newEmail').value;
-  const repeatEmail = document.getElementById('repeatNewEmail').value;
-  const userData = JSON.parse(sessionStorage.getItem('userData'));
+        clearErrors();
+        const currentPass = document.getElementById('verifyPassword').value;
+        const newEmail = document.getElementById('newEmail').value;
+        const repeatEmail = document.getElementById('repeatNewEmail').value;
+        const userData = JSON.parse(sessionStorage.getItem('userData'));
 
-  // Validation
-  if (!currentPass) {
-    showError('Current password required', 'verifyPasswordError');
-    btn.disabled = false;
-    btn.innerHTML = originalText;
-    return;
-  }
-  if (!validateEmail(newEmail)) {
-    showError('Invalid email format', 'newEmailError');
-    btn.disabled = false;
-    btn.innerHTML = originalText;
-    return;
-  }
-  if (newEmail !== repeatEmail) {
-    showError('Emails do not match', 'repeatNewEmailError');
-    btn.disabled = false;
-    btn.innerHTML = originalText;
-    return;
-  }
-
-  createJsonpRequest('updateEmail', {
-    phone: userData.phone,
-    currentPassword: currentPass,
-    newEmail: newEmail,
-    confirmEmail: repeatEmail
-  }, (response) => {
-    btn.disabled = false;
-    btn.innerHTML = originalText;
-    
-    if (response.success) {
-      // Update local session data
-      userData.email = newEmail;
-      sessionStorage.setItem('userData', JSON.stringify(userData));
-      document.getElementById('currentEmail').textContent = newEmail;
-      alert('Email updated successfully!');
-      safeRedirect('dashboard.html');
-    } else {
-      showError(response.message || 'Email update failed');
-      
-      if (response.errors) {
-        response.errors.forEach(error => {
-          const errorField = document.getElementById(`${error.field}Error`);
-          if (errorField) errorField.textContent = error.message;
+        createJsonpRequest('updateEmail', {
+            phone: userData.phone,
+            currentPassword: currentPass,
+            newEmail: newEmail,
+            confirmEmail: repeatEmail
+        }, (response) => {
+            btn.disabled = false;
+            btn.innerHTML = originalText;
+            
+            if(response.success) {
+                userData.email = newEmail;
+                sessionStorage.setItem('userData', JSON.stringify(userData));
+                document.getElementById('currentEmail').textContent = newEmail;
+                showError('Email updated successfully!', 'success');
+            } else {
+                showError(response.message || 'Email update failed');
+            }
         });
-      }
     }
-  });
-}
 
+    // Utilities
     function clearErrors() {
-      document.querySelectorAll('.error-message').forEach(el => el.textContent = '');
+        document.querySelectorAll('.error-message').forEach(el => el.textContent = '');
     }
-  </script>
+
+    function showError(message, targetId = 'error-message') {
+        const errorElement = document.getElementById(targetId) || createErrorElement();
+        errorElement.textContent = message;
+        errorElement.style.display = 'block';
+        setTimeout(() => errorElement.style.display = 'none', 5000);
+    }
+
+    // Initialization
+    document.addEventListener('DOMContentLoaded', () => {
+        const userData = checkSession();
+        if(!userData) return safeRedirect('login.html');
+
+        // Setup section toggles
+        document.getElementById('changePassBtn').addEventListener('click', () => {
+            const section = document.getElementById('changePasswordSection');
+            section.style.display = section.style.display === 'none' ? 'block' : 'none';
+        });
+
+        document.getElementById('changeEmailBtn').addEventListener('click', () => {
+            const section = document.getElementById('changeEmailSection');
+            section.style.display = section.style.display === 'none' ? 'block' : 'none';
+        });
+
+        // Load user data
+        loadUserInfo();
+    });
+</script>
   <div class="footer-text">
     Built by Omis Logistics. For more info 👉
     <a href="https://wa.me/6737187776" target="_blank" rel="noopener">here</a>
