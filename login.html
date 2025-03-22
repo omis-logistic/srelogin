@@ -129,26 +129,25 @@
       script.src = `${CONFIG.GAS_URL}?action=processLogin&phone=${encodeURIComponent(phone)}&password=${encodeURIComponent(password)}&callback=${callbackName}`;
 
       window[callbackName] = (response) => {
-        if (response.success) {
-          sessionStorage.setItem('userData', JSON.stringify({
-            userId: response.userId,
-            phone: response.phone,
-            email: response.email,
-            fullName: response.fullName,
-            tempPassword: response.tempPassword
-          }));
-          
-          if (response.tempPassword) {
-            safeRedirect('password-reset.html');
-          } else {
-            safeRedirect('dashboard.html?fresh=1');
-          }
-        } else {
-          showError(response.message || 'Authentication failed');
-        }
-      };
-      document.body.appendChild(script);
+    if (response.success) {
+      // FIX 1: Store tempPassword correctly
+      sessionStorage.setItem('userData', JSON.stringify({
+        phone: response.phone,
+        tempPassword: response.tempPassword // Add this line
+      }));
+
+      // FIX 2: Add force parameter
+      if (response.tempPassword) {
+        safeRedirect(`password-reset.html?force=true&phone=${encodeURIComponent(response.phone)}`);
+      } else {
+        safeRedirect('dashboard.html?fresh=1');
+      }
+    } else {
+      showError(response.message || 'Authentication failed');
     }
+  };
+  document.body.appendChild(script);
+}
 
     function showRegistration() {
       safeRedirect('register.html');
