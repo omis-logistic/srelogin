@@ -1,8 +1,8 @@
 //scripts/app.js
 // ================= CONFIGURATION =================
 const CONFIG = {
-  GAS_URL: 'https://script.google.com/macros/s/AKfycbzs6VLinPCBgJM2-HNbFNyRmKGKwCTipJXOLoLzZZKIgFapdrZQzhHuahRieq9_FHhZXA/exec',
-  PROXY_URL: 'https://script.google.com/macros/s/AKfycbwinMra1Ca-IwlMGl-lj4_Q8WFNaik5UZMiqD8Tk1LCRT7wniZcu-jii6qZTTHScYb0/exec',
+  GAS_URL: 'https://script.google.com/macros/s/AKfycbxzDyeefL1BWJb2W4h3mZB5M1qkYrxiRJnoe-MUbjNbqzKvmR9jDmHR6iRRDK5mrPPHEw/exec',
+  PROXY_URL: 'https://script.google.com/macros/s/AKfycbwEPNHHedxm8f_MOj3Zody6uICF80X68JrTNWFK6nC7feXEZnshWp8giy2FdCts8qNa/exec',
   SESSION_TIMEOUT: 3600,
   MAX_FILE_SIZE: 5 * 1024 * 1024,
   ALLOWED_FILE_TYPES: ['image/jpeg', 'image/png', 'application/pdf'],
@@ -281,16 +281,22 @@ function createFormDataPayload(payload) {
   
   // Add JSON data
   formData.append('data', JSON.stringify({
-    action: payload.action,
+    action: 'submitParcelDeclaration',
     ...payload.data
   }));
 
-  // Add files with proper formatting
+  // Add files as Blobs directly
   payload.files.forEach((file, index) => {
-    const blob = new Blob(
-      [Utilities.base64Decode(file.data)], 
-      { type: file.type }
-    );
+    // Convert base64 to ArrayBuffer
+    const byteString = atob(file.data);
+    const arrayBuffer = new ArrayBuffer(byteString.length);
+    const uintArray = new Uint8Array(arrayBuffer);
+    
+    for (let i = 0; i < byteString.length; i++) {
+      uintArray[i] = byteString.charCodeAt(i);
+    }
+    
+    const blob = new Blob([arrayBuffer], { type: file.type });
     formData.append(`file${index}`, blob, file.name);
   });
 
