@@ -1,8 +1,8 @@
 //scripts/app.js
 // ================= CONFIGURATION =================
 const CONFIG = {
-  GAS_URL: 'https://script.google.com/macros/s/AKfycbyr0_mhNCEHXSQZtjpqWeENtbgS09o6B53M1PmPwTgdJz-oAXQzZxfSCM8l0BGHXZ7KSg/exec',
-  PROXY_URL: 'https://script.google.com/macros/s/AKfycby6ua64Z2GOYQ5NjEOFtOhXSwktVMLyRvCtbbPa9xH3nW-iOIkVMlJhJoQuoc6286g7/exec',
+  GAS_URL: 'https://script.google.com/macros/s/AKfycbzpE241-xo5XYMImFH6iz8fneje1rWM87btZKuUEyW4_7-hIieSGuL3G1-0e0hAwLq-dQ/exec',
+  PROXY_URL: 'https://script.google.com/macros/s/AKfycbz8-qsnO8YnCRT8tHVbRBI0bXQDe-nYVgmLjvhfowZSDodFInlJVozL89-8ufeIsLHD/exec',
   SESSION_TIMEOUT: 3600,
   MAX_FILE_SIZE: 5 * 1024 * 1024,
   ALLOWED_FILE_TYPES: ['image/jpeg', 'image/png', 'application/pdf'],
@@ -216,65 +216,65 @@ function resetForm() {
 // ================= PARCEL DECLARATION HANDLER =================
 async function handleParcelSubmission(e) {
   e.preventDefault();
-  const form = e.target;
   showLoading(true);
 
   try {
-    const formData = new FormData(form);
-    const itemCategory = formData.get('itemCategory');
-    const files = Array.from(formData.getAll('files'));
-    
-    // Mandatory file check for starred categories
-    const starredCategories = [
-      '*Books', '*Cosmetics/Skincare/Bodycare',
-      '*Food Beverage/Drinks', '*Gadgets',
-      '*Oil Ointment', '*Supplement'
-    ];
-    
-    if (starredCategories.includes(itemCategory)) {
-      if (files.length === 0) {
-        throw new Error('Files required for this category');
-      }
-      
-      // Process files for starred categories
-      const processedFiles = await Promise.all(
-        files.map(async file => ({
-          name: file.name,
-          type: file.type,
-          data: await readFileAsBase64(file)
-        }))
-      );
-      
-      var filesPayload = processedFiles;
-    } else {
-      var filesPayload = [];
-    }
+    const formData = new FormData(e.target);
+    const files = formData.getAll('files');
 
+    // Prepare payload with file data
     const payload = {
-      trackingNumber: formData.get('trackingNumber').trim().toUpperCase(),
-      nameOnParcel: formData.get('nameOnParcel').trim(),
-      phone: document.getElementById('phone').value,
-      itemDescription: formData.get('itemDescription').trim(),
-      quantity: formData.get('quantity'),
-      price: formData.get('price'),
-      collectionPoint: formData.get('collectionPoint'),
-      itemCategory: itemCategory,
-      files: filesPayload
+      action: 'submitParcelDeclaration',
+      data: {
+        trackingNumber: formData.get('trackingNumber').trim().toUpperCase(),
+        nameOnParcel: formData.get('nameOnParcel').trim(),
+        phoneNumber: document.getElementById('phone').value,
+        itemDescription: formData.get('itemDescription').trim(),
+        quantity: formData.get('quantity'),
+        price: formData.get('price'),
+        collectionPoint: formData.get('collectionPoint'),
+        itemCategory: formData.get('itemCategory')
+      },
+      files: await Promise.all(files.map(async file => ({
+        name: file.name,
+        contentType: file.type,
+        data: await readFileAsBase64(file)
+      }))
     };
 
-    await fetch(CONFIG.PROXY_URL, {
+    // Send directly to BACKEND (GAS_URL) with multipart/form-data
+    const response = await fetch(CONFIG.GAS_URL, {
       method: 'POST',
-      headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-      body: `payload=${encodeURIComponent(JSON.stringify(payload))}`
+      body: createFormData(payload) // Handle multipart
     });
 
+    const result = await response.json();
+    if (!result.success) throw new Error(result.message);
+
+    showSuccessMessage();
+    resetForm();
+
   } catch (error) {
-    // Still ignore errors but files are handled
+    showError(error.message);
   } finally {
     showLoading(false);
-    resetForm();
-    showSuccessMessage();
   }
+}
+
+// Helper: Convert payload to FormData
+function createFormData(payload) {
+  const formData = new FormData();
+  formData.append('data', JSON.stringify(payload.data));
+  
+  payload.files.forEach((file, index) => {
+    const blob = new Blob(
+      [Uint8Array.from(atob(file.data), c => c.charCodeAt(0))],
+      { type: file.contentType }
+    );
+    formData.append(`file${index}`, blob, file.name);
+  });
+  
+  return formData;
 }
 
 function readFileAsBase64(file) {
