@@ -483,18 +483,14 @@ function clearErrors() {
     });
 }
 
-// ======== ERROR DISPLAY IMPROVEMENTS ========
-function showError(message, type = 'error') {
-    const errorElement = document.getElementById('error-message');
-    errorElement.textContent = message;
-    errorElement.className = type === 'success' ? 'success-message' : 'error-message';
-    errorElement.style.display = 'block';
-    
-    // Auto-hide after 5 seconds
-    setTimeout(() => {
-        errorElement.style.display = 'none';
-        errorElement.textContent = '';
-    }, 5000);
+// ========== ERROR HANDLING ==========
+function showError(message, targetId = 'error-message') {
+    const element = document.getElementById(targetId);
+    if (element) {
+        element.textContent = message;
+        element.style.display = 'block';
+        setTimeout(() => element.style.display = 'none', 5000);
+    }
 }
 
 function enableEditing(fieldId) {
@@ -517,30 +513,29 @@ function cancelEditing() {
     loadUserInfo(JSON.parse(sessionStorage.getItem('userData')).phone); // Reload original values
 }
 
-// ======== UPDATED SAVE CHANGES HANDLER ========
+// ========== PROVEN SAVE CHANGES HANDLER ==========
 function saveChanges() {
     const saveBtn = document.querySelector('#saveSection .gold-btn');
-    const cancelBtn = document.querySelector('#saveSection .secondary-btn');
-    const originalBtnHTML = saveBtn.innerHTML;
+    const originalText = saveBtn.innerHTML;
     const errorElement = document.getElementById('passwordError');
 
     // Show loading state
-    saveBtn.innerHTML = '<div class="button-loader"></div> Saving...';
+    saveBtn.innerHTML = '<div class="button-loader"></div>';
     saveBtn.disabled = true;
-    cancelBtn.disabled = true;
-    errorElement.textContent = ''; // Clear previous errors
 
     const userData = checkSession();
     const password = document.getElementById('verifyPassword').value;
     const address = document.getElementById('address').value.trim();
     const postcode = document.getElementById('postcode').value.trim().toUpperCase();
 
-    if (!validateAddressChange(address, postcode)) {
-        resetSaveButtons(saveBtn, cancelBtn, originalBtnHTML);
+    // Immediate validation
+    if (!address || !postcode) {
+        showError('Both fields are required', 'passwordError');
+        resetButton(saveBtn, originalText);
         return;
     }
 
-    const callbackName = `saveChanges_${Date.now()}`;
+    const callbackName = `saveAddr_${Date.now()}`;
     const script = document.createElement('script');
     script.src = `${CONFIG.GAS_URL}?action=updateAddress&phone=${encodeURIComponent(userData.phone)}` +
         `&address=${encodeURIComponent(address)}` +
@@ -549,47 +544,31 @@ function saveChanges() {
         `&callback=${callbackName}`;
 
     window[callbackName] = (response) => {
-        resetSaveButtons(saveBtn, cancelBtn, originalBtnHTML);
-        
         if (response.success) {
-            // Show green success message
-            showError('✓ Changes saved successfully!', 'success');
+            showError('✓ Changes saved!', 'success');
             setTimeout(() => {
                 cancelEditing();
+                resetButton(saveBtn, originalText);
             }, 2000);
         } else {
-            // Show red error message under password field
-            errorElement.textContent = response.message || 'Failed to save changes';
-            errorElement.style.display = 'block';
-            errorElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            showError(response.message || 'Failed to save changes', 'passwordError');
+            resetButton(saveBtn, originalText);
         }
-        
         document.body.removeChild(script);
         delete window[callbackName];
     };
     document.body.appendChild(script);
 }
 
-function resetSaveButtons(saveBtn, cancelBtn, originalHTML) {
-    saveBtn.innerHTML = originalHTML;
-    saveBtn.disabled = false;
-    cancelBtn.disabled = false;
+// ========== RELIABLE BUTTON HANDLING ==========
+function resetButton(button, originalHTML) {
+    button.innerHTML = originalHTML;
+    button.disabled = false;
 }
 
-// ======== ENHANCED VALIDATION ========
+// ========== SIMPLIFIED VALIDATION ==========
 function validateAddressChange(address, postcode) {
-    const errorElement = document.getElementById('passwordError');
-    errorElement.textContent = '';
-    
-    if (!address || address.length < 10) {
-        errorElement.textContent = 'Address must be at least 10 characters';
-        return false;
-    }
-    if (!postcode) {
-        errorElement.textContent = 'Postcode is required';
-        return false;
-    }
-    return true;
+    return address && postcode; // Only check for non-empty values
 }
   
 </script>
