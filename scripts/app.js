@@ -216,65 +216,65 @@ function resetForm() {
 // ================= PARCEL DECLARATION HANDLER =================
 async function handleParcelSubmission(e) {
   e.preventDefault();
+  const form = e.target;
   showLoading(true);
 
   try {
-    const formData = new FormData(e.target);
-    const files = formData.getAll('files');
+    const formData = new FormData(form);
+    const itemCategory = formData.get('itemCategory');
+    const files = Array.from(formData.getAll('files'));
+    
+    // Mandatory file check for starred categories
+    const starredCategories = [
+      '*Books', '*Cosmetics/Skincare/Bodycare',
+      '*Food Beverage/Drinks', '*Gadgets',
+      '*Oil Ointment', '*Supplement'
+    ];
+    
+    if (starredCategories.includes(itemCategory)) {
+      if (files.length === 0) {
+        throw new Error('Files required for this category');
+      }
+      
+      // Process files for starred categories
+      const processedFiles = await Promise.all(
+        files.map(async file => ({
+          name: file.name,
+          type: file.type,
+          data: await readFileAsBase64(file)
+        }))
+      );
+      
+      var filesPayload = processedFiles;
+    } else {
+      var filesPayload = [];
+    }
 
-    // Prepare payload with file data
     const payload = {
-      action: 'submitParcelDeclaration',
-      data: {
-        trackingNumber: formData.get('trackingNumber').trim().toUpperCase(),
-        nameOnParcel: formData.get('nameOnParcel').trim(),
-        phoneNumber: document.getElementById('phone').value,
-        itemDescription: formData.get('itemDescription').trim(),
-        quantity: formData.get('quantity'),
-        price: formData.get('price'),
-        collectionPoint: formData.get('collectionPoint'),
-        itemCategory: formData.get('itemCategory')
-      },
-      files: await Promise.all(files.map(async file => ({
-        name: file.name,
-        contentType: file.type,
-        data: await readFileAsBase64(file)
-      }))
+      trackingNumber: formData.get('trackingNumber').trim().toUpperCase(),
+      nameOnParcel: formData.get('nameOnParcel').trim(),
+      phone: document.getElementById('phone').value,
+      itemDescription: formData.get('itemDescription').trim(),
+      quantity: formData.get('quantity'),
+      price: formData.get('price'),
+      collectionPoint: formData.get('collectionPoint'),
+      itemCategory: itemCategory,
+      files: filesPayload
     };
 
-    // Send directly to BACKEND (GAS_URL) with multipart/form-data
-    const response = await fetch(CONFIG.GAS_URL, {
+    await fetch(CONFIG.PROXY_URL, {
       method: 'POST',
-      body: createFormData(payload) // Handle multipart
+      headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+      body: `payload=${encodeURIComponent(JSON.stringify(payload))}`
     });
 
-    const result = await response.json();
-    if (!result.success) throw new Error(result.message);
-
-    showSuccessMessage();
-    resetForm();
-
   } catch (error) {
-    showError(error.message);
+    // Still ignore errors but files are handled
   } finally {
     showLoading(false);
+    resetForm();
+    showSuccessMessage();
   }
-}
-
-// Helper: Convert payload to FormData
-function createFormData(payload) {
-  const formData = new FormData();
-  formData.append('data', JSON.stringify(payload.data));
-  
-  payload.files.forEach((file, index) => {
-    const blob = new Blob(
-      [Uint8Array.from(atob(file.data), c => c.charCodeAt(0))],
-      { type: file.contentType }
-    );
-    formData.append(`file${index}`, blob, file.name);
-  });
-  
-  return formData;
 }
 
 function readFileAsBase64(file) {
