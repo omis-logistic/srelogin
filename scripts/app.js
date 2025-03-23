@@ -1,8 +1,8 @@
 //scripts/app.js
 // ================= CONFIGURATION =================
 const CONFIG = {
-  GAS_URL: 'https://script.google.com/macros/s/AKfycbzPjpGpdod-3SatmzW8AjeZP1DNJNa96hbdi6PHuLPWOfYZnwqP690owPMerAEpOE8abg/exec',
-  PROXY_URL: 'https://script.google.com/macros/s/AKfycbxV8D5RZSsqLNEuFJPT4qhiB-fKI3mNz_e9umxG3qRASHWQ44Du9ep9JQe8jA4F_8-c/exec',
+  GAS_URL: 'https://script.google.com/macros/s/AKfycbxr2T7AQ-fzixVwI7HDpsF5ZpiRUypHYB2XFX1qCO05Y-FKVy2_3jKlnJc2Vy0ApTdfRg/exec',
+  PROXY_URL: 'https://script.google.com/macros/s/AKfycbyADxLjxnqkfORfalQkuchQrvVTVY4811m8aFCHNBYm-NfGgQdtxA5ux-p-uidS4TCt/exec',
   SESSION_TIMEOUT: 3600,
   MAX_FILE_SIZE: 5 * 1024 * 1024,
   ALLOWED_FILE_TYPES: ['image/jpeg', 'image/png', 'application/pdf'],
@@ -221,55 +221,41 @@ async function handleParcelSubmission(e) {
 
   try {
     const formData = new FormData(form);
-    const itemCategory = formData.get('itemCategory');
     const files = Array.from(formData.getAll('files'));
     
-    // Mandatory file check for starred categories
-    const starredCategories = [
-      '*Books', '*Cosmetics/Skincare/Bodycare',
-      '*Food Beverage/Drinks', '*Gadgets',
-      '*Oil Ointment', '*Supplement'
-    ];
-    
-    if (starredCategories.includes(itemCategory)) {
-      if (files.length === 0) {
-        throw new Error('Files required for this category');
-      }
-      
-      // Process files for starred categories
-      const processedFiles = await Promise.all(
-        files.map(async file => ({
-          name: file.name,
-          type: file.type,
-          data: await readFileAsBase64(file)
-        }))
-      );
-      
-      var filesPayload = processedFiles;
-    } else {
-      var filesPayload = [];
-    }
+    // Process all files (up to 3) regardless of category
+    const processedFiles = await Promise.all(
+      files.slice(0, 3).map(async file => ({
+        name: file.name,
+        type: file.type,
+        data: await readFileAsBase64(file)
+      }))
+    );
 
     const payload = {
-      trackingNumber: formData.get('trackingNumber').trim().toUpperCase(),
-      nameOnParcel: formData.get('nameOnParcel').trim(),
-      phone: document.getElementById('phone').value,
-      itemDescription: formData.get('itemDescription').trim(),
-      quantity: formData.get('quantity'),
-      price: formData.get('price'),
-      collectionPoint: formData.get('collectionPoint'),
-      itemCategory: itemCategory,
-      files: filesPayload
+      action: 'submitParcelDeclaration',
+      data: {
+        trackingNumber: formData.get('trackingNumber').trim().toUpperCase(),
+        nameOnParcel: formData.get('nameOnParcel').trim(),
+        phone: document.getElementById('phone').value,
+        itemDescription: formData.get('itemDescription').trim(),
+        quantity: formData.get('quantity'),
+        price: formData.get('price'),
+        collectionPoint: formData.get('collectionPoint'),
+        itemCategory: formData.get('itemCategory')
+      },
+      files: processedFiles
     };
 
+    // Send through proxy
     await fetch(CONFIG.PROXY_URL, {
       method: 'POST',
-      headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-      body: `payload=${encodeURIComponent(JSON.stringify(payload))}`
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(payload)
     });
 
   } catch (error) {
-    // Still ignore errors but files are handled
+    showError('File upload failed. Please check file requirements.');
   } finally {
     showLoading(false);
     resetForm();
