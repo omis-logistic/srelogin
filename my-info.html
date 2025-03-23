@@ -160,13 +160,6 @@ input[readonly] {
   0% { transform: rotate(0deg); }
   100% { transform: rotate(360deg); }
 }
-
-#passwordError {
-    color: #ff4444;
-    font-size: 0.9em;
-    margin-top: 8px;
-    display: none;
-}
   </style>
 </head>
 <body>
@@ -392,24 +385,14 @@ function handleChangePassword() {
     document.body.appendChild(script);
 }
 
-// ======== UPDATED EMAIL CHANGE HANDLER ========
+// MARK 1-STYLE EMAIL CHANGE 
 function handleChangeEmail() {
-    const btn = document.querySelector('#changeEmailSection .gold-btn');
-    const originalBtnHTML = btn.innerHTML;
     const password = document.getElementById('verifyPassword').value;
     const newEmail = document.getElementById('newEmail').value;
     const repeatEmail = document.getElementById('repeatNewEmail').value;
     const userData = checkSession();
 
-    // Show loading state
-    btn.innerHTML = '<div class="button-loader"></div> Saving...';
-    btn.disabled = true;
-
-    if(!validateEmailChange(newEmail, repeatEmail, password)) {
-        btn.innerHTML = originalBtnHTML;
-        btn.disabled = false;
-        return;
-    }
+    if(!validateEmailChange(newEmail, repeatEmail, password)) return;
 
     const callbackName = `emailChange_${Date.now()}`;
     const script = document.createElement('script');
@@ -420,19 +403,12 @@ function handleChangeEmail() {
         `&callback=${callbackName}`;
 
     window[callbackName] = (response) => {
-        btn.innerHTML = originalBtnHTML;
-        btn.disabled = false;
-        
+        handleAuthResponse(response, 'Email updated successfully!');
         if(response.success) {
-            showError('✓ Email updated successfully!', 'success');
             document.getElementById('currentEmail').textContent = newEmail;
-            toggleSection('changeEmailSection');
-        } else {
-            showError(response.message || 'Email update failed', 'newEmailError');
         }
-        
-        document.body.removeChild(script);
         delete window[callbackName];
+        document.body.removeChild(script);
     };
     document.body.appendChild(script);
 }
@@ -490,14 +466,12 @@ function clearErrors() {
     });
 }
 
-// ========== ERROR HANDLING ==========
-function showError(message, targetId = 'error-message') {
-    const element = document.getElementById(targetId);
-    if (element) {
-        element.textContent = message;
-        element.style.display = 'block';
-        setTimeout(() => element.style.display = 'none', 5000);
-    }
+function showError(message, type = 'error') {
+    const errorElement = document.getElementById('error-message');
+    errorElement.textContent = message;
+    errorElement.className = type === 'success' ? 'success-message' : 'error-message';
+    errorElement.style.display = 'block';
+    setTimeout(() => errorElement.style.display = 'none', 5000);
 }
 
 function enableEditing(fieldId) {
@@ -520,31 +494,28 @@ function cancelEditing() {
     loadUserInfo(JSON.parse(sessionStorage.getItem('userData')).phone); // Reload original values
 }
 
-// ========== PROVEN SAVE CHANGES HANDLER ==========
 function saveChanges() {
     const saveBtn = document.querySelector('#saveSection .gold-btn');
-    const originalHTML = saveBtn.innerHTML;
-    const errorElement = document.getElementById('passwordError');
-
+    const cancelBtn = document.querySelector('#saveSection .secondary-btn');
+    const originalBtnHTML = saveBtn.innerHTML;
+    
     // Show loading state
-    saveBtn.innerHTML = '<div class="button-loader"></div>';
+    saveBtn.innerHTML = '<div class="button-loader"></div> Saving...';
     saveBtn.disabled = true;
-    errorElement.textContent = '';
+    cancelBtn.disabled = true;
 
     const userData = checkSession();
     const password = document.getElementById('verifyPassword').value;
     const address = document.getElementById('address').value.trim();
     const postcode = document.getElementById('postcode').value.trim().toUpperCase();
 
-    // Basic validation
-    if (!address || !postcode) {
-        errorElement.textContent = 'Both fields are required';
-        errorElement.style.display = 'block';
-        resetButton(saveBtn, originalHTML);
+    // Validate inputs
+    if (!validateAddressChange(address, postcode)) {
+        resetSaveButtons(saveBtn, cancelBtn, originalBtnHTML);
         return;
     }
 
-    const callbackName = `saveAddr_${Date.now()}`;
+    const callbackName = `saveChanges_${Date.now()}`;
     const script = document.createElement('script');
     script.src = `${CONFIG.GAS_URL}?action=updateAddress&phone=${encodeURIComponent(userData.phone)}` +
         `&address=${encodeURIComponent(address)}` +
@@ -554,40 +525,45 @@ function saveChanges() {
 
     window[callbackName] = (response) => {
         if (response.success) {
-            // Success case
-            errorElement.style.display = 'none';
-            const successElement = document.createElement('div');
-            successElement.className = 'success-message';
-            successElement.textContent = '✓ Changes saved successfully!';
-            document.querySelector('.user-info-section').prepend(successElement);
+            // Show success state
+            saveBtn.innerHTML = '✓ Saved!';
+            cancelBtn.style.display = 'none';
             
+            // Hide section after delay
             setTimeout(() => {
-                successElement.remove();
+                document.getElementById('saveSection').style.display = 'none';
                 cancelEditing();
+                resetSaveButtons(saveBtn, cancelBtn, originalBtnHTML);
             }, 2000);
         } else {
-            // Error case
-            errorElement.textContent = response.message.includes('password') ? 
-                'Incorrect password' : 'Failed to save changes';
-            errorElement.style.display = 'block';
+            // Show error message
+            showError(response.message || 'Failed to save changes', 'passwordError');
+            resetSaveButtons(saveBtn, cancelBtn, originalBtnHTML);
         }
         
-        resetButton(saveBtn, originalHTML);
         document.body.removeChild(script);
         delete window[callbackName];
     };
     document.body.appendChild(script);
 }
 
-// ========== RELIABLE BUTTON HANDLING ==========
-function resetButton(button, originalHTML) {
-    button.innerHTML = originalHTML;
-    button.disabled = false;
+function resetSaveButtons(saveBtn, cancelBtn, originalHTML) {
+    saveBtn.innerHTML = originalHTML;
+    saveBtn.disabled = false;
+    cancelBtn.disabled = false;
+    cancelBtn.style.display = 'inline-block';
 }
 
-// ========== SIMPLIFIED VALIDATION ==========
 function validateAddressChange(address, postcode) {
-    return address && postcode; // Only check for non-empty values
+    if (!address || address.length < 10) {
+        showError('Address must be at least 10 characters');
+        return false;
+    }
+    if (!postcode) {
+        showError('Postcode is required');
+        return false;
+    }
+    return true;
 }
   
 </script>
