@@ -161,6 +161,13 @@ input[readonly] {
   100% { transform: rotate(360deg); }
 }
 
+#passwordError {
+    color: #ff4444;
+    font-size: 0.9em;
+    margin-top: 8px;
+    display: none;
+}
+
 .shake {
     animation: shake 0.5s;
     border-color: #ff4444 !important;
@@ -511,11 +518,13 @@ function saveChanges() {
     const saveBtn = document.querySelector('#saveSection .gold-btn');
     const cancelBtn = document.querySelector('#saveSection .secondary-btn');
     const originalBtnHTML = saveBtn.innerHTML;
-    
+    const passwordError = document.getElementById('passwordError');
+
     // Show loading state
     saveBtn.innerHTML = '<div class="button-loader"></div> Saving...';
     saveBtn.disabled = true;
     cancelBtn.disabled = true;
+    passwordError.textContent = '';
 
     const userData = checkSession();
     const password = document.getElementById('verifyPassword').value;
@@ -536,13 +545,19 @@ function saveChanges() {
         `&password=${encodeURIComponent(password)}` +
         `&callback=${callbackName}`;
 
+    // Set timeout for response
+    const timeoutId = setTimeout(() => {
+        handleSaveError('No response from server', saveBtn, cancelBtn, originalBtnHTML);
+        delete window[callbackName];
+    }, 10000);
+
     window[callbackName] = (response) => {
+        clearTimeout(timeoutId);
+        
         if (response.success) {
-            // Show success state
+            // Success handling
             saveBtn.innerHTML = '✓ Saved!';
             cancelBtn.style.display = 'none';
-            
-            // Hide section after delay
             setTimeout(() => {
                 document.getElementById('saveSection').style.display = 'none';
                 cancelEditing();
@@ -550,15 +565,16 @@ function saveChanges() {
             }, 2000);
         } else {
             // MARK 1-STYLE ERROR HANDLING
-            const errorMessage = response.message === 'Incorrect password' ? 
-                'Incorrect Password' : 
-                'Failed to save changes';
+            handleSaveError(
+                response.message || 'Failed to save changes', 
+                saveBtn, 
+                cancelBtn, 
+                originalBtnHTML
+            );
             
-            showError(errorMessage, 'passwordError');
-            resetSaveButtons(saveBtn, cancelBtn, originalBtnHTML);
-            
-            // Shake animation for wrong password
-            if(response.message === 'Incorrect password') {
+            // Specific handling for password errors
+            if(response.message.toLowerCase().includes('password')) {
+                passwordError.textContent = 'Incorrect Password';
                 document.getElementById('verifyPassword').classList.add('shake');
                 setTimeout(() => {
                     document.getElementById('verifyPassword').classList.remove('shake');
@@ -570,6 +586,13 @@ function saveChanges() {
         delete window[callbackName];
     };
     document.body.appendChild(script);
+}
+
+function handleSaveError(message, saveBtn, cancelBtn, originalBtnHTML) {
+    const passwordError = document.getElementById('passwordError');
+    passwordError.textContent = message;
+    passwordError.style.display = 'block';
+    resetSaveButtons(saveBtn, cancelBtn, originalBtnHTML);
 }
 
 function resetSaveButtons(saveBtn, cancelBtn, originalHTML) {
