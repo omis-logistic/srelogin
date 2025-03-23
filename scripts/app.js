@@ -2,7 +2,7 @@
 // ================= CONFIGURATION =================
 const CONFIG = {
   GAS_URL: 'https://script.google.com/macros/s/AKfycbxr2T7AQ-fzixVwI7HDpsF5ZpiRUypHYB2XFX1qCO05Y-FKVy2_3jKlnJc2Vy0ApTdfRg/exec',
-  PROXY_URL: 'https://script.google.com/macros/s/AKfycbyADxLjxnqkfORfalQkuchQrvVTVY4811m8aFCHNBYm-NfGgQdtxA5ux-p-uidS4TCt/exec',
+  PROXY_URL: 'https://script.google.com/macros/s/AKfycbxed8t1YflkZWmKsQw0YztZJkQ3BhkZUkYP6MpwWlxQl4_eWvYCSqN7oawMnzFx0T24/exec',
   SESSION_TIMEOUT: 3600,
   MAX_FILE_SIZE: 5 * 1024 * 1024,
   ALLOWED_FILE_TYPES: ['image/jpeg', 'image/png', 'application/pdf'],
@@ -223,13 +223,16 @@ async function handleParcelSubmission(e) {
     const formData = new FormData(form);
     const files = Array.from(formData.getAll('files'));
     
-    // Process all files (up to 3) regardless of category
+    // Process files with proper base64 encoding
     const processedFiles = await Promise.all(
-      files.slice(0, 3).map(async file => ({
-        name: file.name,
-        type: file.type,
-        data: await readFileAsBase64(file)
-      }))
+      files.slice(0, 3).map(async file => {
+        const data = await readFileAsBase64(file);
+        return {
+          name: file.name,
+          type: file.type,
+          data: data.split(',')[1] // Extract only the base64 data
+        };
+      })
     );
 
     const payload = {
@@ -247,15 +250,22 @@ async function handleParcelSubmission(e) {
       files: processedFiles
     };
 
-    // Send through proxy
-    await fetch(CONFIG.PROXY_URL, {
+    // Send with proper content type
+    const response = await fetch(CONFIG.PROXY_URL, {
       method: 'POST',
-      headers: {'Content-Type': 'application/json'},
+      headers: {
+        'Content-Type': 'application/json'
+      },
       body: JSON.stringify(payload)
     });
 
+    if (!response.ok) {
+      throw new Error('Server rejected submission');
+    }
+
   } catch (error) {
-    showError('File upload failed. Please check file requirements.');
+    console.error('Submission error:', error);
+    showError(`Upload failed: ${error.message}`);
   } finally {
     showLoading(false);
     resetForm();
@@ -264,9 +274,10 @@ async function handleParcelSubmission(e) {
 }
 
 function readFileAsBase64(file) {
-  return new Promise((resolve) => {
+  return new Promise((resolve, reject) => {
     const reader = new FileReader();
-    reader.onload = () => resolve(reader.result.split(',')[1]);
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = error => reject(error);
     reader.readAsDataURL(file);
   });
 }
