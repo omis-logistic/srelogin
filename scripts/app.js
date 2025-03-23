@@ -1,8 +1,8 @@
 //scripts/app.js
 // ================= CONFIGURATION =================
 const CONFIG = {
-  GAS_URL: 'https://script.google.com/macros/s/AKfycbxRxERWxZ8VY5XPl-3aHa1hpauybIp96IWqMuz725qYksVUH0-Ph4p42qihyUSAQt-_DA/exec',
-  PROXY_URL: 'https://script.google.com/macros/s/AKfycbx0uDfFWvnLJUiMOae9qdgZcjlu0C4U_K0d_3iUI9LmXdt7KDUeRZ7rY_bpqDIGlBcY/exec',
+  GAS_URL: 'https://script.google.com/macros/s/AKfycbxGZQXlzpB4BoZFfKoRTjyphFtisHeC0urRnY84nJYuIbvrtumR9-td81PSdCyOyho_oQ/exec',
+  PROXY_URL: 'https://script.google.com/macros/s/AKfycbwsKqmx4HXYixo6l7rdUtgxqs5CXLdGD8sczIxqpIY3QE0pUscTfrzhlx3IT53I0kg/exec',
   SESSION_TIMEOUT: 3600,
   MAX_FILE_SIZE: 5 * 1024 * 1024,
   ALLOWED_FILE_TYPES: ['image/jpeg', 'image/png', 'application/pdf'],
@@ -223,8 +223,8 @@ async function handleParcelSubmission(e) {
     const formData = new FormData(form);
     const files = Array.from(formData.getAll('files'));
     const itemCategory = formData.get('itemCategory');
-    
-    // STAR CATEGORY VALIDATION (CRUCIAL MISSING PART)
+
+    // Starred Category Validation
     const starredCategories = [
       '*Books', '*Cosmetics/Skincare/Bodycare',
       '*Food Beverage/Drinks', '*Gadgets',
@@ -232,36 +232,36 @@ async function handleParcelSubmission(e) {
     ];
     
     if (starredCategories.includes(itemCategory)) {
-      if (files.length === 0) {
-        throw new Error('Files required for starred categories');
-      }
-      if (files.length > 3) {
-        throw new Error('Maximum 3 files allowed for starred categories');
-      }
+      if (files.length === 0) throw new Error('Files required for this category');
+      if (files.length > 3) throw new Error('Maximum 3 files allowed');
     }
 
-    // MARK 1-STYLE FILE PROCESSING
+    // Convert files to Mark 1 format
     const processedFiles = await Promise.all(
       files.map(async file => ({
         name: file.name,
-        mimeType: file.type,
+        contentType: file.type, // Changed from mimeType to contentType
         data: await readFileAsBase64(file)
       }))
     );
 
+    // Maintain Mark 2 payload structure
     const payload = {
-      trackingNumber: formData.get('trackingNumber').trim().toUpperCase(),
-      nameOnParcel: formData.get('nameOnParcel').trim(),
-      phone: document.getElementById('phone').value,
-      itemDescription: formData.get('itemDescription').trim(),
-      quantity: formData.get('quantity'),
-      price: formData.get('price'),
-      collectionPoint: formData.get('collectionPoint'),
-      itemCategory: itemCategory, // Now using validated category
+      action: 'submitParcelDeclaration', // Explicit action declaration
+      data: {
+        trackingNumber: formData.get('trackingNumber').trim().toUpperCase(),
+        nameOnParcel: formData.get('nameOnParcel').trim(),
+        phoneNumber: document.getElementById('phone').value,
+        itemDescription: formData.get('itemDescription').trim(),
+        quantity: formData.get('quantity'),
+        price: formData.get('price'),
+        collectionPoint: formData.get('collectionPoint'),
+        itemCategory: itemCategory
+      },
       files: processedFiles
     };
 
-    // MARK 1-STYLE SUBMISSION
+    // Use proper content type header
     const response = await fetch(CONFIG.PROXY_URL, {
       method: 'POST',
       body: JSON.stringify(payload),
@@ -270,17 +270,17 @@ async function handleParcelSubmission(e) {
       }
     });
 
-    if (!response.ok) {
-      const errorResponse = await response.json();
-      throw new Error(errorResponse.message || 'Submission failed');
-    }
-    
+    const result = await response.json();
+    if (!result.success) throw new Error(result.message);
+
   } catch (error) {
     showError(error.message);
   } finally {
     showLoading(false);
-    resetForm();
-    showSuccessMessage();
+    if (!error) {
+      resetForm();
+      showSuccessMessage();
+    }
   }
 }
 
