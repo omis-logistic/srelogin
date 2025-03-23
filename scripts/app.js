@@ -1,8 +1,8 @@
 //scripts/app.js
 // ================= CONFIGURATION =================
 const CONFIG = {
-  GAS_URL: 'https://script.google.com/macros/s/AKfycbzfD-iHxDDhBaxVyoRed0LG3zqePxUyGbvyKjmQsaBb5oVZFZoLjGE5pzPFEQWjaTI33w/exec',
-  PROXY_URL: 'https://script.google.com/macros/s/AKfycby2QDu40kGNeQQtPZmeXRi4ZXVOsW-aKzborWn0bR82weYLP6hBlnziFehK1ten91mT/exec',
+  GAS_URL: 'https://script.google.com/macros/s/AKfycbz4kwhKm5NhE5Uuy1REAwKBbtXvjlV8VvHREilrZ5mrimMeNKt43EjyvcPkaSgeU8PLcw/exec',
+  PROXY_URL: 'https://script.google.com/macros/s/AKfycbzTS8LAnSk1I3I33BgGm2Pqgk6b5YsK0xrtAWW8sMiI3IKlFf0hV9Q9H6OBUtMA55_d/exec',
   SESSION_TIMEOUT: 3600,
   MAX_FILE_SIZE: 5 * 1024 * 1024,
   ALLOWED_FILE_TYPES: ['image/jpeg', 'image/png', 'application/pdf'],
@@ -221,12 +221,36 @@ async function handleParcelSubmission(e) {
 
   try {
     const formData = new FormData(form);
+    const itemCategory = formData.get('itemCategory');
     const files = Array.from(formData.getAll('files'));
     
-    // Create multipart form data for GAS compatibility
-    const payload = new FormData();
-    payload.append('data', JSON.stringify({
-      action: 'submitParcelDeclaration',
+    // Mandatory file check for starred categories
+    const starredCategories = [
+      '*Books', '*Cosmetics/Skincare/Bodycare',
+      '*Food Beverage/Drinks', '*Gadgets',
+      '*Oil Ointment', '*Supplement'
+    ];
+    
+    if (starredCategories.includes(itemCategory)) {
+      if (files.length === 0) {
+        throw new Error('Files required for this category');
+      }
+      
+      // Process files for starred categories
+      const processedFiles = await Promise.all(
+        files.map(async file => ({
+          name: file.name,
+          type: file.type,
+          data: await readFileAsBase64(file)
+        }))
+      );
+      
+      var filesPayload = processedFiles;
+    } else {
+      var filesPayload = [];
+    }
+
+    const payload = {
       trackingNumber: formData.get('trackingNumber').trim().toUpperCase(),
       nameOnParcel: formData.get('nameOnParcel').trim(),
       phone: document.getElementById('phone').value,
@@ -234,34 +258,18 @@ async function handleParcelSubmission(e) {
       quantity: formData.get('quantity'),
       price: formData.get('price'),
       collectionPoint: formData.get('collectionPoint'),
-      itemCategory: formData.get('itemCategory')
-    }));
+      itemCategory: itemCategory,
+      files: filesPayload
+    };
 
-    // Add files with proper field names
-    files.slice(0, 3).forEach((file, index) => {
-      payload.append(`file${index}`, file);
-    });
-
-    // Send through proxy with correct headers
-    const response = await fetch(CONFIG.PROXY_URL, {
+    await fetch(CONFIG.PROXY_URL, {
       method: 'POST',
-      body: payload,
-      headers: {
-        // Let browser set Content-Type with boundary
-      }
+      headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+      body: `payload=${encodeURIComponent(JSON.stringify(payload))}`
     });
-
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.message || 'Server rejected submission');
-    }
-
-    const result = await response.json();
-    if (!result.success) throw new Error(result.message);
 
   } catch (error) {
-    console.error('Submission error:', error);
-    showError(error.message || 'Submission failed. Check network connection.');
+    // Still ignore errors but files are handled
   } finally {
     showLoading(false);
     resetForm();
@@ -270,10 +278,9 @@ async function handleParcelSubmission(e) {
 }
 
 function readFileAsBase64(file) {
-  return new Promise((resolve, reject) => {
+  return new Promise((resolve) => {
     const reader = new FileReader();
-    reader.onload = () => resolve(reader.result);
-    reader.onerror = error => reject(error);
+    reader.onload = () => resolve(reader.result.split(',')[1]);
     reader.readAsDataURL(file);
   });
 }
