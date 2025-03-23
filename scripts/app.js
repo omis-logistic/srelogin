@@ -1,8 +1,8 @@
 //scripts/app.js
 // ================= CONFIGURATION =================
 const CONFIG = {
-  GAS_URL: 'https://script.google.com/macros/s/AKfycbxJKux_Bn6ca06wgk7_ppGdF29_CZKmGGG629LVzEUMQIBSmqGQTGWtI2ZppNeuwVk5TA/exec',
-  PROXY_URL: 'https://script.google.com/macros/s/AKfycbyF-tXQVztt2XexJThhwSsbS2XOnLO8H-PVN6V0Ua8QkwMbIVsUfqlEuSxxZLckS8vm/exec',
+  GAS_URL: 'https://script.google.com/macros/s/AKfycbxRxERWxZ8VY5XPl-3aHa1hpauybIp96IWqMuz725qYksVUH0-Ph4p42qihyUSAQt-_DA/exec',
+  PROXY_URL: 'https://script.google.com/macros/s/AKfycbx0uDfFWvnLJUiMOae9qdgZcjlu0C4U_K0d_3iUI9LmXdt7KDUeRZ7rY_bpqDIGlBcY/exec',
   SESSION_TIMEOUT: 3600,
   MAX_FILE_SIZE: 5 * 1024 * 1024,
   ALLOWED_FILE_TYPES: ['image/jpeg', 'image/png', 'application/pdf'],
@@ -221,10 +221,10 @@ async function handleParcelSubmission(e) {
 
   try {
     const formData = new FormData(form);
-    const itemCategory = formData.get('itemCategory');
     const files = Array.from(formData.getAll('files'));
+    const itemCategory = formData.get('itemCategory');
     
-    // Mandatory file check for starred categories
+    // STAR CATEGORY VALIDATION (CRUCIAL MISSING PART)
     const starredCategories = [
       '*Books', '*Cosmetics/Skincare/Bodycare',
       '*Food Beverage/Drinks', '*Gadgets',
@@ -233,22 +233,21 @@ async function handleParcelSubmission(e) {
     
     if (starredCategories.includes(itemCategory)) {
       if (files.length === 0) {
-        throw new Error('Files required for this category');
+        throw new Error('Files required for starred categories');
       }
-      
-      // Process files for starred categories
-      const processedFiles = await Promise.all(
-        files.map(async file => ({
-          name: file.name,
-          type: file.type,
-          data: await readFileAsBase64(file)
-        }))
-      );
-      
-      var filesPayload = processedFiles;
-    } else {
-      var filesPayload = [];
+      if (files.length > 3) {
+        throw new Error('Maximum 3 files allowed for starred categories');
+      }
     }
+
+    // MARK 1-STYLE FILE PROCESSING
+    const processedFiles = await Promise.all(
+      files.map(async file => ({
+        name: file.name,
+        mimeType: file.type,
+        data: await readFileAsBase64(file)
+      }))
+    );
 
     const payload = {
       trackingNumber: formData.get('trackingNumber').trim().toUpperCase(),
@@ -258,18 +257,26 @@ async function handleParcelSubmission(e) {
       quantity: formData.get('quantity'),
       price: formData.get('price'),
       collectionPoint: formData.get('collectionPoint'),
-      itemCategory: itemCategory,
-      files: filesPayload
+      itemCategory: itemCategory, // Now using validated category
+      files: processedFiles
     };
 
-    await fetch(CONFIG.PROXY_URL, {
+    // MARK 1-STYLE SUBMISSION
+    const response = await fetch(CONFIG.PROXY_URL, {
       method: 'POST',
-      headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-      body: `payload=${encodeURIComponent(JSON.stringify(payload))}`
+      body: JSON.stringify(payload),
+      headers: {
+        'Content-Type': 'application/json'
+      }
     });
 
+    if (!response.ok) {
+      const errorResponse = await response.json();
+      throw new Error(errorResponse.message || 'Submission failed');
+    }
+    
   } catch (error) {
-    // Still ignore errors but files are handled
+    showError(error.message);
   } finally {
     showLoading(false);
     resetForm();
