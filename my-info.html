@@ -133,6 +133,33 @@ input[readonly] {
     from { opacity: 0; transform: translateY(-10px); }
     to { opacity: 1; transform: translateY(0); }
 }
+
+.loading-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0,0,0,0.7);
+  display: none;
+  justify-content: center;
+  align-items: center;
+  z-index: 9999;
+}
+
+.loading-spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid #f3f3f3;
+  border-top: 4px solid var(--gold);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
   </style>
 </head>
 <body>
@@ -251,13 +278,29 @@ input[readonly] {
       Logout
     </button>
   </div>
-
+  
+  <div id="globalLoader" class="loading-overlay" style="display: none;">
+  <div class="loading-spinner"></div>
+</div>
+  
   <script src="scripts/app.js"></script>
 <script>
-document.addEventListener('DOMContentLoaded', () => {
-    const userData = checkSession();
-    if(!userData) return safeRedirect('login.html');
 
+
+// ================== GLOBAL LOADING ==================
+function showGlobalLoader(show = true) {
+  document.getElementById('globalLoader').style.display = show ? 'flex' : 'none';
+}
+
+// ================== MY INFO PAGE LOADING ==================
+document.addEventListener('DOMContentLoaded', () => {
+    showGlobalLoader(true); // Show loader on page load
+    
+    const userData = checkSession();
+    if(!userData) {
+        safeRedirect('login.html');
+        return;
+    }
     // Load user info immediately
     loadUserInfo(userData.phone);
 
@@ -279,14 +322,17 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 });
 
-// MARK 1-STYLE DATA LOADING
+// ================== ENHANCED DATA LOADING ==================
 function loadUserInfo(phone) {
     const callbackName = `userInfo_${Date.now()}`;
     const script = document.createElement('script');
     script.src = `${CONFIG.GAS_URL}?action=getUserInfo&phone=${encodeURIComponent(phone)}&callback=${callbackName}`;
 
     window[callbackName] = (response) => {
+        showGlobalLoader(false); // Hide global loader
+        
         if(response.success) {
+            // Populate fields
             document.getElementById('userId').value = response.userId || 'N/A';
             document.getElementById('icNumber').value = response.icNumber || 'N/A';
             document.getElementById('frontIC').href = response.frontIC || '#';
@@ -296,9 +342,12 @@ function loadUserInfo(phone) {
             document.getElementById('postcode').value = response.postcode || '';
             document.getElementById('infoPhone').value = response.phone || 'N/A';
             document.getElementById('currentEmail').textContent = response.email || 'N/A';
+        } else {
+            showError('Failed to load user data');
         }
-        delete window[callbackName];
+        
         document.body.removeChild(script);
+        delete window[callbackName];
     };
     document.body.appendChild(script);
 }
@@ -447,20 +496,22 @@ function cancelEditing() {
 
 function saveChanges() {
     const saveBtn = document.querySelector('#saveSection .gold-btn');
+    const cancelBtn = document.querySelector('#saveSection .secondary-btn');
     const originalBtnHTML = saveBtn.innerHTML;
     
-    // Show loading
+    // Show loading state
     saveBtn.innerHTML = '<div class="button-loader"></div> Saving...';
     saveBtn.disabled = true;
-    
+    cancelBtn.disabled = true;
+
     const userData = checkSession();
     const password = document.getElementById('verifyPassword').value;
     const address = document.getElementById('address').value.trim();
     const postcode = document.getElementById('postcode').value.trim().toUpperCase();
 
+    // Validate inputs
     if (!validateAddressChange(address, postcode)) {
-        saveBtn.innerHTML = originalBtnHTML;
-        saveBtn.disabled = false;
+        resetSaveButtons(saveBtn, cancelBtn, originalBtnHTML);
         return;
     }
 
@@ -473,30 +524,34 @@ function saveChanges() {
         `&callback=${callbackName}`;
 
     window[callbackName] = (response) => {
-        saveBtn.innerHTML = originalBtnHTML;
-        saveBtn.disabled = false;
-
         if (response.success) {
-            // Show success message
-            const successDiv = document.createElement('div');
-            successDiv.className = 'success-message';
-            successDiv.textContent = '✓ Changes saved successfully!';
-            document.querySelector('.user-info-section').prepend(successDiv);
+            // Show success state
+            saveBtn.innerHTML = '✓ Saved!';
+            cancelBtn.style.display = 'none';
             
-            // Hide save section after 2 seconds
+            // Hide section after delay
             setTimeout(() => {
                 document.getElementById('saveSection').style.display = 'none';
-                successDiv.remove();
                 cancelEditing();
+                resetSaveButtons(saveBtn, cancelBtn, originalBtnHTML);
             }, 2000);
         } else {
+            // Show error message
             showError(response.message || 'Failed to save changes', 'passwordError');
+            resetSaveButtons(saveBtn, cancelBtn, originalBtnHTML);
         }
         
         document.body.removeChild(script);
         delete window[callbackName];
     };
     document.body.appendChild(script);
+}
+
+function resetSaveButtons(saveBtn, cancelBtn, originalHTML) {
+    saveBtn.innerHTML = originalHTML;
+    saveBtn.disabled = false;
+    cancelBtn.disabled = false;
+    cancelBtn.style.display = 'inline-block';
 }
 
 function validateAddressChange(address, postcode) {
