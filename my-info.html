@@ -278,17 +278,24 @@ input[readonly] {
     </div>
     
     <div class="input-group" id="changeEmailSection" style="display: none;">
-      <input type="password" id="verifyPassword" placeholder="Verify Current Password" required>
-      <div class="error-message" id="verifyPasswordError"></div>
-      
-      <input type="email" id="newEmail" placeholder="New Email Address" required>
-      <div class="error-message" id="newEmailError"></div>
-      
-      <input type="email" id="repeatNewEmail" placeholder="Repeat New Email Address" required>
-      <div class="error-message" id="repeatNewEmailError"></div>
-      
-      <button onclick="handleChangeEmail()" class="gold-btn">Save New Email</button>
-    </div>
+    <input type="password" 
+           id="currentPasswordEmail" 
+           placeholder="Current Password"
+           required>
+    <div class="error-message" id="emailError"></div>
+    
+    <input type="email" 
+           id="newEmail" 
+           placeholder="New Email Address"
+           required>
+           
+    <input type="email" 
+           id="confirmNewEmail" 
+           placeholder="Confirm New Email"
+           required>
+    
+    <button onclick="handleChangeEmail()" class="gold-btn">Save New Email</button>
+</div>
 
     <!-- Navigation Buttons -->
     <button class="secondary-btn" onclick="safeRedirect('dashboard.html')">
@@ -447,22 +454,26 @@ function handleChangePassword() {
 function handleChangeEmail() {
     const btn = document.querySelector('#changeEmailSection button');
     const originalHTML = btn.innerHTML;
-    const password = document.getElementById('verifyPassword').value;
-    const newEmail = document.getElementById('newEmail').value;
-    const repeatEmail = document.getElementById('repeatNewEmail').value;
-    const userData = checkSession();
+    
+    // Get correct field values from Mark 1 HTML structure
+    const password = document.getElementById('currentPasswordEmail').value; // Changed ID
+    const newEmail = document.getElementById('newEmail').value.trim();
+    const confirmEmail = document.getElementById('confirmNewEmail').value.trim(); // Changed ID
+    
+    // Clear previous errors
+    clearEmailErrors();
 
-    // Mark 1 validation pattern
-    if (!password || !newEmail || !repeatEmail) {
-        showError('All fields required', 'verifyPasswordError');
+    // Mark 1 validation flow
+    if (!password || !newEmail || !confirmEmail) {
+        showError('All fields are required', 'emailError');
         return;
     }
-    if (newEmail !== repeatEmail) {
-        showError('Emails must match', 'repeatNewEmailError');
+    if (newEmail !== confirmEmail) {
+        showError('Emails must match', 'emailError');
         return;
     }
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newEmail)) {
-        showError('Invalid email format', 'newEmailError');
+        showError('Invalid email format', 'emailError');
         return;
     }
 
@@ -470,12 +481,13 @@ function handleChangeEmail() {
     btn.innerHTML = '<div class="button-loader"></div> Updating...';
     btn.disabled = true;
 
+    const userData = checkSession();
     const callbackName = `emailUpdate_${Date.now()}`;
     const script = document.createElement('script');
     script.src = `${CONFIG.GAS_URL}?action=updateEmail&phone=${userData.phone}` +
         `&currentPassword=${encodeURIComponent(password)}` +
         `&newEmail=${encodeURIComponent(newEmail)}` +
-        `&confirmEmail=${encodeURIComponent(repeatEmail)}` +
+        `&confirmEmail=${encodeURIComponent(confirmEmail)}` + // Match Mark 1 parameter names
         `&callback=${callbackName}`;
 
     window[callbackName] = (response) => {
@@ -491,12 +503,12 @@ function handleChangeEmail() {
             // Mark 1 error handling
             const errorMsg = response.message.includes('password') ? 
                 'Incorrect Password' : response.message;
-            showError(errorMsg, 'verifyPasswordError');
+            showError(errorMsg, 'emailError');
             
             if(errorMsg === 'Incorrect Password') {
-                document.getElementById('verifyPassword').classList.add('shake');
+                document.getElementById('currentPasswordEmail').classList.add('shake');
                 setTimeout(() => {
-                    document.getElementById('verifyPassword').classList.remove('shake');
+                    document.getElementById('currentPasswordEmail').classList.remove('shake');
                 }, 500);
             }
         }
@@ -505,6 +517,14 @@ function handleChangeEmail() {
         delete window[callbackName];
     };
     document.body.appendChild(script);
+}
+
+// ================== MARK 1 UTILITIES ==================
+function clearEmailErrors() {
+    document.querySelectorAll('#changeEmailSection .error-message').forEach(el => {
+        el.textContent = '';
+        el.style.display = 'none';
+    });
 }
 
 // MARK 1 VALIDATION PATTERNS
