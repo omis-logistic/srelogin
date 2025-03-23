@@ -1,7 +1,7 @@
 //scripts/app.js
 // ================= CONFIGURATION =================
 const CONFIG = {
-  GAS_URL: 'https://script.google.com/macros/s/AKfycbxGZQXlzpB4BoZFfKoRTjyphFtisHeC0urRnY84nJYuIbvrtumR9-td81PSdCyOyho_oQ/exec',
+  GAS_URL: 'https://script.google.com/macros/s/AKfycbxNnOa5wFgvwxzmbdOtUZaAz_d5b1UfXdh1okkxwQgdSosCxghutG9wDN7aDmMqIE4WNg/exec',
   PROXY_URL: 'https://script.google.com/macros/s/AKfycbwsKqmx4HXYixo6l7rdUtgxqs5CXLdGD8sczIxqpIY3QE0pUscTfrzhlx3IT53I0kg/exec',
   SESSION_TIMEOUT: 3600,
   MAX_FILE_SIZE: 5 * 1024 * 1024,
@@ -224,7 +224,7 @@ async function handleParcelSubmission(e) {
     const files = Array.from(formData.getAll('files'));
     const itemCategory = formData.get('itemCategory');
 
-    // Starred Category Validation
+    // Validate starred categories
     const starredCategories = [
       '*Books', '*Cosmetics/Skincare/Bodycare',
       '*Food Beverage/Drinks', '*Gadgets',
@@ -236,51 +236,55 @@ async function handleParcelSubmission(e) {
       if (files.length > 3) throw new Error('Maximum 3 files allowed');
     }
 
-    // Convert files to Mark 1 format
+    // Process files
     const processedFiles = await Promise.all(
       files.map(async file => ({
         name: file.name,
-        contentType: file.type, // Changed from mimeType to contentType
+        contentType: file.type,
         data: await readFileAsBase64(file)
       }))
     );
 
-    // Maintain Mark 2 payload structure
-    const payload = {
-      action: 'submitParcelDeclaration', // Explicit action declaration
-      data: {
-        trackingNumber: formData.get('trackingNumber').trim().toUpperCase(),
-        nameOnParcel: formData.get('nameOnParcel').trim(),
-        phoneNumber: document.getElementById('phone').value,
-        itemDescription: formData.get('itemDescription').trim(),
-        quantity: formData.get('quantity'),
-        price: formData.get('price'),
-        collectionPoint: formData.get('collectionPoint'),
-        itemCategory: itemCategory
-      },
-      files: processedFiles
-    };
+    // Create proper form data payload
+    const formPayload = new FormData();
+    formPayload.append('data', JSON.stringify({
+      action: 'submitParcelDeclaration',
+      trackingNumber: formData.get('trackingNumber').trim().toUpperCase(),
+      nameOnParcel: formData.get('nameOnParcel').trim(),
+      phone: document.getElementById('phone').value,
+      itemDescription: formData.get('itemDescription').trim(),
+      quantity: formData.get('quantity'),
+      price: formData.get('price'),
+      collectionPoint: formData.get('collectionPoint'),
+      itemCategory: itemCategory
+    }));
 
-    // Use proper content type header
-    const response = await fetch(CONFIG.PROXY_URL, {
-      method: 'POST',
-      body: JSON.stringify(payload),
-      headers: {
-        'Content-Type': 'application/json'
-      }
+    // Add files to form data
+    processedFiles.forEach((file, index) => {
+      formPayload.append(`file${index}`, new Blob(
+        [Utilities.base64Decode(file.data)], 
+        { type: file.contentType }
+      ), file.name);
     });
 
-    const result = await response.json();
-    if (!result.success) throw new Error(result.message);
+    // Send using form data instead of JSON
+    const response = await fetch(CONFIG.PROXY_URL, {
+      method: 'POST',
+      body: formPayload
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.message || 'Submission failed');
+    }
+
+    showSuccessMessage();
+    resetForm();
 
   } catch (error) {
     showError(error.message);
   } finally {
     showLoading(false);
-    if (!error) {
-      resetForm();
-      showSuccessMessage();
-    }
   }
 }
 
