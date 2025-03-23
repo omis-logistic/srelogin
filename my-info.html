@@ -380,16 +380,34 @@ function toggleSection(sectionId) {
     clearErrors();
 }
 
-// MARK 1-STYLE PASSWORD CHANGE
+// ================== PASSWORD CHANGE ==================
 function handleChangePassword() {
+    const btn = document.querySelector('#changePasswordSection button');
+    const originalHTML = btn.innerHTML;
     const currentPass = document.getElementById('currentPassword').value;
     const newPass = document.getElementById('newPassword').value;
     const repeatPass = document.getElementById('repeatNewPassword').value;
     const userData = checkSession();
 
-    if(!validatePasswordChange(currentPass, newPass, repeatPass)) return;
+    // Mark 1 validation pattern
+    if (!currentPass || !newPass || !repeatPass) {
+        showError('All fields are required', 'currentPasswordError');
+        return;
+    }
+    if (newPass !== repeatPass) {
+        showError('Passwords do not match', 'repeatNewPasswordError');
+        return;
+    }
+    if (!/^(?=.*[A-Z])(?=.*\d).{6,}$/.test(newPass)) {
+        showError('6+ chars, 1 uppercase, 1 number', 'newPasswordError');
+        return;
+    }
 
-    const callbackName = `pwdChange_${Date.now()}`;
+    // Mark 1 loading state
+    btn.innerHTML = '<div class="button-loader"></div> Updating...';
+    btn.disabled = true;
+
+    const callbackName = `pwdUpdate_${Date.now()}`;
     const script = document.createElement('script');
     script.src = `${CONFIG.GAS_URL}?action=updatePassword&phone=${userData.phone}` +
         `&currentPassword=${encodeURIComponent(currentPass)}` +
@@ -398,23 +416,61 @@ function handleChangePassword() {
         `&callback=${callbackName}`;
 
     window[callbackName] = (response) => {
-        handleAuthResponse(response, 'Password updated! Please login again.');
-        delete window[callbackName];
+        btn.innerHTML = originalHTML;
+        btn.disabled = false;
+        
+        if (response.success) {
+            // Mark 1 success flow
+            showError('Password updated! Please login again', 'success');
+            setTimeout(handleLogout, 2000);
+        } else {
+            // Mark 1 error handling
+            const errorMsg = response.message.includes('password') ? 
+                'Incorrect Password' : response.message;
+            showError(errorMsg, 'currentPasswordError');
+            
+            if(errorMsg === 'Incorrect Password') {
+                document.getElementById('currentPassword').classList.add('shake');
+                setTimeout(() => {
+                    document.getElementById('currentPassword').classList.remove('shake');
+                }, 500);
+            }
+        }
+        
         document.body.removeChild(script);
+        delete window[callbackName];
     };
     document.body.appendChild(script);
 }
 
-// MARK 1-STYLE EMAIL CHANGE 
+// ================== EMAIL CHANGE ==================
 function handleChangeEmail() {
+    const btn = document.querySelector('#changeEmailSection button');
+    const originalHTML = btn.innerHTML;
     const password = document.getElementById('verifyPassword').value;
     const newEmail = document.getElementById('newEmail').value;
     const repeatEmail = document.getElementById('repeatNewEmail').value;
     const userData = checkSession();
 
-    if(!validateEmailChange(newEmail, repeatEmail, password)) return;
+    // Mark 1 validation pattern
+    if (!password || !newEmail || !repeatEmail) {
+        showError('All fields required', 'verifyPasswordError');
+        return;
+    }
+    if (newEmail !== repeatEmail) {
+        showError('Emails must match', 'repeatNewEmailError');
+        return;
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newEmail)) {
+        showError('Invalid email format', 'newEmailError');
+        return;
+    }
 
-    const callbackName = `emailChange_${Date.now()}`;
+    // Mark 1 loading state
+    btn.innerHTML = '<div class="button-loader"></div> Updating...';
+    btn.disabled = true;
+
+    const callbackName = `emailUpdate_${Date.now()}`;
     const script = document.createElement('script');
     script.src = `${CONFIG.GAS_URL}?action=updateEmail&phone=${userData.phone}` +
         `&currentPassword=${encodeURIComponent(password)}` +
@@ -423,12 +479,30 @@ function handleChangeEmail() {
         `&callback=${callbackName}`;
 
     window[callbackName] = (response) => {
-        handleAuthResponse(response, 'Email updated successfully!');
-        if(response.success) {
+        btn.innerHTML = originalHTML;
+        btn.disabled = false;
+        
+        if (response.success) {
+            // Mark 1 success flow
+            showError('Email updated successfully!', 'success');
             document.getElementById('currentEmail').textContent = newEmail;
+            document.getElementById('changeEmailSection').style.display = 'none';
+        } else {
+            // Mark 1 error handling
+            const errorMsg = response.message.includes('password') ? 
+                'Incorrect Password' : response.message;
+            showError(errorMsg, 'verifyPasswordError');
+            
+            if(errorMsg === 'Incorrect Password') {
+                document.getElementById('verifyPassword').classList.add('shake');
+                setTimeout(() => {
+                    document.getElementById('verifyPassword').classList.remove('shake');
+                }, 500);
+            }
         }
-        delete window[callbackName];
+        
         document.body.removeChild(script);
+        delete window[callbackName];
     };
     document.body.appendChild(script);
 }
@@ -466,26 +540,14 @@ function validateEmailChange(newEmail, repeatEmail, password) {
     return true;
 }
 
-// ======== KEEP THESE MARK 1 FUNCTIONS UNCHANGED ========
-function handleAuthResponse(response, successMessage, successCallback) {
+// ================== MARK 1 SHARED FUNCTIONS ==================
+function handleAuthResponse(response, successMessage, errorContainer) {
     if (response.success) {
         showError(successMessage, 'success');
-        if (typeof successCallback === 'function') {
-            successCallback();
-        }
     } else {
         const errorMsg = response.message.includes('password') ? 
-            'Incorrect Password' : 
-            response.message;
-        showError(errorMsg, 'passwordError');
-        
-        // MARK 1-STYLE SHAKE EFFECT
-        if (errorMsg === 'Incorrect Password') {
-            document.getElementById('verifyPassword').classList.add('shake');
-            setTimeout(() => {
-                document.getElementById('verifyPassword').classList.remove('shake');
-            }, 500);
-        }
+            'Incorrect Password' : response.message;
+        showError(errorMsg, errorContainer);
     }
 }
 
@@ -500,6 +562,8 @@ function clearErrors() {
 function showError(message, targetId = 'error-message') {
     const errorElement = document.getElementById(targetId) || createErrorElement();
     errorElement.textContent = message;
+    errorElement.className = message.includes('success') ? 
+        'success-message' : 'error-message';
     errorElement.style.display = 'block';
     setTimeout(() => errorElement.style.display = 'none', 5000);
 }
