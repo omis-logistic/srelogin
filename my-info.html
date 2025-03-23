@@ -160,6 +160,19 @@ input[readonly] {
   0% { transform: rotate(0deg); }
   100% { transform: rotate(360deg); }
 }
+
+.shake {
+    animation: shake 0.5s;
+    border-color: #ff4444 !important;
+}
+
+@keyframes shake {
+    0% { transform: translateX(0); }
+    25% { transform: translateX(-5px); }
+    50% { transform: translateX(5px); }
+    75% { transform: translateX(-5px); }
+    100% { transform: translateX(0); }
+}
   </style>
 </head>
 <body>
@@ -536,9 +549,21 @@ function saveChanges() {
                 resetSaveButtons(saveBtn, cancelBtn, originalBtnHTML);
             }, 2000);
         } else {
-            // Show error message
-            showError(response.message || 'Failed to save changes', 'passwordError');
+            // MARK 1-STYLE ERROR HANDLING
+            const errorMessage = response.message === 'Incorrect password' ? 
+                'Incorrect Password' : 
+                'Failed to save changes';
+            
+            showError(errorMessage, 'passwordError');
             resetSaveButtons(saveBtn, cancelBtn, originalBtnHTML);
+            
+            // Shake animation for wrong password
+            if(response.message === 'Incorrect password') {
+                document.getElementById('verifyPassword').classList.add('shake');
+                setTimeout(() => {
+                    document.getElementById('verifyPassword').classList.remove('shake');
+                }, 500);
+            }
         }
         
         document.body.removeChild(script);
