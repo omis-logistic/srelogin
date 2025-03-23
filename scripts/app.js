@@ -1,7 +1,7 @@
 //scripts/app.js
 // ================= CONFIGURATION =================
 const CONFIG = {
-  GAS_URL: 'https://script.google.com/macros/s/AKfycbxNnOa5wFgvwxzmbdOtUZaAz_d5b1UfXdh1okkxwQgdSosCxghutG9wDN7aDmMqIE4WNg/exec',
+  GAS_URL: 'https://script.google.com/macros/s/AKfycbyIAlDBSuknAyW_odJ1PZBc9uGlmJTxpWzenmdyNOjOzRa2p2MXu3KykMEob3qGxs78Nw/exec',
   PROXY_URL: 'https://script.google.com/macros/s/AKfycbwsKqmx4HXYixo6l7rdUtgxqs5CXLdGD8sczIxqpIY3QE0pUscTfrzhlx3IT53I0kg/exec',
   SESSION_TIMEOUT: 3600,
   MAX_FILE_SIZE: 5 * 1024 * 1024,
@@ -222,32 +222,19 @@ async function handleParcelSubmission(e) {
   try {
     const formData = new FormData(form);
     const files = Array.from(formData.getAll('files'));
-    const itemCategory = formData.get('itemCategory');
-
-    // Validate starred categories
-    const starredCategories = [
-      '*Books', '*Cosmetics/Skincare/Bodycare',
-      '*Food Beverage/Drinks', '*Gadgets',
-      '*Oil Ointment', '*Supplement'
-    ];
     
-    if (starredCategories.includes(itemCategory)) {
-      if (files.length === 0) throw new Error('Files required for this category');
-      if (files.length > 3) throw new Error('Maximum 3 files allowed');
-    }
-
-    // Process files
+    // Process files WITHOUT Utilities
     const processedFiles = await Promise.all(
       files.map(async file => ({
         name: file.name,
-        contentType: file.type,
-        data: await readFileAsBase64(file)
+        type: file.type,
+        data: await readFileAsBase64(file) // Base64 string only
       }))
     );
 
-    // Create proper form data payload
-    const formPayload = new FormData();
-    formPayload.append('data', JSON.stringify({
+    // Build payload
+    const payload = new FormData();
+    payload.append('data', JSON.stringify({
       action: 'submitParcelDeclaration',
       trackingNumber: formData.get('trackingNumber').trim().toUpperCase(),
       nameOnParcel: formData.get('nameOnParcel').trim(),
@@ -256,21 +243,31 @@ async function handleParcelSubmission(e) {
       quantity: formData.get('quantity'),
       price: formData.get('price'),
       collectionPoint: formData.get('collectionPoint'),
-      itemCategory: itemCategory
+      itemCategory: formData.get('itemCategory')
     }));
 
-    // Add files to form data
+    // Append files directly
     processedFiles.forEach((file, index) => {
-      formPayload.append(`file${index}`, new Blob(
-        [Utilities.base64Decode(file.data)], 
-        { type: file.contentType }
+      payload.append(`file${index}`, new Blob(
+        [base64ToArrayBuffer(file.data)], 
+        { type: file.type }
       ), file.name);
     });
 
-    // Send using form data instead of JSON
-    const response = await fetch(CONFIG.PROXY_URL, {
+    // Helper function
+    function base64ToArrayBuffer(base64) {
+      const binaryString = atob(base64);
+      const bytes = new Uint8Array(binaryString.length);
+      for (let i = 0; i < binaryString.length; i++) {
+        bytes[i] = binaryString.charCodeAt(i);
+      }
+      return bytes;
+    }
+
+    // Send request
+    const response = await fetch(CONFIG.GAS_URL, {
       method: 'POST',
-      body: formPayload
+      body: payload
     });
 
     if (!response.ok) {
