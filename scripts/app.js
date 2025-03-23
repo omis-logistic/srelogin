@@ -2,7 +2,7 @@
 // ================= CONFIGURATION =================
 const CONFIG = {
   GAS_URL: 'https://script.google.com/macros/s/AKfycbz4kwhKm5NhE5Uuy1REAwKBbtXvjlV8VvHREilrZ5mrimMeNKt43EjyvcPkaSgeU8PLcw/exec',
-  PROXY_URL: 'https://script.google.com/macros/s/AKfycbzUyEC-qBrnAbcPmnkknNM0YALxXqfpfR8GtrE5IlCAJMFCgfWw2vGO2Ch_D8ESU-VS/exec',
+  PROXY_URL: 'https://script.google.com/macros/s/AKfycbx3DG0uFhSq6l0iiA-Fr4i5NRIkfMtFD-VYg3hjRljtwwktrKWVfgCrL6r_KJdN-fMG/exec',
   SESSION_TIMEOUT: 3600,
   MAX_FILE_SIZE: 5 * 1024 * 1024,
   ALLOWED_FILE_TYPES: ['image/jpeg', 'image/png', 'application/pdf'],
@@ -237,11 +237,13 @@ async function handleParcelSubmission(e) {
       }
       
       // Process files for starred categories
-      const processedFiles = files.map(file => ({
-  name: file.name.replace(/[^\w.-]/g, '_'), // Sanitize on frontend
-  mimeType: file.type,
-  data: await readFileAsBase64(file)
-}));
+      const processedFiles = await Promise.all(
+        files.map(async file => ({
+          name: file.name,
+          type: file.type,
+          data: await readFileAsBase64(file)
+        }))
+      );
       
       var filesPayload = processedFiles;
     } else {
