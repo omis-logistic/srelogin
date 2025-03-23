@@ -1,8 +1,8 @@
 //scripts/app.js
 // ================= CONFIGURATION =================
 const CONFIG = {
-  GAS_URL: 'https://script.google.com/macros/s/AKfycbxr2T7AQ-fzixVwI7HDpsF5ZpiRUypHYB2XFX1qCO05Y-FKVy2_3jKlnJc2Vy0ApTdfRg/exec',
-  PROXY_URL: 'https://script.google.com/macros/s/AKfycbxed8t1YflkZWmKsQw0YztZJkQ3BhkZUkYP6MpwWlxQl4_eWvYCSqN7oawMnzFx0T24/exec',
+  GAS_URL: 'https://script.google.com/macros/s/AKfycbzfD-iHxDDhBaxVyoRed0LG3zqePxUyGbvyKjmQsaBb5oVZFZoLjGE5pzPFEQWjaTI33w/exec',
+  PROXY_URL: 'https://script.google.com/macros/s/AKfycby2QDu40kGNeQQtPZmeXRi4ZXVOsW-aKzborWn0bR82weYLP6hBlnziFehK1ten91mT/exec',
   SESSION_TIMEOUT: 3600,
   MAX_FILE_SIZE: 5 * 1024 * 1024,
   ALLOWED_FILE_TYPES: ['image/jpeg', 'image/png', 'application/pdf'],
@@ -223,49 +223,45 @@ async function handleParcelSubmission(e) {
     const formData = new FormData(form);
     const files = Array.from(formData.getAll('files'));
     
-    // Process files with proper base64 encoding
-    const processedFiles = await Promise.all(
-      files.slice(0, 3).map(async file => {
-        const data = await readFileAsBase64(file);
-        return {
-          name: file.name,
-          type: file.type,
-          data: data.split(',')[1] // Extract only the base64 data
-        };
-      })
-    );
-
-    const payload = {
+    // Create multipart form data for GAS compatibility
+    const payload = new FormData();
+    payload.append('data', JSON.stringify({
       action: 'submitParcelDeclaration',
-      data: {
-        trackingNumber: formData.get('trackingNumber').trim().toUpperCase(),
-        nameOnParcel: formData.get('nameOnParcel').trim(),
-        phone: document.getElementById('phone').value,
-        itemDescription: formData.get('itemDescription').trim(),
-        quantity: formData.get('quantity'),
-        price: formData.get('price'),
-        collectionPoint: formData.get('collectionPoint'),
-        itemCategory: formData.get('itemCategory')
-      },
-      files: processedFiles
-    };
+      trackingNumber: formData.get('trackingNumber').trim().toUpperCase(),
+      nameOnParcel: formData.get('nameOnParcel').trim(),
+      phone: document.getElementById('phone').value,
+      itemDescription: formData.get('itemDescription').trim(),
+      quantity: formData.get('quantity'),
+      price: formData.get('price'),
+      collectionPoint: formData.get('collectionPoint'),
+      itemCategory: formData.get('itemCategory')
+    }));
 
-    // Send with proper content type
+    // Add files with proper field names
+    files.slice(0, 3).forEach((file, index) => {
+      payload.append(`file${index}`, file);
+    });
+
+    // Send through proxy with correct headers
     const response = await fetch(CONFIG.PROXY_URL, {
       method: 'POST',
+      body: payload,
       headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(payload)
+        // Let browser set Content-Type with boundary
+      }
     });
 
     if (!response.ok) {
-      throw new Error('Server rejected submission');
+      const error = await response.json();
+      throw new Error(error.message || 'Server rejected submission');
     }
+
+    const result = await response.json();
+    if (!result.success) throw new Error(result.message);
 
   } catch (error) {
     console.error('Submission error:', error);
-    showError(`Upload failed: ${error.message}`);
+    showError(error.message || 'Submission failed. Check network connection.');
   } finally {
     showLoading(false);
     resetForm();
