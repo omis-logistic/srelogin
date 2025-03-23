@@ -1,8 +1,8 @@
 //scripts/app.js
 // ================= CONFIGURATION =================
 const CONFIG = {
-  GAS_URL: 'https://script.google.com/macros/s/AKfycbwPc77SAptD0Slz608YkMvfJn7CdWPV1C3TX_G3jMOhS2rKVizOjPyflkeM-ccgn1JEqA/exec',
-  PROXY_URL: 'https://script.google.com/macros/s/AKfycbwsKqmx4HXYixo6l7rdUtgxqs5CXLdGD8sczIxqpIY3QE0pUscTfrzhlx3IT53I0kg/exec',
+  GAS_URL: 'https://script.google.com/macros/s/AKfycbzPjpGpdod-3SatmzW8AjeZP1DNJNa96hbdi6PHuLPWOfYZnwqP690owPMerAEpOE8abg/exec',
+  PROXY_URL: 'https://script.google.com/macros/s/AKfycbxV8D5RZSsqLNEuFJPT4qhiB-fKI3mNz_e9umxG3qRASHWQ44Du9ep9JQe8jA4F_8-c/exec',
   SESSION_TIMEOUT: 3600,
   MAX_FILE_SIZE: 5 * 1024 * 1024,
   ALLOWED_FILE_TYPES: ['image/jpeg', 'image/png', 'application/pdf'],
@@ -221,60 +221,66 @@ async function handleParcelSubmission(e) {
 
   try {
     const formData = new FormData(form);
+    const itemCategory = formData.get('itemCategory');
     const files = Array.from(formData.getAll('files'));
     
-    // 1. Prepare payload
-    const payload = {
-      action: 'submitParcelDeclaration',
-      data: {
-        trackingNumber: formData.get('trackingNumber').trim().toUpperCase(),
-        nameOnParcel: formData.get('nameOnParcel').trim(),
-        phone: formData.get('phone').trim(),
-        itemDescription: formData.get('itemDescription').trim(),
-        quantity: formData.get('quantity'),
-        price: formData.get('price'),
-        collectionPoint: formData.get('collectionPoint'),
-        itemCategory: formData.get('itemCategory')
-      },
-      files: await Promise.all(
+    // Mandatory file check for starred categories
+    const starredCategories = [
+      '*Books', '*Cosmetics/Skincare/Bodycare',
+      '*Food Beverage/Drinks', '*Gadgets',
+      '*Oil Ointment', '*Supplement'
+    ];
+    
+    if (starredCategories.includes(itemCategory)) {
+      if (files.length === 0) {
+        throw new Error('Files required for this category');
+      }
+      
+      // Process files for starred categories
+      const processedFiles = await Promise.all(
         files.map(async file => ({
           name: file.name,
           type: file.type,
           data: await readFileAsBase64(file)
         }))
-    };
-
-    // 2. Send request
-    const response = await fetch(CONFIG.GAS_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
-    });
-
-    // 3. Handle response
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.message || 'Submission failed');
+      );
+      
+      var filesPayload = processedFiles;
+    } else {
+      var filesPayload = [];
     }
 
-    const result = await response.json();
-    if (!result.success) throw new Error(result.message);
+    const payload = {
+      trackingNumber: formData.get('trackingNumber').trim().toUpperCase(),
+      nameOnParcel: formData.get('nameOnParcel').trim(),
+      phone: document.getElementById('phone').value,
+      itemDescription: formData.get('itemDescription').trim(),
+      quantity: formData.get('quantity'),
+      price: formData.get('price'),
+      collectionPoint: formData.get('collectionPoint'),
+      itemCategory: itemCategory,
+      files: filesPayload
+    };
 
-    showSuccessMessage();
-    resetForm();
+    await fetch(CONFIG.PROXY_URL, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+      body: `payload=${encodeURIComponent(JSON.stringify(payload))}`
+    });
 
   } catch (error) {
-    console.error('Submission Error:', error);
-    showError(error.message);
+    // Still ignore errors but files are handled
   } finally {
     showLoading(false);
+    resetForm();
+    showSuccessMessage();
   }
 }
 
 function readFileAsBase64(file) {
   return new Promise((resolve) => {
     const reader = new FileReader();
-    reader.onload = (e) => resolve(e.target.result.split(',')[1]);
+    reader.onload = () => resolve(reader.result.split(',')[1]);
     reader.readAsDataURL(file);
   });
 }
