@@ -523,22 +523,24 @@ function cancelEditing() {
 // ========== PROVEN SAVE CHANGES HANDLER ==========
 function saveChanges() {
     const saveBtn = document.querySelector('#saveSection .gold-btn');
-    const originalText = saveBtn.innerHTML;
+    const originalHTML = saveBtn.innerHTML;
     const errorElement = document.getElementById('passwordError');
 
     // Show loading state
     saveBtn.innerHTML = '<div class="button-loader"></div>';
     saveBtn.disabled = true;
+    errorElement.textContent = '';
 
     const userData = checkSession();
     const password = document.getElementById('verifyPassword').value;
     const address = document.getElementById('address').value.trim();
     const postcode = document.getElementById('postcode').value.trim().toUpperCase();
 
-    // Immediate validation
+    // Basic validation
     if (!address || !postcode) {
-        showError('Both fields are required', 'passwordError');
-        resetButton(saveBtn, originalText);
+        errorElement.textContent = 'Both fields are required';
+        errorElement.style.display = 'block';
+        resetButton(saveBtn, originalHTML);
         return;
     }
 
@@ -552,15 +554,25 @@ function saveChanges() {
 
     window[callbackName] = (response) => {
         if (response.success) {
-            showError('✓ Changes saved!', 'success');
+            // Success case
+            errorElement.style.display = 'none';
+            const successElement = document.createElement('div');
+            successElement.className = 'success-message';
+            successElement.textContent = '✓ Changes saved successfully!';
+            document.querySelector('.user-info-section').prepend(successElement);
+            
             setTimeout(() => {
+                successElement.remove();
                 cancelEditing();
-                resetButton(saveBtn, originalText);
             }, 2000);
         } else {
-            showError(response.message || 'Failed to save changes', 'passwordError');
-            resetButton(saveBtn, originalText);
+            // Error case
+            errorElement.textContent = response.message.includes('password') ? 
+                'Incorrect password' : 'Failed to save changes';
+            errorElement.style.display = 'block';
         }
+        
+        resetButton(saveBtn, originalHTML);
         document.body.removeChild(script);
         delete window[callbackName];
     };
