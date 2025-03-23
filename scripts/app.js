@@ -1,7 +1,7 @@
 //scripts/app.js
 // ================= CONFIGURATION =================
 const CONFIG = {
-  GAS_URL: 'https://script.google.com/macros/s/AKfycbyIAlDBSuknAyW_odJ1PZBc9uGlmJTxpWzenmdyNOjOzRa2p2MXu3KykMEob3qGxs78Nw/exec',
+  GAS_URL: 'https://script.google.com/macros/s/AKfycbwPc77SAptD0Slz608YkMvfJn7CdWPV1C3TX_G3jMOhS2rKVizOjPyflkeM-ccgn1JEqA/exec',
   PROXY_URL: 'https://script.google.com/macros/s/AKfycbwsKqmx4HXYixo6l7rdUtgxqs5CXLdGD8sczIxqpIY3QE0pUscTfrzhlx3IT53I0kg/exec',
   SESSION_TIMEOUT: 3600,
   MAX_FILE_SIZE: 5 * 1024 * 1024,
@@ -223,62 +223,48 @@ async function handleParcelSubmission(e) {
     const formData = new FormData(form);
     const files = Array.from(formData.getAll('files'));
     
-    // Process files WITHOUT Utilities
-    const processedFiles = await Promise.all(
-      files.map(async file => ({
-        name: file.name,
-        type: file.type,
-        data: await readFileAsBase64(file) // Base64 string only
-      }))
-    );
-
-    // Build payload
-    const payload = new FormData();
-    payload.append('data', JSON.stringify({
+    // 1. Prepare payload
+    const payload = {
       action: 'submitParcelDeclaration',
-      trackingNumber: formData.get('trackingNumber').trim().toUpperCase(),
-      nameOnParcel: formData.get('nameOnParcel').trim(),
-      phone: document.getElementById('phone').value,
-      itemDescription: formData.get('itemDescription').trim(),
-      quantity: formData.get('quantity'),
-      price: formData.get('price'),
-      collectionPoint: formData.get('collectionPoint'),
-      itemCategory: formData.get('itemCategory')
-    }));
+      data: {
+        trackingNumber: formData.get('trackingNumber').trim().toUpperCase(),
+        nameOnParcel: formData.get('nameOnParcel').trim(),
+        phone: formData.get('phone').trim(),
+        itemDescription: formData.get('itemDescription').trim(),
+        quantity: formData.get('quantity'),
+        price: formData.get('price'),
+        collectionPoint: formData.get('collectionPoint'),
+        itemCategory: formData.get('itemCategory')
+      },
+      files: await Promise.all(
+        files.map(async file => ({
+          name: file.name,
+          type: file.type,
+          data: await readFileAsBase64(file)
+        }))
+    };
 
-    // Append files directly
-    processedFiles.forEach((file, index) => {
-      payload.append(`file${index}`, new Blob(
-        [base64ToArrayBuffer(file.data)], 
-        { type: file.type }
-      ), file.name);
-    });
-
-    // Helper function
-    function base64ToArrayBuffer(base64) {
-      const binaryString = atob(base64);
-      const bytes = new Uint8Array(binaryString.length);
-      for (let i = 0; i < binaryString.length; i++) {
-        bytes[i] = binaryString.charCodeAt(i);
-      }
-      return bytes;
-    }
-
-    // Send request
+    // 2. Send request
     const response = await fetch(CONFIG.GAS_URL, {
       method: 'POST',
-      body: payload
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
     });
 
+    // 3. Handle response
     if (!response.ok) {
       const error = await response.json();
       throw new Error(error.message || 'Submission failed');
     }
 
+    const result = await response.json();
+    if (!result.success) throw new Error(result.message);
+
     showSuccessMessage();
     resetForm();
 
   } catch (error) {
+    console.error('Submission Error:', error);
     showError(error.message);
   } finally {
     showLoading(false);
@@ -288,7 +274,7 @@ async function handleParcelSubmission(e) {
 function readFileAsBase64(file) {
   return new Promise((resolve) => {
     const reader = new FileReader();
-    reader.onload = () => resolve(reader.result.split(',')[1]);
+    reader.onload = (e) => resolve(e.target.result.split(',')[1]);
     reader.readAsDataURL(file);
   });
 }
