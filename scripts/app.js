@@ -1,7 +1,7 @@
 //scripts/app.js
 // ================= CONFIGURATION =================
 const CONFIG = {
-  GAS_URL: 'https://script.google.com/macros/s/AKfycbyTMHU3lrpaKOV4q6EioB8RuGmg6P6_QUfw_TqA8hjOkckU4e6fF7VzNhHqWAxhe8xhcA/exec',
+  GAS_URL: 'https://script.google.com/macros/s/AKfycbys9cM6oLUsdytBaT61-d9_JUH-SQbh20yCOcQHjSugSWdGioWiigOkIeMmcAWqhBBwhg/exec',
   PROXY_URL: 'https://script.google.com/macros/s/AKfycby-chAYID4slQS634g-2fU1s5sSZaTw1dcVxAUy7rE4wWinPRsDH2j2Oq8UJsdu-qyY/exec',
   SESSION_TIMEOUT: 3600,
   MAX_FILE_SIZE: 5 * 1024 * 1024,
@@ -220,11 +220,14 @@ async function handleParcelSubmission(e) {
   showLoading(true);
 
   try {
+    const userData = JSON.parse(sessionStorage.getItem('userData'));
+    console.log('Submission User Data:', userData);
+
     const formData = new FormData(form);
     const itemCategory = formData.get('itemCategory');
-    const files = Array.from(formData.getAll('files[]')); // Changed to match input name
+    const files = Array.from(formData.getAll('files[]'));
 
-    // Process ALL files regardless of category
+    // Process files regardless of category
     const processedFiles = await Promise.all(
       files.map(async file => ({
         name: file.name,
@@ -233,10 +236,11 @@ async function handleParcelSubmission(e) {
       }))
     );
 
+    // Build payload with User ID from session
     const payload = {
       trackingNumber: formData.get('trackingNumber').trim().toUpperCase(),
       nameOnParcel: formData.get('nameOnParcel').trim(),
-      userId: document.getElementById('userId').value,
+      userId: userData?.userId || '', // Direct from session
       phone: document.getElementById('phone').value,
       itemDescription: formData.get('itemDescription').trim(),
       quantity: formData.get('quantity'),
@@ -246,6 +250,9 @@ async function handleParcelSubmission(e) {
       files: processedFiles
     };
 
+    console.log('Submission Payload:', payload);
+
+    // Maintain existing submission flow
     await fetch(CONFIG.PROXY_URL, {
       method: 'POST',
       headers: {'Content-Type': 'application/x-www-form-urlencoded'},
@@ -617,14 +624,22 @@ async function handleLogin() {
     const result = await callAPI('processLogin', { phone, password });
     
     if (result.success) {
-      // Store all user data including userId
+      // Store all user data with proper userId
       sessionStorage.setItem('userData', JSON.stringify({
         phone: result.phone,
-        userId: result.userId,
+        userId: result.userId,  // Critical for parcel declarations
         email: result.email,
-        tempPassword: result.tempPassword,
+        tempPassword: result.tempPassword
       }));
-      
+
+      // Debug: Verify login response
+      console.log('Login Response:', {
+        success: true,
+        userId: result.userId,
+        phone: result.phone,
+        tempPassword: result.tempPassword
+      });
+
       localStorage.setItem('lastActivity', Date.now());
       
       if (result.tempPassword) {
@@ -828,26 +843,41 @@ document.addEventListener('DOMContentLoaded', () => {
   createLoaderElement();
   checkCategoryRequirements();
 
-  // Session-based Field Initialization
+  // Debug: Check session storage
   const userData = JSON.parse(sessionStorage.getItem('userData'));
+  console.log('[DEBUG] Session Storage:', userData);
+
+  // User Data Initialization
   const phoneField = document.getElementById('phone');
   const userIdField = document.getElementById('userId');
 
-  // Initialize user-specific fields
   if (userData) {
+    console.log('[DEBUG] Initializing user data:');
+    console.log('Phone:', userData.phone);
+    console.log('UserID:', userData.userId);
+
     if (phoneField) {
       phoneField.value = userData.phone || '';
       phoneField.readOnly = true;
+      console.log('[DEBUG] Phone field initialized:', phoneField.value);
     }
+
     if (userIdField) {
-      userIdField.value = userData.userId || ''; // Set from session
+      userIdField.value = userData.userId || 'NO_USER_ID_FOUND';
       userIdField.readOnly = true;
+      console.log('[DEBUG] UserID field initialized:', {
+        value: userIdField.value,
+        readonly: userIdField.readOnly
+      });
     }
+  } else {
+    console.warn('[DEBUG] No user data in session storage');
   }
 
   // Parcel Form Setup
   const parcelForm = document.getElementById('declarationForm');
   if (parcelForm) {
+    console.log('[DEBUG] Initializing parcel form');
     parcelForm.addEventListener('submit', handleParcelSubmission);
     
     const categorySelect = document.getElementById('itemCategory');
@@ -863,23 +893,26 @@ document.addEventListener('DOMContentLoaded', () => {
   );
 
   if (!isPublicPage) {
+    console.log('[DEBUG] Checking session validity');
     const sessionUserData = checkSession();
     if (!sessionUserData) return;
     
     if (sessionUserData.tempPassword && !window.location.pathname.includes('password-reset.html')) {
+      console.log('[DEBUG] Temp password detected - forcing logout');
       handleLogout();
     }
   }
 
-  // Cleanup listeners
   window.addEventListener('beforeunload', () => {
     const errorElement = document.getElementById('error-message');
     if (errorElement) errorElement.style.display = 'none';
   });
 
-  // Initial Focus
   const firstInput = document.querySelector('input:not([type="hidden"])');
-  if (firstInput) firstInput.focus();
+  if (firstInput) {
+    console.log('[DEBUG] Setting initial focus');
+    firstInput.focus();
+  }
 });
 
 // New functions for category requirements =================
