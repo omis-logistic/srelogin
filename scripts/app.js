@@ -1,7 +1,7 @@
 //scripts/app.js
 // ================= CONFIGURATION =================
 const CONFIG = {
-  GAS_URL: 'https://script.google.com/macros/s/AKfycbwtNKZ4-btvSQLM9h61r9P5z21r50OSmgjYa_-V56YQjvh1pDY3RfaAIdojdRSK0yzafg/exec',
+  GAS_URL: 'https://script.google.com/macros/s/AKfycbxg1VTtQeE_gIeiVxsws-DA605SiJiB_AzU0ON7aRClenhGfgTjPVkCymJsUXLWH0JQDQ/exec',
   PROXY_URL: 'https://script.google.com/macros/s/AKfycby-chAYID4slQS634g-2fU1s5sSZaTw1dcVxAUy7rE4wWinPRsDH2j2Oq8UJsdu-qyY/exec',
   SESSION_TIMEOUT: 3600,
   MAX_FILE_SIZE: 5 * 1024 * 1024,
@@ -610,6 +610,7 @@ async function handleLogin() {
   const phone = document.getElementById('phone').value.trim();
   const password = document.getElementById('password').value;
 
+  // Validate inputs
   if (!validatePhone(phone)) {
     showError('Invalid phone number format');
     return;
@@ -624,48 +625,44 @@ async function handleLogin() {
     const result = await callAPI('processLogin', { phone, password });
     
     if (result.success) {
-      // Session data validation and storage
-      const sessionData = {
-        phone: result.phone,
-        userId: result.userId || 'MISSING_USER_ID_BACKEND',
-        tempPassword: result.tempPassword,
-        email: result.email || ''
-      };
-
-      // Debug: Verify complete session data
-      console.log('[LOGIN] Session Data to Store:', {
-        ...sessionData,
-        source: 'login-response'
-      });
-
-      sessionStorage.setItem('userData', JSON.stringify(sessionData));
+      // Force User ID storage with verification
+      if (!result.userId) {
+        console.error('Backend returned empty User ID:', result);
+        result.userId = `ERROR_${Date.now().toString(36)}`;
+      }
       
-      // Immediate session verification
-      const storedSession = JSON.parse(sessionStorage.getItem('userData'));
-      console.log('[LOGIN] Session Storage Verification:', {
-        keys: Object.keys(storedSession),
-        userIdExists: 'userId' in storedSession,
-        storedValue: storedSession.userId
-      });
+      // Store session data
+      sessionStorage.setItem('userData', JSON.stringify({
+        phone: result.phone,
+        userId: result.userId,
+        tempPassword: result.tempPassword,
+        email: result.email
+      }));
+
+      // Immediate validation
+      const stored = JSON.parse(sessionStorage.getItem('userData'));
+      console.log('Session Storage Write Verification:', stored);
 
       // Update last activity
       localStorage.setItem('lastActivity', Date.now());
 
       // Handle password reset flow
       if (result.tempPassword) {
-        console.log('[LOGIN] Temp password detected, redirecting...');
+        showError('Temporary password detected - please reset your password');
         safeRedirect('password-reset.html');
       } else {
-        console.log('[LOGIN] Regular login, redirecting to dashboard...');
+        showSuccessMessage();
         safeRedirect('dashboard.html');
       }
     } else {
       showError(result.message || 'Authentication failed');
-      console.log('[LOGIN] Failed attempt for:', phone);
     }
   } catch (error) {
-    console.error('[LOGIN] System error:', error);
+    console.error('Login error:', error);
     showError('Login failed - please try again');
+  } finally {
+    // Cleanup any loading states
+    document.getElementById('loginButton').disabled = false;
   }
 }
 
@@ -851,7 +848,7 @@ function formatDate(dateString) {
 
 // ================= INITIALIZATION =================
 document.addEventListener('DOMContentLoaded', () => {
-  // Existing viewport and component initialization
+  // Existing initialization code
   detectViewMode();
   initValidationListeners();
   createLoaderElement();
@@ -859,52 +856,55 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Session data handling
   const userData = JSON.parse(sessionStorage.getItem('userData')) || {};
-  
-  // Debug session analysis
-  console.log('[DEBUG] Session Storage Analysis:', {
-    exists: !!sessionStorage.getItem('userData'),
-    keys: Object.keys(userData),
-    userIdPresent: 'userId' in userData
-  });
+  console.log('[SESSION] Loaded:', userData);
 
   // Phone field initialization
   const phoneField = document.getElementById('phone');
   if (phoneField) {
     phoneField.value = userData.phone || '';
     phoneField.readOnly = true;
-    console.log('[DEBUG] Phone Field State:', {
+    console.log('[PHONE] Field state:', {
       value: phoneField.value,
       readOnly: phoneField.readOnly
     });
   }
 
-  // User ID field initialization
+  // User ID field handling
   const userIdField = document.getElementById('userId');
   if (userIdField) {
+    // Set value with fallback
     userIdField.value = userData.userId || 'USER_ID_MISSING';
-    userIdField.readOnly = true;
-    console.log('[DEBUG] UserID Field Diagnostics:', {
-      domValue: userIdField.value,
+    
+    // Visual validation styling
+    userIdField.style.border = userData.userId 
+      ? '2px solid #9C51B6' 
+      : '2px dashed #ff0000';
+    userIdField.style.padding = '0.8rem';
+    userIdField.style.fontWeight = userData.userId ? '500' : 'bold';
+    
+    // Debug logging
+    console.log('[USER-ID] Field diagnostics:', {
       elementExists: true,
+      domValue: userIdField.value,
+      sessionValue: userData.userId,
       inputType: userIdField.type,
-      sessionValue: userData.userId
+      sessionKeys: Object.keys(userData)
     });
   }
 
-  // Existing parcel form setup
+  // Form initialization
   const parcelForm = document.getElementById('declarationForm');
   if (parcelForm) {
-    console.log('[DEBUG] Initializing parcel form');
     parcelForm.addEventListener('submit', handleParcelSubmission);
     
     const categorySelect = document.getElementById('itemCategory');
     if (categorySelect) {
       categorySelect.addEventListener('change', checkCategoryRequirements);
     }
+    console.log('[FORM] Parcel form initialized');
   }
 
   // Session validation
-  console.log('[DEBUG] Checking session validity');
   const publicPages = ['login.html', 'register.html', 'forgot-password.html'];
   const isPublicPage = publicPages.some(page => 
     window.location.pathname.includes(page)
@@ -912,23 +912,30 @@ document.addEventListener('DOMContentLoaded', () => {
 
   if (!isPublicPage) {
     const sessionUserData = checkSession();
+    console.log('[SESSION] Validation result:', sessionUserData);
+    
     if (!sessionUserData) return;
     
     if (sessionUserData.tempPassword && !window.location.pathname.includes('password-reset.html')) {
+      console.log('[SESSION] Temp password detected - redirecting');
       handleLogout();
     }
   }
 
-  // Existing cleanup and focus management
+  // Window event listeners
   window.addEventListener('beforeunload', () => {
     const errorElement = document.getElementById('error-message');
-    if (errorElement) errorElement.style.display = 'none';
+    if (errorElement) {
+      errorElement.style.display = 'none';
+      console.log('[UI] Cleaned up error messages');
+    }
   });
 
+  // Initial focus
   const firstInput = document.querySelector('input:not([type="hidden"])');
   if (firstInput) {
-    console.log('[DEBUG] Setting initial focus');
     firstInput.focus();
+    console.log('[UI] Set initial focus to:', firstInput.id);
   }
 });
 
