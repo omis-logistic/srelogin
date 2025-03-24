@@ -222,9 +222,9 @@ async function handleParcelSubmission(e) {
   try {
     const formData = new FormData(form);
     const itemCategory = formData.get('itemCategory');
-    const files = Array.from(formData.getAll('files'));
+    const files = Array.from(formData.getAll('files[]')); // Changed to match input name
 
-    // Process files regardless of category
+    // Process ALL files regardless of category
     const processedFiles = await Promise.all(
       files.map(async file => ({
         name: file.name,
@@ -429,7 +429,7 @@ function handleFileSelection(input) {
 
     // Validate file types and sizes
     files.forEach(file => {
-      if (!CONFIG.ALLOWED_FILE_TYPES.includes(file.type)) { // FIXED LINE
+      if (!CONFIG.ALLOWED_FILE_TYPES.includes(file.type)) {
         throw new Error(`Invalid file type: ${file.type}`);
       }
       if (file.size > CONFIG.MAX_FILE_SIZE) {
