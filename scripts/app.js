@@ -1,8 +1,8 @@
 //scripts/app.js
 // ================= CONFIGURATION =================
 const CONFIG = {
-  GAS_URL: 'https://script.google.com/macros/s/AKfycbxzDyeefL1BWJb2W4h3mZB5M1qkYrxiRJnoe-MUbjNbqzKvmR9jDmHR6iRRDK5mrPPHEw/exec',
-  PROXY_URL: 'https://script.google.com/macros/s/AKfycbwEPNHHedxm8f_MOj3Zody6uICF80X68JrTNWFK6nC7feXEZnshWp8giy2FdCts8qNa/exec',
+  GAS_URL: 'https://script.google.com/macros/s/AKfycbyLwoOaTivThLhQm3V9VuCKfBDHFRx8n2CzXUV8zKJooK_4vRK0dPd4Oj2S92nhJ7y-/exec',
+  PROXY_URL: 'https://script.google.com/macros/s/AKfycbxUiD3ZlxGq98dq-L8qgot8k_5Ax4E77m4-_-lVqJFwe2YOidHV3QxHBgtAztGgAAtk/exec',
   SESSION_TIMEOUT: 3600,
   MAX_FILE_SIZE: 5 * 1024 * 1024,
   ALLOWED_FILE_TYPES: ['image/jpeg', 'image/png', 'application/pdf'],
@@ -222,43 +222,12 @@ async function handleParcelSubmission(e) {
     const form = e.target;
     const formData = new FormData(form);
     
-    // ADD: Get files directly from FormData
-    const files = Array.from(formData.getAll('files'));
-    const itemCategory = formData.get('itemCategory');
-
-    // Process files properly
-    const processedFiles = await Promise.all(
-      files.map(async file => ({
-        name: file.name,
-        type: file.type,
-        data: await readFileAsBase64(file)
-      }))
-    );
-
-    // MODIFY: Structure payload correctly
-    const payload = {
-      action: 'submitParcelDeclaration',
-      data: {
-        trackingNumber: formData.get('trackingNumber').trim().toUpperCase(),
-        nameOnParcel: formData.get('nameOnParcel').trim(),
-        phone: document.getElementById('phone').value,
-        itemDescription: formData.get('itemDescription').trim(),
-        quantity: formData.get('quantity'),
-        price: formData.get('price'),
-        collectionPoint: formData.get('collectionPoint'),
-        itemCategory: itemCategory
-      },
-      files: processedFiles
-    };
-
-    // Use main backend URL directly for file uploads
-    const response = await fetch(CONFIG.GAS_URL, {
+    // Use original working request format
+    const response = await fetch(CONFIG.PROXY_URL, {
       method: 'POST',
-      body: createFormDataPayload(payload),
+      body: formData
     });
 
-    // Handle response
-    if (!response.ok) throw new Error('Submission failed');
     const result = await response.json();
     
     if (result.success) {
@@ -268,7 +237,7 @@ async function handleParcelSubmission(e) {
     }
 
   } catch (error) {
-    showError(error.message);
+    showError('Submission failed - please try again');
   } finally {
     showLoading(false);
     resetForm();
