@@ -259,7 +259,7 @@ async function handleParcelSubmission(e) {
       price: formData.get('price'),
       collectionPoint: formData.get('collectionPoint'),
       itemCategory: itemCategory,
-      files: processedFiles
+      files: filesPayload
     };
 
     await fetch(CONFIG.PROXY_URL, {
