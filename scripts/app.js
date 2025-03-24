@@ -1,7 +1,7 @@
 //scripts/app.js
 // ================= CONFIGURATION =================
 const CONFIG = {
-  GAS_URL: 'https://script.google.com/macros/s/AKfycbxTkfxYrLO5AESZd10sD4qI8ZeQ22WM0E5I4NlTiLoDMlxO42HDNg_PO_T7TsVkuEymFg/exec',
+  GAS_URL: 'https://script.google.com/macros/s/AKfycbwMVtCvbNwpa9PtkImool5FvZV0nOl5t30825EGclrOoFvx4OvP8HfYMHsODu3MhXM14Q/exec',
   PROXY_URL: 'https://script.google.com/macros/s/AKfycbz1p1FvRx93CXLCSS_LVaCGXcVhWtJ7n91C03xmzjzbhfao2GX2anQiWn5Yxkf6NJg/exec',
   SESSION_TIMEOUT: 3600,
   MAX_FILE_SIZE: 5 * 1024 * 1024,
@@ -234,6 +234,7 @@ async function handleParcelSubmission(e) {
     );
 
     const payload = {
+      userId: document.getElementById('userId').value,
       trackingNumber: formData.get('trackingNumber').trim().toUpperCase(),
       nameOnParcel: formData.get('nameOnParcel').trim(),
       phone: document.getElementById('phone').value,
@@ -615,8 +616,12 @@ async function handleLogin() {
   try {
     const result = await callAPI('processLogin', { phone, password });
     
+    // --- MODIFIED LOGIN SUCCESS HANDLER ---
     if (result.success) {
-      sessionStorage.setItem('userData', JSON.stringify(result));
+      sessionStorage.setItem('userData', JSON.stringify({
+        ...result,
+        userId: result.userId // Store user ID from backend response
+      }));
       localStorage.setItem('lastActivity', Date.now());
       
       if (result.tempPassword) {
@@ -627,7 +632,10 @@ async function handleLogin() {
     } else {
       showError(result.message || 'Authentication failed');
     }
+    // --- END MODIFIED SECTION ---
+    
   } catch (error) {
+    console.error('Login error:', error);
     showError('Login failed - please try again');
   }
 }
@@ -824,6 +832,13 @@ document.addEventListener('DOMContentLoaded', () => {
   // Initialize parcel declaration form
   const parcelForm = document.getElementById('declarationForm');
   if (parcelForm) {
+    // Session handling - ADDED USER ID POPULATION
+    const userData = checkSession();
+    if (userData) {
+      document.getElementById('phone').value = userData.phone;
+      document.getElementById('userId').value = userData.userId; // New line
+    }
+
     parcelForm.addEventListener('submit', handleParcelSubmission);
     
     // Set up category change listener
@@ -832,7 +847,7 @@ document.addEventListener('DOMContentLoaded', () => {
       categorySelect.addEventListener('change', checkCategoryRequirements);
     }
 
-    // Phone field setup
+    // Phone field setup (existing code)
     const phoneField = document.getElementById('phone');
     if (phoneField) {
       const userData = checkSession();
@@ -841,7 +856,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  // Session management
+  // Existing session management below...
   const publicPages = ['login.html', 'register.html', 'forgot-password.html'];
   const isPublicPage = publicPages.some(page => 
     window.location.pathname.includes(page)
