@@ -833,17 +833,17 @@ document.addEventListener('DOMContentLoaded', () => {
       categorySelect.addEventListener('change', checkCategoryRequirements);
     }
 
-    // Phone field setup
-  const phoneField = document.getElementById('phone');
-  const userIdField = document.getElementById('userId');
-  if (phoneField && userIdField) {
-    const userData = checkSession();
-    phoneField.value = userData?.phone || '';
-    userIdField.value = userData?.userId || ''; // Add this line
-    phoneField.readOnly = true;
-    userIdField.readOnly = true;
+    // Phone and User ID field setup
+    const phoneField = document.getElementById('phone');
+    const userIdField = document.getElementById('userId');
+    if (phoneField && userIdField) {
+      const userData = checkSession();
+      phoneField.value = userData?.phone || '';
+      userIdField.value = userData?.userId || ''; // New User ID field
+      phoneField.readOnly = true;
+      userIdField.readOnly = true;
+    }
   }
-});
 
   // Session management
   const publicPages = ['login.html', 'register.html', 'forgot-password.html'];
