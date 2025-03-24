@@ -212,15 +212,15 @@ select {
   margin-bottom: 1.8rem;
 }
 
-#userId {
-  border-left: 4px solid #9C51B6 !important;
+#userId:empty {
+  border-left: 4px solid var(--error-red) !important;
   background: rgba(156, 81, 182, 0.05) !important;
-  font-weight: 500;
 }
 
-#userId:empty::before {
-  content: "User ID Placeholder";
-  color: #9C51B680;
+#userId[value*="MISSING"],
+#userId[value*="NO_USERID"] {
+  color: var(--error-red) !important;
+  font-style: italic;
 }
 
 #fileUpload {
