@@ -1,7 +1,7 @@
 //scripts/app.js
 // ================= CONFIGURATION =================
 const CONFIG = {
-  GAS_URL: 'https://script.google.com/macros/s/AKfycbys9cM6oLUsdytBaT61-d9_JUH-SQbh20yCOcQHjSugSWdGioWiigOkIeMmcAWqhBBwhg/exec',
+  GAS_URL: 'https://script.google.com/macros/s/AKfycbyn9q4zxvja5omEbLP7xE7GpMhrCxVXYxf4D9Y6wV2hmyi8Wbc2pylI9p2NJgwKM_o9FA/exec',
   PROXY_URL: 'https://script.google.com/macros/s/AKfycby-chAYID4slQS634g-2fU1s5sSZaTw1dcVxAUy7rE4wWinPRsDH2j2Oq8UJsdu-qyY/exec',
   SESSION_TIMEOUT: 3600,
   MAX_FILE_SIZE: 5 * 1024 * 1024,
@@ -624,21 +624,20 @@ async function handleLogin() {
     const result = await callAPI('processLogin', { phone, password });
     
     if (result.success) {
-      // Store all user data with proper userId
+      // Debug: Verify complete user data
+      console.log('[DEBUG] Login Response:', {
+        userId: result.userId,
+        phone: result.phone,
+        temp: result.tempPassword
+      });
+
+      // Force store user ID with fallback
       sessionStorage.setItem('userData', JSON.stringify({
         phone: result.phone,
-        userId: result.userId,  // Critical for parcel declarations
+        userId: result.userId || 'ERR_NO_USERID', // Explicit fallback
         email: result.email,
         tempPassword: result.tempPassword
       }));
-
-      // Debug: Verify login response
-      console.log('Login Response:', {
-        success: true,
-        userId: result.userId,
-        phone: result.phone,
-        tempPassword: result.tempPassword
-      });
 
       localStorage.setItem('lastActivity', Date.now());
       
@@ -838,81 +837,80 @@ function formatDate(dateString) {
 
 // ================= INITIALIZATION =================
 document.addEventListener('DOMContentLoaded', () => {
+  // 1. Core Initializations (Existing)
   detectViewMode();
   initValidationListeners();
   createLoaderElement();
   checkCategoryRequirements();
 
-  // Debug: Check session storage
-  const userData = JSON.parse(sessionStorage.getItem('userData'));
-  console.log('[DEBUG] Session Storage:', userData);
+  // 2. Session Data Analysis (Enhanced)
+  const userData = JSON.parse(sessionStorage.getItem('userData')) || {};
+  console.log('[DEBUG] Session Storage Analysis:', {
+    exists: !!sessionStorage.getItem('userData'),
+    keys: Object.keys(userData),
+    userIdPresent: 'userId' in userData
+  });
 
-  // User Data Initialization
+  // 3. Field Initialization with Validation (Critical Fix)
   const phoneField = document.getElementById('phone');
   const userIdField = document.getElementById('userId');
-
-  if (userData) {
-    console.log('[DEBUG] Initializing user data:');
-    console.log('Phone:', userData.phone);
-    console.log('UserID:', userData.userId);
-
-    if (phoneField) {
-      phoneField.value = userData.phone || '';
-      phoneField.readOnly = true;
-      console.log('[DEBUG] Phone field initialized:', phoneField.value);
-    }
-
-    if (userIdField) {
-      userIdField.value = userData.userId || 'NO_USER_ID_FOUND';
-      userIdField.readOnly = true;
-      console.log('[DEBUG] UserID field initialized:', {
-        value: userIdField.value,
-        readonly: userIdField.readOnly
-      });
-    }
-  } else {
-    console.warn('[DEBUG] No user data in session storage');
+  
+  if (phoneField) {
+    phoneField.value = userData.phone || '';
+    phoneField.readOnly = true;
+    console.log('[DEBUG] Phone Field State:', {
+      value: phoneField.value,
+      readOnly: phoneField.readOnly
+    });
   }
 
-  // Parcel Form Setup
+  if (userIdField) {
+    // Force display with validation
+    userIdField.value = userData.userId || 'USER_ID_MISSING';
+    userIdField.readOnly = true;
+    
+    // Debug element state
+    console.log('[DEBUG] UserID Field Diagnostics:', {
+      elementExists: true,
+      domValue: userIdField.value,
+      sessionValue: userData.userId,
+      inputType: userIdField.type
+    });
+  }
+
+  // 4. Existing Form Setup (Unchanged)
   const parcelForm = document.getElementById('declarationForm');
   if (parcelForm) {
-    console.log('[DEBUG] Initializing parcel form');
     parcelForm.addEventListener('submit', handleParcelSubmission);
-    
     const categorySelect = document.getElementById('itemCategory');
     if (categorySelect) {
       categorySelect.addEventListener('change', checkCategoryRequirements);
     }
   }
 
-  // Session Validation
+  // 5. Session Security Checks (Existing)
   const publicPages = ['login.html', 'register.html', 'forgot-password.html'];
   const isPublicPage = publicPages.some(page => 
     window.location.pathname.includes(page)
   );
 
   if (!isPublicPage) {
-    console.log('[DEBUG] Checking session validity');
     const sessionUserData = checkSession();
     if (!sessionUserData) return;
     
     if (sessionUserData.tempPassword && !window.location.pathname.includes('password-reset.html')) {
-      console.log('[DEBUG] Temp password detected - forcing logout');
       handleLogout();
     }
   }
 
+  // 6. Existing Cleanup & Focus (Unchanged)
   window.addEventListener('beforeunload', () => {
     const errorElement = document.getElementById('error-message');
     if (errorElement) errorElement.style.display = 'none';
   });
 
   const firstInput = document.querySelector('input:not([type="hidden"])');
-  if (firstInput) {
-    console.log('[DEBUG] Setting initial focus');
-    firstInput.focus();
-  }
+  if (firstInput) firstInput.focus();
 });
 
 // New functions for category requirements =================
