@@ -2,7 +2,7 @@
 // ================= CONFIGURATION =================
 const CONFIG = {
   GAS_URL: 'https://script.google.com/macros/s/AKfycbykXu2b5y2KEzyhsnPQhWPH6DoBlKfbgPszwnW_kOywi8La2J68LploEFwGfeU3IsT1zw/exec',
-  PROXY_URL: 'https://script.google.com/macros/s/AKfycbxYZsNKhmWl4DoDneOdX34p2cjF3Ol4LowwfYj7nSodDbbcqN60fLi1kRwmYvHCLZxv/exec',
+  PROXY_URL: 'https://script.google.com/macros/s/AKfycbzdhaDNjXECbAqfBcGksauEeHTgrlBWngTHwF7D1V3zjPacGz5rxBtw2IfufH_BNsT3/exec',
   SESSION_TIMEOUT: 3600,
   MAX_FILE_SIZE: 5 * 1024 * 1024,
   ALLOWED_FILE_TYPES: ['image/jpeg', 'image/png', 'application/pdf'],
@@ -259,7 +259,7 @@ async function handleParcelSubmission(e) {
       price: formData.get('price'),
       collectionPoint: formData.get('collectionPoint'),
       itemCategory: itemCategory,
-      files: filesPayload
+      files: filesPayload // MUST use filesPayload instead of processedFiles
     };
 
     await fetch(CONFIG.PROXY_URL, {
@@ -439,6 +439,9 @@ function handleFileSelection(input) {
     const files = Array.from(input.files);
     const category = document.getElementById('itemCategory').value;
     
+    // Add this line to track files properly
+    input.setAttribute('data-files', JSON.stringify(files.map(f => f.name)));
+
     // Validate against starred categories
     const starredCategories = [
       '*Books', '*Cosmetics/Skincare/Bodycare', '*Food Beverage/Drinks',
@@ -462,6 +465,7 @@ function handleFileSelection(input) {
   } catch (error) {
     showError(error.message);
     input.value = '';
+    input.removeAttribute('data-files');
   }
 }
 
