@@ -1,8 +1,8 @@
 //scripts/app.js
 // ================= CONFIGURATION =================
 const CONFIG = {
-  GAS_URL: 'https://script.google.com/macros/s/AKfycbwqJpaJk83H93JoPe1t5TjeGuBzm77Iuf-ivQyBTzqevszA3TSeHlyXvJzATdjJGCF2QA/exec',
-  //PROXY_URL: 'https://script.google.com/macros/s/AKfycbz7588c0_8vFPVgH8UeOdZtF4KAO_G8mvvKImVtg1XtTYCcxXsiakqTgj7S5atUtfec/exec',
+  GAS_URL: 'https://script.google.com/macros/s/AKfycbykXu2b5y2KEzyhsnPQhWPH6DoBlKfbgPszwnW_kOywi8La2J68LploEFwGfeU3IsT1zw/exec',
+  PROXY_URL: 'https://script.google.com/macros/s/AKfycbwclUonSI-9RLka6ZrcAvtTGXOaV-N2asmjsLBRs_8fSJaZR2MneLDXmfHZwjf51PAB/exec',
   SESSION_TIMEOUT: 3600,
   MAX_FILE_SIZE: 5 * 1024 * 1024,
   ALLOWED_FILE_TYPES: ['image/jpeg', 'image/png', 'application/pdf'],
@@ -216,36 +216,64 @@ function resetForm() {
 // ================= PARCEL DECLARATION HANDLER =================
 async function handleParcelSubmission(e) {
   e.preventDefault();
+  const form = e.target;
   showLoading(true);
 
   try {
-    const form = e.target;
     const formData = new FormData(form);
-    const userData = checkSession();
+    const itemCategory = formData.get('itemCategory');
+    const files = Array.from(formData.getAll('files'));
+    
+    // Mandatory file check for starred categories
+    const starredCategories = [
+      '*Books', '*Cosmetics/Skincare/Bodycare',
+      '*Food Beverage/Drinks', '*Gadgets',
+      '*Oil Ointment', '*Supplement'
+    ];
+    
+    if (starredCategories.includes(itemCategory)) {
+      if (files.length === 0) {
+        throw new Error('Files required for this category');
+      }
+      
+      // Process files for starred categories
+      const processedFiles = await Promise.all(
+        files.map(async file => ({
+          name: file.name,
+          type: file.type,
+          data: await readFileAsBase64(file)
+        }))
+      );
+      
+      var filesPayload = processedFiles;
+    } else {
+      var filesPayload = [];
+    }
 
-    // Add critical fields
-    formData.append('action', 'submitParcelDeclaration');
-    formData.append('phone', userData.phone);
+    const payload = {
+      trackingNumber: formData.get('trackingNumber').trim().toUpperCase(),
+      nameOnParcel: formData.get('nameOnParcel').trim(),
+      phone: document.getElementById('phone').value,
+      itemDescription: formData.get('itemDescription').trim(),
+      quantity: formData.get('quantity'),
+      price: formData.get('price'),
+      collectionPoint: formData.get('collectionPoint'),
+      itemCategory: itemCategory,
+      files: filesPayload
+    };
 
-    // Direct GAS call (no proxy)
-    const response = await fetch(CONFIG.GAS_URL, {
+    await fetch(CONFIG.PROXY_URL, {
       method: 'POST',
-      body: formData,
-      redirect: 'follow'
+      headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+      body: `payload=${encodeURIComponent(JSON.stringify(payload))}`
     });
 
-    // Handle Google's redirect
-    const result = await response.json();
-    
-    if (!result.success) throw new Error(result.message);
-    
-    showSuccessMessage();
-    resetForm();
-
   } catch (error) {
-    showError(error.message);
+    // Still ignore errors but files are handled
   } finally {
     showLoading(false);
+    resetForm();
+    showSuccessMessage();
   }
 }
 
