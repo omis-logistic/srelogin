@@ -1,7 +1,7 @@
 //scripts/app.js
 // ================= CONFIGURATION =================
 const CONFIG = {
-  GAS_URL: 'https://script.google.com/macros/s/AKfycbyn9q4zxvja5omEbLP7xE7GpMhrCxVXYxf4D9Y6wV2hmyi8Wbc2pylI9p2NJgwKM_o9FA/exec',
+  GAS_URL: 'https://script.google.com/macros/s/AKfycbz4C8i59ahlZbqqh_xoirQrJjTVjsxneobrzCpq86VhQYlX1Mcaa4KNVD0UpiQKdMsmDg/exec',
   PROXY_URL: 'https://script.google.com/macros/s/AKfycby-chAYID4slQS634g-2fU1s5sSZaTw1dcVxAUy7rE4wWinPRsDH2j2Oq8UJsdu-qyY/exec',
   SESSION_TIMEOUT: 3600,
   MAX_FILE_SIZE: 5 * 1024 * 1024,
@@ -610,6 +610,7 @@ async function handleLogin() {
   const phone = document.getElementById('phone').value.trim();
   const password = document.getElementById('password').value;
 
+  // Existing validation checks
   if (!validatePhone(phone)) {
     showError('Invalid phone number format');
     return;
@@ -621,35 +622,41 @@ async function handleLogin() {
   }
 
   try {
+    // Original API call structure
     const result = await callAPI('processLogin', { phone, password });
     
     if (result.success) {
-      // Debug: Verify complete user data
-      console.log('[DEBUG] Login Response:', {
-        userId: result.userId,
-        phone: result.phone,
-        temp: result.tempPassword
-      });
-
-      // Force store user ID with fallback
+      // Enhanced session storage with User ID
       sessionStorage.setItem('userData', JSON.stringify({
         phone: result.phone,
-        userId: result.userId || 'ERR_NO_USERID', // Explicit fallback
+        userId: result.userId,  // Now explicitly stored
         email: result.email,
         tempPassword: result.tempPassword
       }));
 
+      // Debug logging (original format)
+      console.log('[SESSION] Auth Data:', {
+        userId: result.userId,
+        phone: result.phone,
+        temp: result.tempPassword,
+        source: 'processLogin'
+      });
+
+      // Existing activity tracking
       localStorage.setItem('lastActivity', Date.now());
       
+      // Original redirection logic
       if (result.tempPassword) {
         safeRedirect('password-reset.html');
       } else {
         safeRedirect('dashboard.html');
       }
     } else {
+      // Existing error handling
       showError(result.message || 'Authentication failed');
     }
   } catch (error) {
+    // Original error handling
     console.error('Login error:', error);
     showError('Login failed - please try again');
   }
@@ -837,13 +844,13 @@ function formatDate(dateString) {
 
 // ================= INITIALIZATION =================
 document.addEventListener('DOMContentLoaded', () => {
-  // 1. Core Initializations (Existing)
+  // Existing initialization
   detectViewMode();
   initValidationListeners();
   createLoaderElement();
   checkCategoryRequirements();
 
-  // 2. Session Data Analysis (Enhanced)
+  // Session data analysis
   const userData = JSON.parse(sessionStorage.getItem('userData')) || {};
   console.log('[DEBUG] Session Storage Analysis:', {
     exists: !!sessionStorage.getItem('userData'),
@@ -851,44 +858,48 @@ document.addEventListener('DOMContentLoaded', () => {
     userIdPresent: 'userId' in userData
   });
 
-  // 3. Field Initialization with Validation (Critical Fix)
+  // User field initialization
   const phoneField = document.getElementById('phone');
   const userIdField = document.getElementById('userId');
-  
-  if (phoneField) {
-    phoneField.value = userData.phone || '';
-    phoneField.readOnly = true;
-    console.log('[DEBUG] Phone Field State:', {
-      value: phoneField.value,
-      readOnly: phoneField.readOnly
-    });
+
+  if (userData) {
+    // Phone number handling (existing)
+    if (phoneField) {
+      phoneField.value = userData.phone || '';
+      phoneField.readOnly = true;
+      console.log('[DEBUG] Phone Field State:', {
+        value: phoneField.value,
+        readOnly: phoneField.readOnly
+      });
+    }
+
+    // User ID handling (enhanced)
+    if (userIdField) {
+      userIdField.value = userData.userId || 'USER_ID_MISSING';
+      userIdField.readOnly = true;
+      console.log('[DEBUG] UserID Field Diagnostics:', {
+        domValue: userIdField.value,
+        elementExists: !!userIdField,
+        sessionValue: userData.userId,
+        inputType: userIdField.type
+      });
+    }
   }
 
-  if (userIdField) {
-    // Force display with validation
-    userIdField.value = userData.userId || 'USER_ID_MISSING';
-    userIdField.readOnly = true;
-    
-    // Debug element state
-    console.log('[DEBUG] UserID Field Diagnostics:', {
-      elementExists: true,
-      domValue: userIdField.value,
-      sessionValue: userData.userId,
-      inputType: userIdField.type
-    });
-  }
-
-  // 4. Existing Form Setup (Unchanged)
+  // Existing parcel form setup
   const parcelForm = document.getElementById('declarationForm');
   if (parcelForm) {
+    console.log('[DEBUG] Initializing parcel form');
     parcelForm.addEventListener('submit', handleParcelSubmission);
+    
     const categorySelect = document.getElementById('itemCategory');
     if (categorySelect) {
       categorySelect.addEventListener('change', checkCategoryRequirements);
     }
   }
 
-  // 5. Session Security Checks (Existing)
+  // Existing session validation
+  console.log('[DEBUG] Checking session validity');
   const publicPages = ['login.html', 'register.html', 'forgot-password.html'];
   const isPublicPage = publicPages.some(page => 
     window.location.pathname.includes(page)
@@ -903,14 +914,18 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  // 6. Existing Cleanup & Focus (Unchanged)
+  // Existing cleanup
   window.addEventListener('beforeunload', () => {
     const errorElement = document.getElementById('error-message');
     if (errorElement) errorElement.style.display = 'none';
   });
 
+  // Existing focus management
   const firstInput = document.querySelector('input:not([type="hidden"])');
-  if (firstInput) firstInput.focus();
+  if (firstInput) {
+    console.log('[DEBUG] Setting initial focus');
+    firstInput.focus();
+  }
 });
 
 // New functions for category requirements =================
