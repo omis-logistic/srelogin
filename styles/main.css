@@ -213,16 +213,14 @@ select {
 }
 
 #userId {
-  border: 2px solid #9C51B6 !important;
-  background: rgba(156, 81, 182, 0.1) !important;
-  font-weight: bold;
-  color: #9C51B6 !important;
+  border-left: 4px solid #9C51B6 !important;
+  background: rgba(156, 81, 182, 0.05) !important;
+  font-weight: 500;
 }
 
-#userId::after {
-  content: " (User ID)";
-  color: #666;
-  font-size: 0.8em;
+#userId:empty::before {
+  content: "User ID Placeholder";
+  color: #9C51B680;
 }
 
 #fileUpload {
