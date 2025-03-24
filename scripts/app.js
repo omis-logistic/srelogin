@@ -1,7 +1,7 @@
 //scripts/app.js
 // ================= CONFIGURATION =================
 const CONFIG = {
-  GAS_URL: 'https://script.google.com/macros/s/AKfycbxQaiaVKSGIGezyAB5NEV2TOIGjMlFVkv7Ymo4CWiRreSoGEZ0QRjw0ZzjB9PwivKDiVg/exec',
+  GAS_URL: 'https://script.google.com/macros/s/AKfycbwYlPnhY65Vkq27YFtv6t0NUsYWV96MF7_2JAiqGsLRb-B4RQL0VE3CJcn5DmQC6VPjWw/exec',
   PROXY_URL: 'https://script.google.com/macros/s/AKfycbxWyphp0qwRMLzmYNEZUCs-lcXBtKv_21-eKdImBpRkUjIDShfyThIlakWUbSCINtA/exec',
   SESSION_TIMEOUT: 3600,
   MAX_FILE_SIZE: 5 * 1024 * 1024,
@@ -216,64 +216,65 @@ function resetForm() {
 // ================= PARCEL DECLARATION HANDLER =================
 async function handleParcelSubmission(e) {
   e.preventDefault();
-  const form = e.target;
   showLoading(true);
 
   try {
+    const form = e.target;
     const formData = new FormData(form);
-    const itemCategory = formData.get('itemCategory');
-    const files = Array.from(formData.getAll('files'));
-    
-    // Mandatory file check for starred categories
-    const starredCategories = [
-      '*Books', '*Cosmetics/Skincare/Bodycare',
-      '*Food Beverage/Drinks', '*Gadgets',
-      '*Oil Ointment', '*Supplement'
-    ];
-    
-    if (starredCategories.includes(itemCategory)) {
-      if (files.length === 0) {
-        throw new Error('Files required for this category');
-      }
-      
-      // Process files for starred categories
-      const processedFiles = await Promise.all(
-        files.map(async file => ({
-          name: file.name,
-          type: file.type,
-          data: await readFileAsBase64(file)
-        }))
-      );
-      
-      var filesPayload = processedFiles;
-    } else {
-      var filesPayload = [];
-    }
+    const userData = checkSession();
 
-    const payload = {
+    // Add phone number to formData
+    formData.append('phone', userData.phone);
+
+    // Process files using proper FormData handling
+    const files = formData.getAll('files');
+    const processedFiles = await Promise.all(
+      files.map(async file => ({
+        name: file.name,
+        type: file.type,
+        data: await readFileAsBase64(file)
+      }))
+    );
+
+    // Create proper multipart form data
+    const payload = new FormData();
+    payload.append('data', JSON.stringify({
+      action: 'submitParcelDeclaration',
       trackingNumber: formData.get('trackingNumber').trim().toUpperCase(),
       nameOnParcel: formData.get('nameOnParcel').trim(),
-      phone: document.getElementById('phone').value,
+      phone: userData.phone,
       itemDescription: formData.get('itemDescription').trim(),
       quantity: formData.get('quantity'),
       price: formData.get('price'),
       collectionPoint: formData.get('collectionPoint'),
-      itemCategory: itemCategory,
-      files: filesPayload
-    };
+      itemCategory: formData.get('itemCategory')
+    }));
 
-    await fetch(CONFIG.PROXY_URL, {
-      method: 'POST',
-      headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-      body: `payload=${encodeURIComponent(JSON.stringify(payload))}`
+    // Append files with proper field names
+    processedFiles.forEach((file, index) => {
+      const blob = new Blob(
+        [Uint8Array.from(atob(file.data), c => c.charCodeAt(0))],
+        { type: file.type }
+      );
+      payload.append(`file${index}`, blob, file.name);
     });
 
+    // Send to main backend directly (bypass proxy)
+    const response = await fetch(CONFIG.GAS_URL, {
+      method: 'POST',
+      body: payload
+    });
+
+    const result = await response.json();
+    if (!result.success) throw new Error(result.message);
+
+    showSuccessMessage();
+    resetForm();
+    
   } catch (error) {
-    // Still ignore errors but files are handled
+    showError(error.message);
   } finally {
     showLoading(false);
-    resetForm();
-    showSuccessMessage();
   }
 }
 
