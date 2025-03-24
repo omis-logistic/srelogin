@@ -1,7 +1,7 @@
 //scripts/app.js
 // ================= CONFIGURATION =================
 const CONFIG = {
-  GAS_URL: 'https://script.google.com/macros/s/AKfycbxfqJzGwWwOpQ-Cj6xopJHTaQM3zwJA8RQj9SzzEmvBp18yIqJ9l9CXIF1gMy8DCYzQRg/exec',
+  GAS_URL: 'https://script.google.com/macros/s/AKfycbxUAzRlyLeVUpe8M-f9R-NoogcaE2VcvRKVHefsXBQvYaPvqaCgMYaTz9oKpexRCu-VEQ/exec',
   PROXY_URL: 'https://script.google.com/macros/s/AKfycbwtMxJxYIfLFqtPMzjZIWZRVULtsQgrD_XIRK_CSiYnGODfnnkFunpKY7QlRZD2xnQT/exec',
   SESSION_TIMEOUT: 3600,
   MAX_FILE_SIZE: 5 * 1024 * 1024,
@@ -617,7 +617,14 @@ async function handleLogin() {
     const result = await callAPI('processLogin', { phone, password });
     
     if (result.success) {
-      sessionStorage.setItem('userData', JSON.stringify(result));
+      // Store all user data including userId
+      sessionStorage.setItem('userData', JSON.stringify({
+        phone: result.phone,
+        email: result.email,
+        tempPassword: result.tempPassword,
+        userId: result.userId // Added User ID storage
+      }));
+      
       localStorage.setItem('lastActivity', Date.now());
       
       if (result.tempPassword) {
@@ -629,6 +636,7 @@ async function handleLogin() {
       showError(result.message || 'Authentication failed');
     }
   } catch (error) {
+    console.error('Login error:', error);
     showError('Login failed - please try again');
   }
 }
@@ -819,52 +827,50 @@ document.addEventListener('DOMContentLoaded', () => {
   initValidationListeners();
   createLoaderElement();
 
-  // Initialize category requirements on page load
+  // Initialize category requirements
   checkCategoryRequirements();
 
-  // Initialize parcel declaration form
   const parcelForm = document.getElementById('declarationForm');
   if (parcelForm) {
     parcelForm.addEventListener('submit', handleParcelSubmission);
     
-    // Set up category change listener
+    // Category change listener
     const categorySelect = document.getElementById('itemCategory');
     if (categorySelect) {
       categorySelect.addEventListener('change', checkCategoryRequirements);
     }
 
-    // Phone and User ID field setup
+    // User data population
     const phoneField = document.getElementById('phone');
     const userIdField = document.getElementById('userId');
     if (phoneField && userIdField) {
       const userData = checkSession();
+      console.log('Session Data:', userData); // Debug log
+      
       phoneField.value = userData?.phone || '';
-      userIdField.value = userData?.userId || ''; // New User ID field
+      userIdField.value = userData?.userId || ''; 
       phoneField.readOnly = true;
       userIdField.readOnly = true;
     }
   }
 
-  // Session management
+  // Session validation
   const publicPages = ['login.html', 'register.html', 'forgot-password.html'];
-  const isPublicPage = publicPages.some(page => 
-    window.location.pathname.includes(page)
-  );
-
-  if (!isPublicPage) {
+  if (!publicPages.some(page => location.pathname.includes(page))) {
     const userData = checkSession();
     if (!userData) return;
-    
-    if (userData.tempPassword && !window.location.pathname.includes('password-reset.html')) {
+    if (userData.tempPassword && !location.pathname.includes('password-reset.html')) {
       handleLogout();
     }
   }
 
+  // Cleanup
   window.addEventListener('beforeunload', () => {
     const errorElement = document.getElementById('error-message');
     if (errorElement) errorElement.style.display = 'none';
   });
 
+  // Focus management
   const firstInput = document.querySelector('input:not([type="hidden"])');
   if (firstInput) firstInput.focus();
 });
