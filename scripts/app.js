@@ -1,8 +1,8 @@
 //scripts/app.js
 // ================= CONFIGURATION =================
 const CONFIG = {
-  GAS_URL: 'https://script.google.com/macros/s/AKfycbxg1VTtQeE_gIeiVxsws-DA605SiJiB_AzU0ON7aRClenhGfgTjPVkCymJsUXLWH0JQDQ/exec',
-  PROXY_URL: 'https://script.google.com/macros/s/AKfycby-chAYID4slQS634g-2fU1s5sSZaTw1dcVxAUy7rE4wWinPRsDH2j2Oq8UJsdu-qyY/exec',
+  GAS_URL: 'https://script.google.com/macros/s/AKfycbxTkfxYrLO5AESZd10sD4qI8ZeQ22WM0E5I4NlTiLoDMlxO42HDNg_PO_T7TsVkuEymFg/exec',
+  PROXY_URL: 'https://script.google.com/macros/s/AKfycbz1p1FvRx93CXLCSS_LVaCGXcVhWtJ7n91C03xmzjzbhfao2GX2anQiWn5Yxkf6NJg/exec',
   SESSION_TIMEOUT: 3600,
   MAX_FILE_SIZE: 5 * 1024 * 1024,
   ALLOWED_FILE_TYPES: ['image/jpeg', 'image/png', 'application/pdf'],
@@ -220,14 +220,11 @@ async function handleParcelSubmission(e) {
   showLoading(true);
 
   try {
-    const userData = JSON.parse(sessionStorage.getItem('userData'));
-    console.log('Submission User Data:', userData);
-
     const formData = new FormData(form);
     const itemCategory = formData.get('itemCategory');
-    const files = Array.from(formData.getAll('files[]'));
+    const files = Array.from(formData.getAll('files[]')); // Changed to match input name
 
-    // Process files regardless of category
+    // Process ALL files regardless of category
     const processedFiles = await Promise.all(
       files.map(async file => ({
         name: file.name,
@@ -236,11 +233,9 @@ async function handleParcelSubmission(e) {
       }))
     );
 
-    // Build payload with User ID from session
     const payload = {
       trackingNumber: formData.get('trackingNumber').trim().toUpperCase(),
       nameOnParcel: formData.get('nameOnParcel').trim(),
-      userId: userData?.userId || '', // Direct from session
       phone: document.getElementById('phone').value,
       itemDescription: formData.get('itemDescription').trim(),
       quantity: formData.get('quantity'),
@@ -250,9 +245,6 @@ async function handleParcelSubmission(e) {
       files: processedFiles
     };
 
-    console.log('Submission Payload:', payload);
-
-    // Maintain existing submission flow
     await fetch(CONFIG.PROXY_URL, {
       method: 'POST',
       headers: {'Content-Type': 'application/x-www-form-urlencoded'},
@@ -610,7 +602,6 @@ async function handleLogin() {
   const phone = document.getElementById('phone').value.trim();
   const password = document.getElementById('password').value;
 
-  // Validate inputs
   if (!validatePhone(phone)) {
     showError('Invalid phone number format');
     return;
@@ -625,44 +616,19 @@ async function handleLogin() {
     const result = await callAPI('processLogin', { phone, password });
     
     if (result.success) {
-      // Force User ID storage with verification
-      if (!result.userId) {
-        console.error('Backend returned empty User ID:', result);
-        result.userId = `ERROR_${Date.now().toString(36)}`;
-      }
-      
-      // Store session data
-      sessionStorage.setItem('userData', JSON.stringify({
-        phone: result.phone,
-        userId: result.userId,
-        tempPassword: result.tempPassword,
-        email: result.email
-      }));
-
-      // Immediate validation
-      const stored = JSON.parse(sessionStorage.getItem('userData'));
-      console.log('Session Storage Write Verification:', stored);
-
-      // Update last activity
+      sessionStorage.setItem('userData', JSON.stringify(result));
       localStorage.setItem('lastActivity', Date.now());
-
-      // Handle password reset flow
+      
       if (result.tempPassword) {
-        showError('Temporary password detected - please reset your password');
         safeRedirect('password-reset.html');
       } else {
-        showSuccessMessage();
         safeRedirect('dashboard.html');
       }
     } else {
       showError(result.message || 'Authentication failed');
     }
   } catch (error) {
-    console.error('Login error:', error);
     showError('Login failed - please try again');
-  } finally {
-    // Cleanup any loading states
-    document.getElementById('loginButton').disabled = false;
   }
 }
 
@@ -848,95 +814,55 @@ function formatDate(dateString) {
 
 // ================= INITIALIZATION =================
 document.addEventListener('DOMContentLoaded', () => {
-  // Existing initialization code
   detectViewMode();
   initValidationListeners();
   createLoaderElement();
+
+  // Initialize category requirements on page load
   checkCategoryRequirements();
 
-  // Session data handling
-  const userData = JSON.parse(sessionStorage.getItem('userData')) || {};
-  console.log('[SESSION] Loaded:', userData);
-
-  // Phone field initialization
-  const phoneField = document.getElementById('phone');
-  if (phoneField) {
-    phoneField.value = userData.phone || '';
-    phoneField.readOnly = true;
-    console.log('[PHONE] Field state:', {
-      value: phoneField.value,
-      readOnly: phoneField.readOnly
-    });
-  }
-
-  // User ID field handling
-  const userIdField = document.getElementById('userId');
-  if (userIdField) {
-    // Set value with fallback
-    userIdField.value = userData.userId || 'USER_ID_MISSING';
-    
-    // Visual validation styling
-    userIdField.style.border = userData.userId 
-      ? '2px solid #9C51B6' 
-      : '2px dashed #ff0000';
-    userIdField.style.padding = '0.8rem';
-    userIdField.style.fontWeight = userData.userId ? '500' : 'bold';
-    
-    // Debug logging
-    console.log('[USER-ID] Field diagnostics:', {
-      elementExists: true,
-      domValue: userIdField.value,
-      sessionValue: userData.userId,
-      inputType: userIdField.type,
-      sessionKeys: Object.keys(userData)
-    });
-  }
-
-  // Form initialization
+  // Initialize parcel declaration form
   const parcelForm = document.getElementById('declarationForm');
   if (parcelForm) {
     parcelForm.addEventListener('submit', handleParcelSubmission);
     
+    // Set up category change listener
     const categorySelect = document.getElementById('itemCategory');
     if (categorySelect) {
       categorySelect.addEventListener('change', checkCategoryRequirements);
     }
-    console.log('[FORM] Parcel form initialized');
+
+    // Phone field setup
+    const phoneField = document.getElementById('phone');
+    if (phoneField) {
+      const userData = checkSession();
+      phoneField.value = userData?.phone || '';
+      phoneField.readOnly = true;
+    }
   }
 
-  // Session validation
+  // Session management
   const publicPages = ['login.html', 'register.html', 'forgot-password.html'];
   const isPublicPage = publicPages.some(page => 
     window.location.pathname.includes(page)
   );
 
   if (!isPublicPage) {
-    const sessionUserData = checkSession();
-    console.log('[SESSION] Validation result:', sessionUserData);
+    const userData = checkSession();
+    if (!userData) return;
     
-    if (!sessionUserData) return;
-    
-    if (sessionUserData.tempPassword && !window.location.pathname.includes('password-reset.html')) {
-      console.log('[SESSION] Temp password detected - redirecting');
+    if (userData.tempPassword && !window.location.pathname.includes('password-reset.html')) {
       handleLogout();
     }
   }
 
-  // Window event listeners
   window.addEventListener('beforeunload', () => {
     const errorElement = document.getElementById('error-message');
-    if (errorElement) {
-      errorElement.style.display = 'none';
-      console.log('[UI] Cleaned up error messages');
-    }
+    if (errorElement) errorElement.style.display = 'none';
   });
 
-  // Initial focus
   const firstInput = document.querySelector('input:not([type="hidden"])');
-  if (firstInput) {
-    firstInput.focus();
-    console.log('[UI] Set initial focus to:', firstInput.id);
-  }
+  if (firstInput) firstInput.focus();
 });
 
 // New functions for category requirements =================
