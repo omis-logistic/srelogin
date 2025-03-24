@@ -1,8 +1,8 @@
 //scripts/app.js
 // ================= CONFIGURATION =================
 const CONFIG = {
-  GAS_URL: 'https://script.google.com/macros/s/AKfycbwYlPnhY65Vkq27YFtv6t0NUsYWV96MF7_2JAiqGsLRb-B4RQL0VE3CJcn5DmQC6VPjWw/exec',
-  PROXY_URL: 'https://script.google.com/macros/s/AKfycbxWyphp0qwRMLzmYNEZUCs-lcXBtKv_21-eKdImBpRkUjIDShfyThIlakWUbSCINtA/exec',
+  GAS_URL: 'https://script.google.com/macros/s/AKfycbykf1IoZxo_15tlB_QxHUGGZ-j7jKYu_6RMseEeSJbPpIDCyzee570PePW4vmffI6K5Ig/exec',
+  PROXY_URL: 'https://script.google.com/macros/s/AKfycbz7588c0_8vFPVgH8UeOdZtF4KAO_G8mvvKImVtg1XtTYCcxXsiakqTgj7S5atUtfec/exec',
   SESSION_TIMEOUT: 3600,
   MAX_FILE_SIZE: 5 * 1024 * 1024,
   ALLOWED_FILE_TYPES: ['image/jpeg', 'image/png', 'application/pdf'],
@@ -222,11 +222,12 @@ async function handleParcelSubmission(e) {
     const form = e.target;
     const formData = new FormData(form);
     const userData = checkSession();
-
-    // Add phone number to formData
+    
+    // Add critical fields
+    formData.append('action', 'submitParcelDeclaration');
     formData.append('phone', userData.phone);
 
-    // Process files using proper FormData handling
+    // Process files properly
     const files = formData.getAll('files');
     const processedFiles = await Promise.all(
       files.map(async file => ({
@@ -236,41 +237,39 @@ async function handleParcelSubmission(e) {
       }))
     );
 
-    // Create proper multipart form data
-    const payload = new FormData();
-    payload.append('data', JSON.stringify({
+    // Create clean payload
+    const payload = {
       action: 'submitParcelDeclaration',
-      trackingNumber: formData.get('trackingNumber').trim().toUpperCase(),
-      nameOnParcel: formData.get('nameOnParcel').trim(),
-      phone: userData.phone,
-      itemDescription: formData.get('itemDescription').trim(),
-      quantity: formData.get('quantity'),
-      price: formData.get('price'),
-      collectionPoint: formData.get('collectionPoint'),
-      itemCategory: formData.get('itemCategory')
-    }));
+      data: {
+        trackingNumber: formData.get('trackingNumber').trim().toUpperCase(),
+        nameOnParcel: formData.get('nameOnParcel').trim(),
+        phone: userData.phone,
+        itemDescription: formData.get('itemDescription').trim(),
+        quantity: formData.get('quantity'),
+        price: formData.get('price'),
+        collectionPoint: formData.get('collectionPoint'),
+        itemCategory: formData.get('itemCategory')
+      },
+      files: processedFiles
+    };
 
-    // Append files with proper field names
-    processedFiles.forEach((file, index) => {
-      const blob = new Blob(
-        [Uint8Array.from(atob(file.data), c => c.charCodeAt(0))],
-        { type: file.type }
-      );
-      payload.append(`file${index}`, blob, file.name);
-    });
-
-    // Send to main backend directly (bypass proxy)
-    const response = await fetch(CONFIG.GAS_URL, {
+    // Send through proxy with proper encoding
+    const response = await fetch(CONFIG.PROXY_URL, {
       method: 'POST',
-      body: payload
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: `payload=${encodeURIComponent(JSON.stringify(payload))}`
     });
 
+    if (!response.ok) throw new Error('Network response failed');
     const result = await response.json();
+    
     if (!result.success) throw new Error(result.message);
-
+    
     showSuccessMessage();
     resetForm();
-    
+
   } catch (error) {
     showError(error.message);
   } finally {
