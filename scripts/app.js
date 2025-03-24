@@ -1,7 +1,7 @@
 //scripts/app.js
 // ================= CONFIGURATION =================
 const CONFIG = {
-  GAS_URL: 'https://script.google.com/macros/s/AKfycbwicVWvmryuH2Yw6BbC3eBUSLpOqoRfuZM6P0mnR3qYp-2Kodvm_-pD73YYTzjxkXam/exec',
+  GAS_URL: 'https://script.google.com/macros/s/AKfycbyIKw2OcmgsDXCs2D0IfIsizX08jFnSx4_cpUD0yIZJ-uHqXWSdPSX-6slSv1nT_1koqQ/exec',
   PROXY_URL: 'https://script.google.com/macros/s/AKfycby-chAYID4slQS634g-2fU1s5sSZaTw1dcVxAUy7rE4wWinPRsDH2j2Oq8UJsdu-qyY/exec',
   SESSION_TIMEOUT: 3600,
   MAX_FILE_SIZE: 5 * 1024 * 1024,
@@ -620,9 +620,9 @@ async function handleLogin() {
       // Store all user data including userId
       sessionStorage.setItem('userData', JSON.stringify({
         phone: result.phone,
+        userId: result.userId,
         email: result.email,
         tempPassword: result.tempPassword,
-        userId: result.userId // Added User ID storage
       }));
       
       localStorage.setItem('lastActivity', Date.now());
@@ -826,51 +826,58 @@ document.addEventListener('DOMContentLoaded', () => {
   detectViewMode();
   initValidationListeners();
   createLoaderElement();
-
-  // Initialize category requirements
   checkCategoryRequirements();
 
+  // Session-based Field Initialization
+  const userData = JSON.parse(sessionStorage.getItem('userData'));
+  const phoneField = document.getElementById('phone');
+  const userIdField = document.getElementById('userId');
+
+  // Initialize user-specific fields
+  if (userData) {
+    if (phoneField) {
+      phoneField.value = userData.phone || '';
+      phoneField.readOnly = true;
+    }
+    if (userIdField) {
+      userIdField.value = userData.userId || ''; // Set from session
+      userIdField.readOnly = true;
+    }
+  }
+
+  // Parcel Form Setup
   const parcelForm = document.getElementById('declarationForm');
   if (parcelForm) {
     parcelForm.addEventListener('submit', handleParcelSubmission);
     
-    // Category change listener
     const categorySelect = document.getElementById('itemCategory');
     if (categorySelect) {
       categorySelect.addEventListener('change', checkCategoryRequirements);
     }
-
-    // User data population
-  const phoneField = document.getElementById('phone');
-  const userIdField = document.getElementById('userId');
-  if (phoneField && userIdField) {
-    const userData = checkSession();
-    if (userData) {
-      phoneField.value = userData.phone || '';
-      userIdField.value = userData.userId || ''; // Direct access
-    }
-    phoneField.readOnly = true;
-    userIdField.readOnly = true;
-  }
   }
 
-  // Session validation
+  // Session Validation
   const publicPages = ['login.html', 'register.html', 'forgot-password.html'];
-  if (!publicPages.some(page => location.pathname.includes(page))) {
-    const userData = checkSession();
-    if (!userData) return;
-    if (userData.tempPassword && !location.pathname.includes('password-reset.html')) {
+  const isPublicPage = publicPages.some(page => 
+    window.location.pathname.includes(page)
+  );
+
+  if (!isPublicPage) {
+    const sessionUserData = checkSession();
+    if (!sessionUserData) return;
+    
+    if (sessionUserData.tempPassword && !window.location.pathname.includes('password-reset.html')) {
       handleLogout();
     }
   }
 
-  // Cleanup
+  // Cleanup listeners
   window.addEventListener('beforeunload', () => {
     const errorElement = document.getElementById('error-message');
     if (errorElement) errorElement.style.display = 'none';
   });
 
-  // Focus management
+  // Initial Focus
   const firstInput = document.querySelector('input:not([type="hidden"])');
   if (firstInput) firstInput.focus();
 });
