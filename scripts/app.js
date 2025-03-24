@@ -222,42 +222,62 @@ async function handleParcelSubmission(e) {
   try {
     const formData = new FormData(form);
     const itemCategory = formData.get('itemCategory');
-    const files = Array.from(formData.getAll('files[]')); // Changed to match input name
+    const files = Array.from(formData.getAll('files[]'));
 
-    // Process ALL files regardless of category
+    // Process files with existing validation
     const processedFiles = await Promise.all(
       files.map(async file => ({
-        name: file.name,
+        name: file.name.replace(/[^a-z0-9._-]/gi, '_'),
         type: file.type,
-        data: await readFileAsBase64(file)
+        data: await toBase64(file),
+        size: file.size
       }))
     );
 
+    // Full payload construction with all original fields
     const payload = {
-      userId: document.getElementById('userId').value,
-      trackingNumber: formData.get('trackingNumber').trim().toUpperCase(),
-      nameOnParcel: formData.get('nameOnParcel').trim(),
-      phone: document.getElementById('phone').value,
-      itemDescription: formData.get('itemDescription').trim(),
-      quantity: formData.get('quantity'),
-      price: formData.get('price'),
-      collectionPoint: formData.get('collectionPoint'),
-      itemCategory: itemCategory,
+      data: {
+        trackingNumber: formData.get('trackingNumber').trim().toUpperCase(),
+        nameOnParcel: formData.get('nameOnParcel').trim(),
+        phoneNumber: document.getElementById('phone').value,
+        itemDescription: formData.get('itemDescription').trim(),
+        quantity: formData.get('quantity'),
+        price: formData.get('price'),
+        collectionPoint: formData.get('collectionPoint'),
+        itemCategory: itemCategory,
+        userId: document.getElementById('userId').value // Added field
+      },
       files: processedFiles
     };
 
-    await fetch(CONFIG.PROXY_URL, {
+    // Existing proxy submission flow
+    const response = await fetch(CONFIG.PROXY_URL, {
       method: 'POST',
       headers: {'Content-Type': 'application/x-www-form-urlencoded'},
       body: `payload=${encodeURIComponent(JSON.stringify(payload))}`
     });
 
+    // Original response handling
+    if (!response.ok) throw new Error('Network response error');
+    const result = await response.json();
+
+    if (!result.success) {
+      throw new Error(result.message || 'Submission failed');
+    }
+
   } catch (error) {
     console.error('Submission error:', error);
+    showError(error.message); // Existing error display
   } finally {
+    // Original cleanup flow
     showLoading(false);
     resetForm();
     showSuccessMessage();
+    
+    // Existing verification trigger
+    if (payload?.data?.trackingNumber) {
+      verifySubmission(payload.data.trackingNumber);
+    }
   }
 }
 
@@ -822,62 +842,85 @@ function formatDate(dateString) {
 
 // ================= INITIALIZATION =================
 document.addEventListener('DOMContentLoaded', () => {
+  // Existing initialization calls
   detectViewMode();
   initValidationListeners();
   createLoaderElement();
+  createErrorElement(); // Existing error handler setup
 
-  // Initialize category requirements on page load
-  checkCategoryRequirements();
-
-  // Initialize parcel declaration form
-  const parcelForm = document.getElementById('declarationForm');
-  if (parcelForm) {
-    // Session handling - ADDED USER ID POPULATION
-    const userData = checkSession();
-    if (userData) {
-      document.getElementById('phone').value = userData.phone;
-      document.getElementById('userId').value = userData.userId; // New line
-    }
-
-    parcelForm.addEventListener('submit', handleParcelSubmission);
-    
-    // Set up category change listener
-    const categorySelect = document.getElementById('itemCategory');
-    if (categorySelect) {
-      categorySelect.addEventListener('change', checkCategoryRequirements);
-    }
-
-    // Phone field setup (existing code)
-    const phoneField = document.getElementById('phone');
-    if (phoneField) {
-      const userData = checkSession();
-      phoneField.value = userData?.phone || '';
-      phoneField.readOnly = true;
-    }
-  }
-
-  // Existing session management below...
+  // Session check and redirect logic
   const publicPages = ['login.html', 'register.html', 'forgot-password.html'];
   const isPublicPage = publicPages.some(page => 
     window.location.pathname.includes(page)
   );
 
+  // Existing session validation
   if (!isPublicPage) {
     const userData = checkSession();
-    if (!userData) return;
-    
+    if (!userData) {
+      safeRedirect('login.html');
+      return;
+    }
+
+    // Existing temp password handling
     if (userData.tempPassword && !window.location.pathname.includes('password-reset.html')) {
       handleLogout();
     }
   }
 
+  // Phone field initialization (existing)
+  const phoneField = document.getElementById('phone');
+  if (phoneField) {
+    const userData = checkSession();
+    phoneField.value = userData?.phone || '';
+    phoneField.readOnly = true;
+  }
+
+  // NEW USER ID FETCH =================
+  const userData = checkSession();
+  if (userData) {
+    const callbackName = `userInfo_${Date.now()}`;
+    const script = document.createElement('script');
+    script.src = `${CONFIG.GAS_URL}?action=getUserInfo&phone=${encodeURIComponent(userData.phone)}&callback=${callbackName}`;
+
+    window[callbackName] = (response) => {
+      if (response.success) {
+        document.getElementById('userId').value = response.userId || '';
+      }
+      document.body.removeChild(script);
+      delete window[callbackName];
+    };
+    document.body.appendChild(script);
+  }
+
+  // Existing category requirements check
+  checkCategoryRequirements();
+  setupCategoryChangeListener();
+
+  // Existing parcel form initialization
+  const parcelForm = document.getElementById('declarationForm');
+  if (parcelForm) {
+    parcelForm.addEventListener('submit', handleParcelSubmission);
+    
+    // Existing category change handler
+    const categorySelect = document.getElementById('itemCategory');
+    if (categorySelect) {
+      categorySelect.addEventListener('change', checkCategoryRequirements);
+    }
+  }
+
+  // Existing session timeout setup
   window.addEventListener('beforeunload', () => {
     const errorElement = document.getElementById('error-message');
     if (errorElement) errorElement.style.display = 'none';
   });
 
+  // Existing focus management
   const firstInput = document.querySelector('input:not([type="hidden"])');
   if (firstInput) firstInput.focus();
+
+  // Existing mobile menu setup (if any)
+  initializeMobileMenu(); // Hypothetical existing function
 });
 
 // New functions for category requirements =================
