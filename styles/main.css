@@ -213,11 +213,10 @@ select {
 }
 
 #userId {
-  background-color: #2a2a2a;
-  color: #ffffff;
-  border: 1px solid #444;
-  padding: 10px;
-  width: 100%;
+  border: 2px solid #9C51B6 !important;
+  background-color: #2a2a2a !important;
+  color: #FFFFFF !important;
+  font-weight: bold;
 }
 
 #fileUpload {
