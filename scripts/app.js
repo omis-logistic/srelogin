@@ -252,7 +252,8 @@ async function handleParcelSubmission(e) {
     });
 
   } catch (error) {
-    showError(error.message);
+    // Only log the error instead of showing it
+    console.error('Submission error:', error);
   } finally {
     showLoading(false);
     resetForm();
@@ -422,7 +423,12 @@ function handleFileSelection(input) {
     const files = Array.from(input.files);
     const category = document.getElementById('itemCategory').value;
     
-    // Enhanced validation for all file types
+    // Global file count validation
+    if (files.length > CONFIG.MAX_FILES) {
+      throw new Error(`Maximum ${CONFIG.MAX_FILES} files allowed`);
+    }
+
+    // Validate file types and sizes
     files.forEach(file => {
       if (!CONFIG.ALLOWED_FILE_TYPES.includes(file.type)) {
         throw new Error(`Invalid file type: ${file.type}`);
@@ -432,7 +438,7 @@ function handleFileSelection(input) {
       }
     });
 
-    // Special handling for starred categories
+    // Starred category validation
     const starredCategories = [
       '*Books', '*Cosmetics/Skincare/Bodycare', 
       '*Food Beverage/Drinks', '*Gadgets',
@@ -441,9 +447,6 @@ function handleFileSelection(input) {
     
     if (starredCategories.includes(category)) {
       if (files.length < 1) throw new Error('At least 1 file required');
-      if (files.length > CONFIG.MAX_FILES) {
-        throw new Error(`Maximum ${CONFIG.MAX_FILES} files allowed`);
-      }
     }
 
     showError(`${files.length} valid files selected`, 'status-message success');
