@@ -2,7 +2,7 @@
 // ================= CONFIGURATION =================
 const CONFIG = {
   GAS_URL: 'https://script.google.com/macros/s/AKfycbyZQWSBR_4d6ytXJwayako_Kyb_ELa66sQ78nbhEUGJxCYGruTFtgxxuGcX5iiTMqJt/exec',
-  PROXY_URL: 'https://script.google.com/macros/s/AKfycbyRs-JIVRG8lnKHH023uYwBhK3NzoaSDDraR92XdGRD23LzBN4UTWp1E3JGKLF7E_I/exec',
+  PROXY_URL: 'https://script.google.com/macros/s/AKfycbz59FOd2O9XVWaZoWyfLLgaFebRkFOwLFK6x5IW5VvKbGZfd9T1ywv3LcXbkzudatOT/exec',
   SESSION_TIMEOUT: 3600,
   MAX_FILE_SIZE: 5 * 1024 * 1024,
   ALLOWED_FILE_TYPES: ['image/jpeg', 'image/png', 'application/pdf'],
@@ -235,7 +235,6 @@ async function handleParcelSubmission(e) {
 
     const payload = {
       trackingNumber: formData.get('trackingNumber').trim().toUpperCase(),
-      userId: document.getElementById('userId').value,
       nameOnParcel: formData.get('nameOnParcel').trim(),
       phone: document.getElementById('phone').value,
       itemDescription: formData.get('itemDescription').trim(),
@@ -834,15 +833,13 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Phone field setup
-  const phoneField = document.getElementById('phone');
-  const userIdField = document.getElementById('userId');
-  if (phoneField && userIdField) {
-    const userData = checkSession();
-    phoneField.value = userData?.phone || '';
-    userIdField.value = userData?.userId || ''; // Add this line
-    phoneField.readOnly = true;
+    const phoneField = document.getElementById('phone');
+    if (phoneField) {
+      const userData = checkSession();
+      phoneField.value = userData?.phone || '';
+      phoneField.readOnly = true;
+    }
   }
-});
 
   // Session management
   const publicPages = ['login.html', 'register.html', 'forgot-password.html'];
