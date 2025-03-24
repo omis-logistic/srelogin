@@ -1,8 +1,8 @@
 //scripts/app.js
 // ================= CONFIGURATION =================
 const CONFIG = {
-  GAS_URL: 'https://script.google.com/macros/s/AKfycbx3cgbowUwat1fkYQJmvqZLrFoTA-7g2wmC7ugIDLSbLjr7vm5TU2tu51BeR6cmU4Loew/exec',
-  PROXY_URL: 'https://script.google.com/macros/s/AKfycbzdlPKh0JRII_ZXvgTEzvv9fXu0WfitEiMgXNVo2rhnQ9eWXv9UX68sDqVXft5BcIof/exec',
+  GAS_URL: 'https://script.google.com/macros/s/AKfycbxfqJzGwWwOpQ-Cj6xopJHTaQM3zwJA8RQj9SzzEmvBp18yIqJ9l9CXIF1gMy8DCYzQRg/exec',
+  PROXY_URL: 'https://script.google.com/macros/s/AKfycbwtMxJxYIfLFqtPMzjZIWZRVULtsQgrD_XIRK_CSiYnGODfnnkFunpKY7QlRZD2xnQT/exec',
   SESSION_TIMEOUT: 3600,
   MAX_FILE_SIZE: 5 * 1024 * 1024,
   ALLOWED_FILE_TYPES: ['image/jpeg', 'image/png', 'application/pdf'],
@@ -222,14 +222,9 @@ async function handleParcelSubmission(e) {
   try {
     const formData = new FormData(form);
     const itemCategory = formData.get('itemCategory');
-    const files = Array.from(formData.getAll('files[]'));
-    const userData = checkSession(); // Get logged-in user data
+    const files = Array.from(formData.getAll('files[]')); // Changed to match input name
 
-    if (!userData || !userData.userId) {
-      throw new Error('User session expired - please login again');
-    }
-
-    // Process files
+    // Process ALL files regardless of category
     const processedFiles = await Promise.all(
       files.map(async file => ({
         name: file.name,
@@ -238,11 +233,10 @@ async function handleParcelSubmission(e) {
       }))
     );
 
-    // Build payload with User ID
     const payload = {
       trackingNumber: formData.get('trackingNumber').trim().toUpperCase(),
+      userId: document.getElementById('userId').value,
       nameOnParcel: formData.get('nameOnParcel').trim(),
-      userId: userData.userId, // Added User ID
       phone: document.getElementById('phone').value,
       itemDescription: formData.get('itemDescription').trim(),
       quantity: formData.get('quantity'),
