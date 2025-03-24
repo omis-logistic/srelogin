@@ -2,7 +2,7 @@
 // ================= CONFIGURATION =================
 const CONFIG = {
   GAS_URL: 'https://script.google.com/macros/s/AKfycbykXu2b5y2KEzyhsnPQhWPH6DoBlKfbgPszwnW_kOywi8La2J68LploEFwGfeU3IsT1zw/exec',
-  PROXY_URL: 'https://script.google.com/macros/s/AKfycbzdhaDNjXECbAqfBcGksauEeHTgrlBWngTHwF7D1V3zjPacGz5rxBtw2IfufH_BNsT3/exec',
+  PROXY_URL: 'https://script.google.com/macros/s/AKfycbzOxIBWfIR2yigkCBRjsVqmnoSD1IfAXXF1jh6LrQMPTRLMIIhMVuJomCik9G5t-6Uo/exec',
   SESSION_TIMEOUT: 3600,
   MAX_FILE_SIZE: 5 * 1024 * 1024,
   ALLOWED_FILE_TYPES: ['image/jpeg', 'image/png', 'application/pdf'],
@@ -223,32 +223,15 @@ async function handleParcelSubmission(e) {
     const formData = new FormData(form);
     const itemCategory = formData.get('itemCategory');
     const files = Array.from(formData.getAll('files'));
-    
-    // Mandatory file check for starred categories
-    const starredCategories = [
-      '*Books', '*Cosmetics/Skincare/Bodycare',
-      '*Food Beverage/Drinks', '*Gadgets',
-      '*Oil Ointment', '*Supplement'
-    ];
-    
-    if (starredCategories.includes(itemCategory)) {
-      if (files.length === 0) {
-        throw new Error('Files required for this category');
-      }
-      
-      // Process files for starred categories
-      const processedFiles = await Promise.all(
-        files.map(async file => ({
-          name: file.name,
-          type: file.type,
-          data: await readFileAsBase64(file)
-        }))
-      );
-      
-      var filesPayload = processedFiles;
-    } else {
-      var filesPayload = [];
-    }
+
+    // Process files regardless of category
+    const processedFiles = await Promise.all(
+      files.map(async file => ({
+        name: file.name,
+        type: file.type,
+        data: await readFileAsBase64(file)
+      }))
+    );
 
     const payload = {
       trackingNumber: formData.get('trackingNumber').trim().toUpperCase(),
@@ -259,7 +242,7 @@ async function handleParcelSubmission(e) {
       price: formData.get('price'),
       collectionPoint: formData.get('collectionPoint'),
       itemCategory: itemCategory,
-      files: filesPayload // MUST use filesPayload instead of processedFiles
+      files: processedFiles // Always include processed files
     };
 
     await fetch(CONFIG.PROXY_URL, {
@@ -269,7 +252,7 @@ async function handleParcelSubmission(e) {
     });
 
   } catch (error) {
-    // Still ignore errors but files are handled
+    showError(error.message);
   } finally {
     showLoading(false);
     resetForm();
@@ -439,33 +422,35 @@ function handleFileSelection(input) {
     const files = Array.from(input.files);
     const category = document.getElementById('itemCategory').value;
     
-    // Add this line to track files properly
-    input.setAttribute('data-files', JSON.stringify(files.map(f => f.name)));
-
-    // Validate against starred categories
-    const starredCategories = [
-      '*Books', '*Cosmetics/Skincare/Bodycare', '*Food Beverage/Drinks',
-      '*Gadgets', '*Oil Ointment', '*Supplement'
-    ];
-    
-    if (starredCategories.includes(category)) {
-      if (files.length < 1) throw new Error('At least 1 file required');
-      if (files.length > 3) throw new Error('Max 3 files allowed');
-    }
-
-    // Validate individual files
+    // Enhanced validation for all file types
     files.forEach(file => {
+      if (!CONFIG.ALLOWED_FILE_TYPES.includes(file.type)) {
+        throw new Error(`Invalid file type: ${file.type}`);
+      }
       if (file.size > CONFIG.MAX_FILE_SIZE) {
         throw new Error(`${file.name} exceeds 5MB`);
       }
     });
+
+    // Special handling for starred categories
+    const starredCategories = [
+      '*Books', '*Cosmetics/Skincare/Bodycare', 
+      '*Food Beverage/Drinks', '*Gadgets',
+      '*Oil Ointment', '*Supplement'
+    ];
+    
+    if (starredCategories.includes(category)) {
+      if (files.length < 1) throw new Error('At least 1 file required');
+      if (files.length > CONFIG.MAX_FILES) {
+        throw new Error(`Maximum ${CONFIG.MAX_FILES} files allowed`);
+      }
+    }
 
     showError(`${files.length} valid files selected`, 'status-message success');
     
   } catch (error) {
     showError(error.message);
     input.value = '';
-    input.removeAttribute('data-files');
   }
 }
 
