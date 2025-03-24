@@ -1,7 +1,7 @@
 //scripts/app.js
 // ================= CONFIGURATION =================
 const CONFIG = {
-  GAS_URL: 'https://script.google.com/macros/s/AKfycbz4C8i59ahlZbqqh_xoirQrJjTVjsxneobrzCpq86VhQYlX1Mcaa4KNVD0UpiQKdMsmDg/exec',
+  GAS_URL: 'https://script.google.com/macros/s/AKfycbwtNKZ4-btvSQLM9h61r9P5z21r50OSmgjYa_-V56YQjvh1pDY3RfaAIdojdRSK0yzafg/exec',
   PROXY_URL: 'https://script.google.com/macros/s/AKfycby-chAYID4slQS634g-2fU1s5sSZaTw1dcVxAUy7rE4wWinPRsDH2j2Oq8UJsdu-qyY/exec',
   SESSION_TIMEOUT: 3600,
   MAX_FILE_SIZE: 5 * 1024 * 1024,
@@ -610,7 +610,6 @@ async function handleLogin() {
   const phone = document.getElementById('phone').value.trim();
   const password = document.getElementById('password').value;
 
-  // Existing validation checks
   if (!validatePhone(phone)) {
     showError('Invalid phone number format');
     return;
@@ -622,42 +621,50 @@ async function handleLogin() {
   }
 
   try {
-    // Original API call structure
     const result = await callAPI('processLogin', { phone, password });
     
     if (result.success) {
-      // Enhanced session storage with User ID
-      sessionStorage.setItem('userData', JSON.stringify({
+      // Session data validation and storage
+      const sessionData = {
         phone: result.phone,
-        userId: result.userId,  // Now explicitly stored
-        email: result.email,
-        tempPassword: result.tempPassword
-      }));
+        userId: result.userId || 'MISSING_USER_ID_BACKEND',
+        tempPassword: result.tempPassword,
+        email: result.email || ''
+      };
 
-      // Debug logging (original format)
-      console.log('[SESSION] Auth Data:', {
-        userId: result.userId,
-        phone: result.phone,
-        temp: result.tempPassword,
-        source: 'processLogin'
+      // Debug: Verify complete session data
+      console.log('[LOGIN] Session Data to Store:', {
+        ...sessionData,
+        source: 'login-response'
       });
 
-      // Existing activity tracking
-      localStorage.setItem('lastActivity', Date.now());
+      sessionStorage.setItem('userData', JSON.stringify(sessionData));
       
-      // Original redirection logic
+      // Immediate session verification
+      const storedSession = JSON.parse(sessionStorage.getItem('userData'));
+      console.log('[LOGIN] Session Storage Verification:', {
+        keys: Object.keys(storedSession),
+        userIdExists: 'userId' in storedSession,
+        storedValue: storedSession.userId
+      });
+
+      // Update last activity
+      localStorage.setItem('lastActivity', Date.now());
+
+      // Handle password reset flow
       if (result.tempPassword) {
+        console.log('[LOGIN] Temp password detected, redirecting...');
         safeRedirect('password-reset.html');
       } else {
+        console.log('[LOGIN] Regular login, redirecting to dashboard...');
         safeRedirect('dashboard.html');
       }
     } else {
-      // Existing error handling
       showError(result.message || 'Authentication failed');
+      console.log('[LOGIN] Failed attempt for:', phone);
     }
   } catch (error) {
-    // Original error handling
-    console.error('Login error:', error);
+    console.error('[LOGIN] System error:', error);
     showError('Login failed - please try again');
   }
 }
@@ -844,46 +851,44 @@ function formatDate(dateString) {
 
 // ================= INITIALIZATION =================
 document.addEventListener('DOMContentLoaded', () => {
-  // Existing initialization
+  // Existing viewport and component initialization
   detectViewMode();
   initValidationListeners();
   createLoaderElement();
   checkCategoryRequirements();
 
-  // Session data analysis
+  // Session data handling
   const userData = JSON.parse(sessionStorage.getItem('userData')) || {};
+  
+  // Debug session analysis
   console.log('[DEBUG] Session Storage Analysis:', {
     exists: !!sessionStorage.getItem('userData'),
     keys: Object.keys(userData),
     userIdPresent: 'userId' in userData
   });
 
-  // User field initialization
+  // Phone field initialization
   const phoneField = document.getElementById('phone');
+  if (phoneField) {
+    phoneField.value = userData.phone || '';
+    phoneField.readOnly = true;
+    console.log('[DEBUG] Phone Field State:', {
+      value: phoneField.value,
+      readOnly: phoneField.readOnly
+    });
+  }
+
+  // User ID field initialization
   const userIdField = document.getElementById('userId');
-
-  if (userData) {
-    // Phone number handling (existing)
-    if (phoneField) {
-      phoneField.value = userData.phone || '';
-      phoneField.readOnly = true;
-      console.log('[DEBUG] Phone Field State:', {
-        value: phoneField.value,
-        readOnly: phoneField.readOnly
-      });
-    }
-
-    // User ID handling (enhanced)
-    if (userIdField) {
-      userIdField.value = userData.userId || 'USER_ID_MISSING';
-      userIdField.readOnly = true;
-      console.log('[DEBUG] UserID Field Diagnostics:', {
-        domValue: userIdField.value,
-        elementExists: !!userIdField,
-        sessionValue: userData.userId,
-        inputType: userIdField.type
-      });
-    }
+  if (userIdField) {
+    userIdField.value = userData.userId || 'USER_ID_MISSING';
+    userIdField.readOnly = true;
+    console.log('[DEBUG] UserID Field Diagnostics:', {
+      domValue: userIdField.value,
+      elementExists: true,
+      inputType: userIdField.type,
+      sessionValue: userData.userId
+    });
   }
 
   // Existing parcel form setup
@@ -898,7 +903,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  // Existing session validation
+  // Session validation
   console.log('[DEBUG] Checking session validity');
   const publicPages = ['login.html', 'register.html', 'forgot-password.html'];
   const isPublicPage = publicPages.some(page => 
@@ -914,13 +919,12 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  // Existing cleanup
+  // Existing cleanup and focus management
   window.addEventListener('beforeunload', () => {
     const errorElement = document.getElementById('error-message');
     if (errorElement) errorElement.style.display = 'none';
   });
 
-  // Existing focus management
   const firstInput = document.querySelector('input:not([type="hidden"])');
   if (firstInput) {
     console.log('[DEBUG] Setting initial focus');
