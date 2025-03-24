@@ -1,7 +1,7 @@
 //scripts/app.js
 // ================= CONFIGURATION =================
 const CONFIG = {
-  GAS_URL: 'https://script.google.com/macros/s/AKfycbyIKw2OcmgsDXCs2D0IfIsizX08jFnSx4_cpUD0yIZJ-uHqXWSdPSX-6slSv1nT_1koqQ/exec',
+  GAS_URL: 'https://script.google.com/macros/s/AKfycbyTMHU3lrpaKOV4q6EioB8RuGmg6P6_QUfw_TqA8hjOkckU4e6fF7VzNhHqWAxhe8xhcA/exec',
   PROXY_URL: 'https://script.google.com/macros/s/AKfycby-chAYID4slQS634g-2fU1s5sSZaTw1dcVxAUy7rE4wWinPRsDH2j2Oq8UJsdu-qyY/exec',
   SESSION_TIMEOUT: 3600,
   MAX_FILE_SIZE: 5 * 1024 * 1024,
