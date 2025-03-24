@@ -235,8 +235,8 @@ async function handleParcelSubmission(e) {
 
     const payload = {
       trackingNumber: formData.get('trackingNumber').trim().toUpperCase(),
-      userId: document.getElementById('userId').value,
       nameOnParcel: formData.get('nameOnParcel').trim(),
+      userId: document.getElementById('userId').value,
       phone: document.getElementById('phone').value,
       itemDescription: formData.get('itemDescription').trim(),
       quantity: formData.get('quantity'),
@@ -841,17 +841,17 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // User data population
-    const phoneField = document.getElementById('phone');
-    const userIdField = document.getElementById('userId');
-    if (phoneField && userIdField) {
-      const userData = checkSession();
-      console.log('Session Data:', userData); // Debug log
-      
-      phoneField.value = userData?.phone || '';
-      userIdField.value = userData?.userId || ''; 
-      phoneField.readOnly = true;
-      userIdField.readOnly = true;
+  const phoneField = document.getElementById('phone');
+  const userIdField = document.getElementById('userId');
+  if (phoneField && userIdField) {
+    const userData = checkSession();
+    if (userData) {
+      phoneField.value = userData.phone || '';
+      userIdField.value = userData.userId || ''; // Direct access
     }
+    phoneField.readOnly = true;
+    userIdField.readOnly = true;
+  }
   }
 
   // Session validation
