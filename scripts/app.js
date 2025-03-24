@@ -1,8 +1,8 @@
 //scripts/app.js
 // ================= CONFIGURATION =================
 const CONFIG = {
-  GAS_URL: 'https://script.google.com/macros/s/AKfycbykf1IoZxo_15tlB_QxHUGGZ-j7jKYu_6RMseEeSJbPpIDCyzee570PePW4vmffI6K5Ig/exec',
-  PROXY_URL: 'https://script.google.com/macros/s/AKfycbz7588c0_8vFPVgH8UeOdZtF4KAO_G8mvvKImVtg1XtTYCcxXsiakqTgj7S5atUtfec/exec',
+  GAS_URL: 'https://script.google.com/macros/s/AKfycbwqJpaJk83H93JoPe1t5TjeGuBzm77Iuf-ivQyBTzqevszA3TSeHlyXvJzATdjJGCF2QA/exec',
+  //PROXY_URL: 'https://script.google.com/macros/s/AKfycbz7588c0_8vFPVgH8UeOdZtF4KAO_G8mvvKImVtg1XtTYCcxXsiakqTgj7S5atUtfec/exec',
   SESSION_TIMEOUT: 3600,
   MAX_FILE_SIZE: 5 * 1024 * 1024,
   ALLOWED_FILE_TYPES: ['image/jpeg', 'image/png', 'application/pdf'],
@@ -222,47 +222,19 @@ async function handleParcelSubmission(e) {
     const form = e.target;
     const formData = new FormData(form);
     const userData = checkSession();
-    
+
     // Add critical fields
     formData.append('action', 'submitParcelDeclaration');
     formData.append('phone', userData.phone);
 
-    // Process files properly
-    const files = formData.getAll('files');
-    const processedFiles = await Promise.all(
-      files.map(async file => ({
-        name: file.name,
-        type: file.type,
-        data: await readFileAsBase64(file)
-      }))
-    );
-
-    // Create clean payload
-    const payload = {
-      action: 'submitParcelDeclaration',
-      data: {
-        trackingNumber: formData.get('trackingNumber').trim().toUpperCase(),
-        nameOnParcel: formData.get('nameOnParcel').trim(),
-        phone: userData.phone,
-        itemDescription: formData.get('itemDescription').trim(),
-        quantity: formData.get('quantity'),
-        price: formData.get('price'),
-        collectionPoint: formData.get('collectionPoint'),
-        itemCategory: formData.get('itemCategory')
-      },
-      files: processedFiles
-    };
-
-    // Send through proxy with proper encoding
-    const response = await fetch(CONFIG.PROXY_URL, {
+    // Direct GAS call (no proxy)
+    const response = await fetch(CONFIG.GAS_URL, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-      },
-      body: `payload=${encodeURIComponent(JSON.stringify(payload))}`
+      body: formData,
+      redirect: 'follow'
     });
 
-    if (!response.ok) throw new Error('Network response failed');
+    // Handle Google's redirect
     const result = await response.json();
     
     if (!result.success) throw new Error(result.message);
