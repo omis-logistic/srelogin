@@ -1,8 +1,8 @@
 //scripts/app.js
 // ================= CONFIGURATION =================
 const CONFIG = {
-  GAS_URL: 'https://script.google.com/macros/s/AKfycbyZQWSBR_4d6ytXJwayako_Kyb_ELa66sQ78nbhEUGJxCYGruTFtgxxuGcX5iiTMqJt/exec',
-  PROXY_URL: 'https://script.google.com/macros/s/AKfycbz59FOd2O9XVWaZoWyfLLgaFebRkFOwLFK6x5IW5VvKbGZfd9T1ywv3LcXbkzudatOT/exec',
+  GAS_URL: 'https://script.google.com/macros/s/AKfycbx3cgbowUwat1fkYQJmvqZLrFoTA-7g2wmC7ugIDLSbLjr7vm5TU2tu51BeR6cmU4Loew/exec',
+  PROXY_URL: 'https://script.google.com/macros/s/AKfycbzdlPKh0JRII_ZXvgTEzvv9fXu0WfitEiMgXNVo2rhnQ9eWXv9UX68sDqVXft5BcIof/exec',
   SESSION_TIMEOUT: 3600,
   MAX_FILE_SIZE: 5 * 1024 * 1024,
   ALLOWED_FILE_TYPES: ['image/jpeg', 'image/png', 'application/pdf'],
@@ -222,9 +222,14 @@ async function handleParcelSubmission(e) {
   try {
     const formData = new FormData(form);
     const itemCategory = formData.get('itemCategory');
-    const files = Array.from(formData.getAll('files[]')); // Changed to match input name
+    const files = Array.from(formData.getAll('files[]'));
+    const userData = checkSession(); // Get logged-in user data
 
-    // Process ALL files regardless of category
+    if (!userData || !userData.userId) {
+      throw new Error('User session expired - please login again');
+    }
+
+    // Process files
     const processedFiles = await Promise.all(
       files.map(async file => ({
         name: file.name,
@@ -233,9 +238,11 @@ async function handleParcelSubmission(e) {
       }))
     );
 
+    // Build payload with User ID
     const payload = {
       trackingNumber: formData.get('trackingNumber').trim().toUpperCase(),
       nameOnParcel: formData.get('nameOnParcel').trim(),
+      userId: userData.userId, // Added User ID
       phone: document.getElementById('phone').value,
       itemDescription: formData.get('itemDescription').trim(),
       quantity: formData.get('quantity'),
@@ -833,13 +840,16 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Phone field setup
-    const phoneField = document.getElementById('phone');
-    if (phoneField) {
-      const userData = checkSession();
-      phoneField.value = userData?.phone || '';
-      phoneField.readOnly = true;
-    }
+  const phoneField = document.getElementById('phone');
+  const userIdField = document.getElementById('userId');
+  if (phoneField && userIdField) {
+    const userData = checkSession();
+    phoneField.value = userData?.phone || '';
+    userIdField.value = userData?.userId || ''; // Add this line
+    phoneField.readOnly = true;
+    userIdField.readOnly = true;
   }
+});
 
   // Session management
   const publicPages = ['login.html', 'register.html', 'forgot-password.html'];
