@@ -242,7 +242,7 @@ async function handleParcelSubmission(e) {
       price: formData.get('price'),
       collectionPoint: formData.get('collectionPoint'),
       itemCategory: itemCategory,
-      files: processedFiles // Always include processed files
+      files: processedFiles
     };
 
     await fetch(CONFIG.PROXY_URL, {
@@ -252,7 +252,6 @@ async function handleParcelSubmission(e) {
     });
 
   } catch (error) {
-    // Only log the error instead of showing it
     console.error('Submission error:', error);
   } finally {
     showLoading(false);
@@ -430,7 +429,7 @@ function handleFileSelection(input) {
 
     // Validate file types and sizes
     files.forEach(file => {
-      if (!CONFIG.ALLOWED_FILE_TYPES.includes(file.type)) {
+      if (!CONFIG.ALLOWED_FILE_TYPES.includes(file.type)) { // FIXED LINE
         throw new Error(`Invalid file type: ${file.type}`);
       }
       if (file.size > CONFIG.MAX_FILE_SIZE) {
