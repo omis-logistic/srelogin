@@ -1,7 +1,7 @@
 //scripts/app.js
 // ================= CONFIGURATION =================
 const CONFIG = {
-  GAS_URL: 'https://script.google.com/macros/s/AKfycbzJ2ybkXZZZ3ystyomFqKYQW6cQN6AxCGt_GtFKFYALeONoiGPteDKjyS-09o96QqEDCA/exec',
+  GAS_URL: 'https://script.google.com/macros/s/AKfycbwfnzIKy5JgrAFwHPZnIi-e6hesZU2WEkEvAZWalRrckzQ43nNqR9s_JSgt0F1UpIfTZA/exec',
   PROXY_URL: 'https://script.google.com/macros/s/AKfycbz1p1FvRx93CXLCSS_LVaCGXcVhWtJ7n91C03xmzjzbhfao2GX2anQiWn5Yxkf6NJg/exec',
   SESSION_TIMEOUT: 3600,
   MAX_FILE_SIZE: 5 * 1024 * 1024,
@@ -221,41 +221,29 @@ async function handleParcelSubmission(e) {
 
   try {
     const formData = new FormData(form);
-    const userId = document.getElementById('userId').value; // Get User ID
+    const files = Array.from(formData.getAll('files[]'));
     
-    // Create proper multipart form data
+    // ORIGINAL MARK 1 PAYLOAD
     const payload = {
-      action: 'submitParcelDeclaration',
-      data: JSON.stringify({
-        trackingNumber: formData.get('trackingNumber').trim().toUpperCase(),
-        nameOnParcel: formData.get('nameOnParcel').trim(),
-        phone: document.getElementById('phone').value,
-        userId: userId, // Include User ID
-        itemDescription: formData.get('itemDescription').trim(),
-        quantity: formData.get('quantity'),
-        price: formData.get('price'),
-        collectionPoint: formData.get('collectionPoint'),
-        itemCategory: formData.get('itemCategory')
-      })
+      trackingNumber: formData.get('trackingNumber').trim().toUpperCase(),
+      nameOnParcel: formData.get('nameOnParcel').trim(),
+      phone: document.getElementById('phone').value,
+      itemDescription: formData.get('itemDescription').trim(),
+      quantity: formData.get('quantity'),
+      price: formData.get('price'),
+      collectionPoint: formData.get('collectionPoint'),
+      itemCategory: formData.get('itemCategory'),
+      userId: document.getElementById('userId').value // ONLY ADDITION
     };
 
-    // Add files to FormData
-    const files = formData.getAll('files[]');
-    files.forEach((file, index) => {
-      payload[`file${index}`] = file;
-    });
+    // ORIGINAL MARK 1 SUBMISSION FLOW
+    const submissionForm = new FormData();
+    submissionForm.append('data', JSON.stringify(payload));
+    files.forEach(file => submissionForm.append('files[]', file));
 
-    // Create proper FormData object
-    const submissionData = new FormData();
-    submissionData.append('data', payload.data);
-    files.forEach((file, index) => {
-      submissionData.append(`file${index}`, file);
-    });
-
-    // Send request with proper headers
     await fetch(CONFIG.PROXY_URL, {
       method: 'POST',
-      body: submissionData
+      body: submissionForm
     });
 
   } catch (error) {
