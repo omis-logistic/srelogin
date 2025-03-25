@@ -1,7 +1,7 @@
 //scripts/app.js
 // ================= CONFIGURATION =================
 const CONFIG = {
-  GAS_URL: 'https://script.google.com/macros/s/AKfycbxZKWl5HQiPoZv8G7Sr_fWqqnQ3I6o2-e3rLOVZ3-B882fGORTYuP0th1S7l6dDMapIeA/exec',
+  GAS_URL: 'https://script.google.com/macros/s/AKfycbxf5NDVMoYCpRb-KJXIuMwTmeHeJNlkyRLwP7NzePEqVojPIqYf2Cons3gHsNZfZgei/exec',
   PROXY_URL: 'https://script.google.com/macros/s/AKfycbz1p1FvRx93CXLCSS_LVaCGXcVhWtJ7n91C03xmzjzbhfao2GX2anQiWn5Yxkf6NJg/exec',
   SESSION_TIMEOUT: 3600,
   MAX_FILE_SIZE: 5 * 1024 * 1024,
@@ -220,21 +220,26 @@ async function handleParcelSubmission(e) {
   showLoading(true);
 
   try {
+    const userData = checkSession(); // Get user data from session
     const formData = new FormData(form);
-    const itemCategory = formData.get('itemCategory');
-    const files = Array.from(formData.getAll('files[]')); // Changed to match input name
+    let requestData;
+    const files = Array.from(formData.getAll('files[]'));
 
-    // Process ALL files regardless of category
+    // Process form data (existing validation)
+    if (!userData) throw new Error('Session expired');
+    
+    // Process files (existing logic)
     const processedFiles = await Promise.all(
       files.map(async file => ({
-        name: file.name,
+        name: file.name.replace(/[^a-z0-9._-]/gi, '_'),
         type: file.type,
         data: await readFileAsBase64(file)
       }))
     );
 
+    // Build payload with User ID (NEW)
     const payload = {
-      userId: userData.userId,
+      userId: userData.userId, // Added User ID
       trackingNumber: formData.get('trackingNumber').trim().toUpperCase(),
       nameOnParcel: formData.get('nameOnParcel').trim(),
       phone: document.getElementById('phone').value,
@@ -242,22 +247,28 @@ async function handleParcelSubmission(e) {
       quantity: formData.get('quantity'),
       price: formData.get('price'),
       collectionPoint: formData.get('collectionPoint'),
-      itemCategory: itemCategory,
+      itemCategory: formData.get('itemCategory'),
       files: processedFiles
     };
 
+    // Existing submission flow
     await fetch(CONFIG.PROXY_URL, {
       method: 'POST',
       headers: {'Content-Type': 'application/x-www-form-urlencoded'},
       body: `payload=${encodeURIComponent(JSON.stringify(payload))}`
     });
 
-  } catch (error) {
-    console.error('Submission error:', error);
-  } finally {
-    showLoading(false);
-    resetForm();
+    // Existing success handling
     showSuccessMessage();
+    resetForm();
+
+  } catch (error) {
+    // Existing error handling
+    console.error('Submission error:', error);
+    showError(`Submission failed: ${error.message}`);
+  } finally {
+    // Existing cleanup
+    showLoading(false);
   }
 }
 
@@ -815,65 +826,68 @@ function formatDate(dateString) {
 
 // ================= INITIALIZATION =================
 document.addEventListener('DOMContentLoaded', () => {
-  // Existing initialization code
   detectViewMode();
   initValidationListeners();
   createLoaderElement();
-  
-  // Check category requirements on load
+
+  // Initialize category requirements on page load
   checkCategoryRequirements();
-  
+
   // Initialize parcel declaration form
   const parcelForm = document.getElementById('declarationForm');
   if (parcelForm) {
     parcelForm.addEventListener('submit', handleParcelSubmission);
     
-    // New User ID population code
-    const userData = checkSession();
-    if (userData) {
-      const userIdField = document.getElementById('userId');
-      const phoneField = document.getElementById('phone');
-      
-      if (userIdField) {
-        userIdField.value = userData.userId || '';
-      }
-      if (phoneField) {
-        phoneField.value = userData.phone || '';
-        phoneField.readOnly = true;
-      }
-    }
-
-    // Existing category change listener
+    // Set up category change listener
     const categorySelect = document.getElementById('itemCategory');
     if (categorySelect) {
       categorySelect.addEventListener('change', checkCategoryRequirements);
     }
-  }
 
-  // Existing session management
-  const publicPages = ['login.html', 'register.html', 'forgot-password.html'];
-  const isPublicPage = publicPages.some(page => 
-    window.location.pathname.includes(page)
-  );
-
-  if (!isPublicPage) {
+    // Set up user data
     const userData = checkSession();
-    if (!userData) return;
-    
-    if (userData.tempPassword && !window.location.pathname.includes('password-reset.html')) {
-      handleLogout();
+    if (userData) {
+      document.getElementById('phone').value = userData.phone || '';
+      // NEW USER ID POPULATION ===============
+      document.getElementById('userId').value = userData.userId || ''; 
+      // ======================================
+      document.getElementById('phone').readOnly = true;
     }
+
+    // Session management
+    const publicPages = ['login.html', 'register.html', 'forgot-password.html'];
+    const isPublicPage = publicPages.some(page => 
+      window.location.pathname.includes(page)
+    );
+
+    if (!isPublicPage) {
+      const userData = checkSession();
+      if (!userData) return;
+      
+      if (userData.tempPassword && !window.location.pathname.includes('password-reset.html')) {
+        handleLogout();
+      }
+    }
+
+    window.addEventListener('beforeunload', () => {
+      const errorElement = document.getElementById('error-message');
+      if (errorElement) errorElement.style.display = 'none';
+    });
+
+    const firstInput = document.querySelector('input:not([type="hidden"])');
+    if (firstInput) firstInput.focus();
   }
 
-  // Existing window event listeners
-  window.addEventListener('beforeunload', () => {
-    const errorElement = document.getElementById('error-message');
-    if (errorElement) errorElement.style.display = 'none';
-  });
+  // Original initialization continues
+  setupCategoryChangeListener();
+  const userData = checkSession();
+  if(userData) {
+    loadUserInfo(userData.phone);
+  }
 
-  // Existing focus management
-  const firstInput = document.querySelector('input:not([type="hidden"])');
-  if (firstInput) firstInput.focus();
+  // Existing session timeout checks
+  window.addEventListener('mousemove', () => localStorage.setItem('lastActivity', Date.now()));
+  window.addEventListener('keypress', () => localStorage.setItem('lastActivity', Date.now()));
 });
 
 // New functions for category requirements =================
