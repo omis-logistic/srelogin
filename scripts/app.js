@@ -1,7 +1,7 @@
 //scripts/app.js
 // ================= CONFIGURATION =================
 const CONFIG = {
-  GAS_URL: 'https://script.google.com/macros/s/AKfycbz0bw9OrN5PlzW6RmR5_SFTKc1ofD9rx7xlfrqwFs34Or_9Nuv4R5xQhrRupNfP0nFIiA/exec',
+  GAS_URL: 'https://script.google.com/macros/s/AKfycbx4j4vlUeF6gTYfidYXoWRzC51et4nER8hLZpNdAvYXeDI4WB59dQ2qsRnofOJJ57nPew/exec',
   PROXY_URL: 'https://script.google.com/macros/s/AKfycbz1p1FvRx93CXLCSS_LVaCGXcVhWtJ7n91C03xmzjzbhfao2GX2anQiWn5Yxkf6NJg/exec',
   SESSION_TIMEOUT: 3600,
   MAX_FILE_SIZE: 5 * 1024 * 1024,
@@ -70,11 +70,13 @@ function createErrorElement() {
 }
 
 // ================= SESSION MANAGEMENT =================
-const checkSession = () => {
+function checkSession() {
   const sessionData = sessionStorage.getItem('userData');
   const lastActivity = localStorage.getItem('lastActivity');
 
-  if (!sessionData) {
+  // NEW USER ID VALIDATION =============================
+  if (sessionData && !JSON.parse(sessionData).userId) {
+    console.error('User ID missing in session data!');
     handleLogout();
     return null;
   }
@@ -220,26 +222,28 @@ async function handleParcelSubmission(e) {
   showLoading(true);
 
   try {
-    const userData = checkSession(); // Get user data from session
+    // Debug: Check session data
+    const userData = checkSession();
+    console.log('[DEBUG] Submission User Data:', userData);
+    
+    if (!userData) throw new Error('Session expired - please login again');
+    
     const formData = new FormData(form);
-    let requestData;
     const files = Array.from(formData.getAll('files[]'));
 
-    // Process form data (existing validation)
-    if (!userData) throw new Error('Session expired');
-    
-    // Process files (existing logic)
+    // Process files (existing validation)
     const processedFiles = await Promise.all(
       files.map(async file => ({
         name: file.name.replace(/[^a-z0-9._-]/gi, '_'),
         type: file.type,
-        data: await readFileAsBase64(file)
+        data: await readFileAsBase64(file),
+        size: file.size
       }))
     );
 
-    // Build payload with User ID (NEW)
+    // Build payload with debug logging
     const payload = {
-      userId: userData.userId, // Added User ID
+      userId: userData.userId, // User ID from session
       trackingNumber: formData.get('trackingNumber').trim().toUpperCase(),
       nameOnParcel: formData.get('nameOnParcel').trim(),
       phone: document.getElementById('phone').value,
@@ -250,6 +254,7 @@ async function handleParcelSubmission(e) {
       itemCategory: formData.get('itemCategory'),
       files: processedFiles
     };
+    console.log('[DEBUG] Submission Payload:', payload);
 
     // Existing submission flow
     await fetch(CONFIG.PROXY_URL, {
@@ -266,6 +271,15 @@ async function handleParcelSubmission(e) {
     // Existing error handling
     console.error('Submission error:', error);
     showError(`Submission failed: ${error.message}`);
+    
+    // Existing security logging
+    if(typeof gtag !== 'undefined') {
+      gtag('event', 'exception', {
+        description: `Parcel submission error: ${error.message}`,
+        fatal: false
+      });
+    }
+    
   } finally {
     // Existing cleanup
     showLoading(false);
@@ -614,6 +628,7 @@ async function handleLogin() {
   const phone = document.getElementById('phone').value.trim();
   const password = document.getElementById('password').value;
 
+  // Existing validation
   if (!validatePhone(phone)) {
     showError('Invalid phone number format');
     return;
@@ -628,19 +643,44 @@ async function handleLogin() {
     const result = await callAPI('processLogin', { phone, password });
     
     if (result.success) {
-      sessionStorage.setItem('userData', JSON.stringify(result));
+      // Enhanced session storage with User ID
+      sessionStorage.setItem('userData', JSON.stringify({
+        phone: result.phone,
+        userId: result.userId,  // Added User ID
+        tempPassword: result.tempPassword,
+        email: result.email     // Existing field
+      }));
+      
       localStorage.setItem('lastActivity', Date.now());
       
+      // Existing redirect logic
       if (result.tempPassword) {
         safeRedirect('password-reset.html');
       } else {
         safeRedirect('dashboard.html');
       }
+      
+      // Existing analytics tracking
+      if(typeof gtag !== 'undefined') {
+        gtag('event', 'login', {
+          'event_category': 'authentication',
+          'event_label': 'success'
+        });
+      }
     } else {
+      // Existing error handling
       showError(result.message || 'Authentication failed');
+      
+      // Existing security logging
+      console.warn(`Failed login attempt for: ${phone}`);
     }
   } catch (error) {
+    // Existing error handling
+    console.error('Login error:', error);
     showError('Login failed - please try again');
+    
+    // Existing session cleanup
+    sessionStorage.removeItem('userData');
   }
 }
 
@@ -846,6 +886,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Set up user data
     const userData = checkSession();
+    console.log('User Data:', userData); // Check browser console for this output
     if (userData) {
       document.getElementById('phone').value = userData.phone || '';
       // NEW USER ID POPULATION ===============
