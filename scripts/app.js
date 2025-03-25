@@ -1,7 +1,7 @@
 //scripts/app.js
 // ================= CONFIGURATION =================
 const CONFIG = {
-  GAS_URL: 'https://script.google.com/macros/s/AKfycbxdloXwKW2QUmOslVHjdof-KK4AVWmlPS1RFD3MkItAUwoPNKOPDHtSfTQzeXuFX-Q5kA/exec',
+  GAS_URL: 'https://script.google.com/macros/s/AKfycbxZKWl5HQiPoZv8G7Sr_fWqqnQ3I6o2-e3rLOVZ3-B882fGORTYuP0th1S7l6dDMapIeA/exec',
   PROXY_URL: 'https://script.google.com/macros/s/AKfycbz1p1FvRx93CXLCSS_LVaCGXcVhWtJ7n91C03xmzjzbhfao2GX2anQiWn5Yxkf6NJg/exec',
   SESSION_TIMEOUT: 3600,
   MAX_FILE_SIZE: 5 * 1024 * 1024,
@@ -234,6 +234,7 @@ async function handleParcelSubmission(e) {
     );
 
     const payload = {
+      userId: userData.userId,
       trackingNumber: formData.get('trackingNumber').trim().toUpperCase(),
       nameOnParcel: formData.get('nameOnParcel').trim(),
       phone: document.getElementById('phone').value,
@@ -814,34 +815,42 @@ function formatDate(dateString) {
 
 // ================= INITIALIZATION =================
 document.addEventListener('DOMContentLoaded', () => {
+  // Existing initialization code
   detectViewMode();
   initValidationListeners();
   createLoaderElement();
-
-  // Initialize category requirements on page load
+  
+  // Check category requirements on load
   checkCategoryRequirements();
-
+  
   // Initialize parcel declaration form
   const parcelForm = document.getElementById('declarationForm');
   if (parcelForm) {
     parcelForm.addEventListener('submit', handleParcelSubmission);
     
-    // Set up category change listener
+    // New User ID population code
+    const userData = checkSession();
+    if (userData) {
+      const userIdField = document.getElementById('userId');
+      const phoneField = document.getElementById('phone');
+      
+      if (userIdField) {
+        userIdField.value = userData.userId || '';
+      }
+      if (phoneField) {
+        phoneField.value = userData.phone || '';
+        phoneField.readOnly = true;
+      }
+    }
+
+    // Existing category change listener
     const categorySelect = document.getElementById('itemCategory');
     if (categorySelect) {
       categorySelect.addEventListener('change', checkCategoryRequirements);
     }
-
-    // Phone field setup
-    const phoneField = document.getElementById('phone');
-    if (phoneField) {
-      const userData = checkSession();
-      phoneField.value = userData?.phone || '';
-      phoneField.readOnly = true;
-    }
   }
 
-  // Session management
+  // Existing session management
   const publicPages = ['login.html', 'register.html', 'forgot-password.html'];
   const isPublicPage = publicPages.some(page => 
     window.location.pathname.includes(page)
@@ -856,11 +865,13 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
+  // Existing window event listeners
   window.addEventListener('beforeunload', () => {
     const errorElement = document.getElementById('error-message');
     if (errorElement) errorElement.style.display = 'none';
   });
 
+  // Existing focus management
   const firstInput = document.querySelector('input:not([type="hidden"])');
   if (firstInput) firstInput.focus();
 });
