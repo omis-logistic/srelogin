@@ -1,7 +1,7 @@
 //scripts/app.js
 // ================= CONFIGURATION =================
 const CONFIG = {
-  GAS_URL: 'https://script.google.com/macros/s/AKfycbx4j4vlUeF6gTYfidYXoWRzC51et4nER8hLZpNdAvYXeDI4WB59dQ2qsRnofOJJ57nPew/exec',
+  GAS_URL: 'https://script.google.com/macros/s/AKfycbxxQjcx8_LHzKtgD8vnQKfugVOVzwHxhrSMNwzpmyZ-qPqsoFkTdVOGTkbcsf1CHTzM/exec',
   PROXY_URL: 'https://script.google.com/macros/s/AKfycbz1p1FvRx93CXLCSS_LVaCGXcVhWtJ7n91C03xmzjzbhfao2GX2anQiWn5Yxkf6NJg/exec',
   SESSION_TIMEOUT: 3600,
   MAX_FILE_SIZE: 5 * 1024 * 1024,
@@ -71,31 +71,72 @@ function createErrorElement() {
 
 // ================= SESSION MANAGEMENT =================
 function checkSession() {
+  // Get session data from storage
   const sessionData = sessionStorage.getItem('userData');
   const lastActivity = localStorage.getItem('lastActivity');
 
-  // NEW USER ID VALIDATION =============================
-  if (sessionData && !JSON.parse(sessionData).userId) {
-    console.error('User ID missing in session data!');
+  // NEW: Handle legacy sessions missing User ID
+  if (sessionData) {
+    try {
+      const parsedData = JSON.parse(sessionData);
+      
+      // Modified validation (only enforce User ID if not in temp password flow)
+      if (!parsedData.userId && !parsedData.tempPassword) {
+        console.warn('Session validation: Missing User ID in persistent session');
+        handleLogout();
+        return null;
+      }
+    } catch (e) {
+      console.error('Session data corruption:', e);
+      handleLogout();
+      return null;
+    }
+  }
+
+  // Existing session checks
+  if (!sessionData) {
+    console.log('No session data found');
     handleLogout();
     return null;
   }
 
+  // Existing timeout check
   if (lastActivity && Date.now() - lastActivity > CONFIG.SESSION_TIMEOUT * 1000) {
+    console.warn('Session expired due to inactivity');
     handleLogout();
     return null;
   }
 
+  // Update activity timestamp
   localStorage.setItem('lastActivity', Date.now());
-  const userData = JSON.parse(sessionData);
-  
-  if (userData?.tempPassword && !window.location.pathname.includes('password-reset.html')) {
+
+  // Parse and validate session structure
+  let userData;
+  try {
+    userData = JSON.parse(sessionData);
+    
+    // Existing temporary password check
+    if (userData.tempPassword && !window.location.pathname.includes('password-reset.html')) {
+      console.warn('Temp password requires reset');
+      handleLogout();
+      return null;
+    }
+
+    // Maintained legacy field check
+    if (!userData.phone) {
+      console.error('Session missing phone number');
+      handleLogout();
+      return null;
+    }
+
+  } catch (error) {
+    console.error('Invalid session data:', error);
     handleLogout();
     return null;
   }
 
   return userData;
-};
+}
 
 function handleLogout() {
   sessionStorage.clear(); // This clears the freshLogin flag
@@ -643,12 +684,12 @@ async function handleLogin() {
     const result = await callAPI('processLogin', { phone, password });
     
     if (result.success) {
-      // Enhanced session storage with User ID
+      // Ensure complete session data
       sessionStorage.setItem('userData', JSON.stringify({
         phone: result.phone,
-        userId: result.userId,  // Added User ID
+        userId: result.userId, // Mandatory field
         tempPassword: result.tempPassword,
-        email: result.email     // Existing field
+        email: result.email
       }));
       
       localStorage.setItem('lastActivity', Date.now());
