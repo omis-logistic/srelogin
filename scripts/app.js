@@ -1,7 +1,7 @@
 //scripts/app.js
 // ================= CONFIGURATION =================
 const CONFIG = {
-  GAS_URL: 'https://script.google.com/macros/s/AKfycbwfnzIKy5JgrAFwHPZnIi-e6hesZU2WEkEvAZWalRrckzQ43nNqR9s_JSgt0F1UpIfTZA/exec',
+  GAS_URL: 'https://script.google.com/macros/s/AKfycbxdloXwKW2QUmOslVHjdof-KK4AVWmlPS1RFD3MkItAUwoPNKOPDHtSfTQzeXuFX-Q5kA/exec',
   PROXY_URL: 'https://script.google.com/macros/s/AKfycbz1p1FvRx93CXLCSS_LVaCGXcVhWtJ7n91C03xmzjzbhfao2GX2anQiWn5Yxkf6NJg/exec',
   SESSION_TIMEOUT: 3600,
   MAX_FILE_SIZE: 5 * 1024 * 1024,
@@ -221,9 +221,18 @@ async function handleParcelSubmission(e) {
 
   try {
     const formData = new FormData(form);
-    const files = Array.from(formData.getAll('files[]'));
-    
-    // ORIGINAL MARK 1 PAYLOAD
+    const itemCategory = formData.get('itemCategory');
+    const files = Array.from(formData.getAll('files[]')); // Changed to match input name
+
+    // Process ALL files regardless of category
+    const processedFiles = await Promise.all(
+      files.map(async file => ({
+        name: file.name,
+        type: file.type,
+        data: await readFileAsBase64(file)
+      }))
+    );
+
     const payload = {
       trackingNumber: formData.get('trackingNumber').trim().toUpperCase(),
       nameOnParcel: formData.get('nameOnParcel').trim(),
@@ -232,23 +241,18 @@ async function handleParcelSubmission(e) {
       quantity: formData.get('quantity'),
       price: formData.get('price'),
       collectionPoint: formData.get('collectionPoint'),
-      itemCategory: formData.get('itemCategory'),
-      userId: document.getElementById('userId').value // ONLY ADDITION
+      itemCategory: itemCategory,
+      files: processedFiles
     };
-
-    // ORIGINAL MARK 1 SUBMISSION FLOW
-    const submissionForm = new FormData();
-    submissionForm.append('data', JSON.stringify(payload));
-    files.forEach(file => submissionForm.append('files[]', file));
 
     await fetch(CONFIG.PROXY_URL, {
       method: 'POST',
-      body: submissionForm
+      headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+      body: `payload=${encodeURIComponent(JSON.stringify(payload))}`
     });
 
   } catch (error) {
     console.error('Submission error:', error);
-    showError('Submission failed. Please try again.');
   } finally {
     showLoading(false);
     resetForm();
@@ -611,12 +615,8 @@ async function handleLogin() {
   try {
     const result = await callAPI('processLogin', { phone, password });
     
-    // --- MODIFIED LOGIN SUCCESS HANDLER ---
     if (result.success) {
-      sessionStorage.setItem('userData', JSON.stringify({
-        ...result,
-        userId: result.userId // Store user ID from backend response
-      }));
+      sessionStorage.setItem('userData', JSON.stringify(result));
       localStorage.setItem('lastActivity', Date.now());
       
       if (result.tempPassword) {
@@ -627,10 +627,7 @@ async function handleLogin() {
     } else {
       showError(result.message || 'Authentication failed');
     }
-    // --- END MODIFIED SECTION ---
-    
   } catch (error) {
-    console.error('Login error:', error);
     showError('Login failed - please try again');
   }
 }
@@ -663,32 +660,22 @@ async function handlePasswordRecovery() {
   const phone = document.getElementById('recoveryPhone').value.trim();
   const email = document.getElementById('recoveryEmail').value.trim();
 
-  // Add validation feedback
-  if (!validatePhone(phone)) {
-    showError('Invalid phone format (673xxxxxxx or 60xxxxxxxxx)');
+  if (!validatePhone(phone) || !validateEmail(email)) {
+    showError('Please check your inputs');
     return;
   }
 
-  if (!validateEmail(email)) {
-    showError('Invalid email format');
-    return;
-  }
-
-  showLoading(true);
-  
   try {
     const result = await callAPI('initiatePasswordReset', { phone, email });
     
     if (result.success) {
-      showError('Temporary password sent to your email', 'success');
-      setTimeout(() => safeRedirect('login.html'), 3000);
+      alert('Temporary password sent to your email!');
+      safeRedirect('login.html');
     } else {
-      showError(result.message || 'Recovery failed');
+      showError(result.message || 'Password recovery failed');
     }
   } catch (error) {
     showError('Password recovery failed - please try again');
-  } finally {
-    showLoading(false);
   }
 }
 
@@ -827,11 +814,32 @@ function formatDate(dateString) {
 
 // ================= INITIALIZATION =================
 document.addEventListener('DOMContentLoaded', () => {
-  // Core initializations
   detectViewMode();
   initValidationListeners();
   createLoaderElement();
-  createErrorElement();
+
+  // Initialize category requirements on page load
+  checkCategoryRequirements();
+
+  // Initialize parcel declaration form
+  const parcelForm = document.getElementById('declarationForm');
+  if (parcelForm) {
+    parcelForm.addEventListener('submit', handleParcelSubmission);
+    
+    // Set up category change listener
+    const categorySelect = document.getElementById('itemCategory');
+    if (categorySelect) {
+      categorySelect.addEventListener('change', checkCategoryRequirements);
+    }
+
+    // Phone field setup
+    const phoneField = document.getElementById('phone');
+    if (phoneField) {
+      const userData = checkSession();
+      phoneField.value = userData?.phone || '';
+      phoneField.readOnly = true;
+    }
+  }
 
   // Session management
   const publicPages = ['login.html', 'register.html', 'forgot-password.html'];
@@ -841,75 +849,20 @@ document.addEventListener('DOMContentLoaded', () => {
 
   if (!isPublicPage) {
     const userData = checkSession();
-    if (!userData) {
-      safeRedirect('login.html');
-      return;
-    }
-
+    if (!userData) return;
+    
     if (userData.tempPassword && !window.location.pathname.includes('password-reset.html')) {
       handleLogout();
     }
   }
 
-  // Form initializations
-  const phoneField = document.getElementById('phone');
-  if (phoneField) {
-    const userData = checkSession();
-    phoneField.value = userData?.phone || '';
-    phoneField.readOnly = !isPublicPage; // Fix: Only readonly for logged-in users
-  }
-
-  // User ID fetch
-  const userData = checkSession();
-  if (userData) {
-    const callbackName = `userInfo_${Date.now()}`;
-    const script = document.createElement('script');
-    script.src = `${CONFIG.GAS_URL}?action=getUserInfo&phone=${encodeURIComponent(userData.phone)}&callback=${callbackName}`;
-
-    window[callbackName] = (response) => {
-      if (response.success) {
-        document.getElementById('userId').value = response.userId || '';
-      }
-      document.body.removeChild(script);
-      delete window[callbackName];
-    };
-    document.body.appendChild(script);
-  }
-
-  // Form handlers
-  checkCategoryRequirements();
-  setupCategoryChangeListener();
-
-  // NEW PASSWORD RECOVERY HANDLER INIT
-  initPasswordRecoveryHandlers(); // ← Added line
-
-  // Parcel form setup
-  const parcelForm = document.getElementById('declarationForm');
-  if (parcelForm) {
-    parcelForm.addEventListener('submit', handleParcelSubmission);
-    
-    const categorySelect = document.getElementById('itemCategory');
-    if (categorySelect) {
-      categorySelect.addEventListener('change', checkCategoryRequirements);
-    }
-  }
-
-  // Existing UI handlers
-  initializeMobileMenu();
-  initAddressAutocomplete(); // Hypothetical existing function
-
-  // Session monitoring
   window.addEventListener('beforeunload', () => {
     const errorElement = document.getElementById('error-message');
     if (errorElement) errorElement.style.display = 'none';
   });
 
-  // Focus management
   const firstInput = document.querySelector('input:not([type="hidden"])');
   if (firstInput) firstInput.focus();
-
-  // Performance monitoring
-  initAnalytics(); // Hypothetical existing function
 });
 
 // New functions for category requirements =================
@@ -939,12 +892,5 @@ function setupCategoryChangeListener() {
   const categorySelect = document.getElementById('itemCategory');
   if (categorySelect) {
     categorySelect.addEventListener('change', checkCategoryRequirements);
-  }
-}
-
-function initPasswordRecoveryHandlers() {
-  const forgotPasswordBtn = document.getElementById('forgotPasswordBtn');
-  if (forgotPasswordBtn) {
-    forgotPasswordBtn.addEventListener('click', handlePasswordRecovery);
   }
 }
