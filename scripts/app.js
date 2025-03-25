@@ -1,7 +1,7 @@
 //scripts/app.js
 // ================= CONFIGURATION =================
 const CONFIG = {
-  GAS_URL: 'https://script.google.com/macros/s/AKfycbwMVtCvbNwpa9PtkImool5FvZV0nOl5t30825EGclrOoFvx4OvP8HfYMHsODu3MhXM14Q/exec',
+  GAS_URL: 'https://script.google.com/macros/s/AKfycbzJ2ybkXZZZ3ystyomFqKYQW6cQN6AxCGt_GtFKFYALeONoiGPteDKjyS-09o96QqEDCA/exec',
   PROXY_URL: 'https://script.google.com/macros/s/AKfycbz1p1FvRx93CXLCSS_LVaCGXcVhWtJ7n91C03xmzjzbhfao2GX2anQiWn5Yxkf6NJg/exec',
   SESSION_TIMEOUT: 3600,
   MAX_FILE_SIZE: 5 * 1024 * 1024,
@@ -221,41 +221,46 @@ async function handleParcelSubmission(e) {
 
   try {
     const formData = new FormData(form);
-    const itemCategory = formData.get('itemCategory');
-    const files = Array.from(formData.getAll('files[]'));
-
-    // Restore original payload structure
+    const userId = document.getElementById('userId').value; // Get User ID
+    
+    // Create proper multipart form data
     const payload = {
-      trackingNumber: formData.get('trackingNumber').trim().toUpperCase(),
-      nameOnParcel: formData.get('nameOnParcel').trim(),
-      phone: document.getElementById('phone').value,
-      userId: document.getElementById('userId').value, // Add User ID here
-      itemDescription: formData.get('itemDescription').trim(),
-      quantity: formData.get('quantity'),
-      price: formData.get('price'),
-      collectionPoint: formData.get('collectionPoint'),
-      itemCategory: itemCategory,
-      files: files // Maintain original files handling
+      action: 'submitParcelDeclaration',
+      data: JSON.stringify({
+        trackingNumber: formData.get('trackingNumber').trim().toUpperCase(),
+        nameOnParcel: formData.get('nameOnParcel').trim(),
+        phone: document.getElementById('phone').value,
+        userId: userId, // Include User ID
+        itemDescription: formData.get('itemDescription').trim(),
+        quantity: formData.get('quantity'),
+        price: formData.get('price'),
+        collectionPoint: formData.get('collectionPoint'),
+        itemCategory: formData.get('itemCategory')
+      })
     };
 
-    // Keep original submission format
-    const formPayload = new FormData();
-    formPayload.append('data', JSON.stringify(payload));
-    
-    // Add files directly to FormData as before
+    // Add files to FormData
+    const files = formData.getAll('files[]');
     files.forEach((file, index) => {
-      formPayload.append(`file${index}`, file);
+      payload[`file${index}`] = file;
     });
 
-    // Restore original fetch call
+    // Create proper FormData object
+    const submissionData = new FormData();
+    submissionData.append('data', payload.data);
+    files.forEach((file, index) => {
+      submissionData.append(`file${index}`, file);
+    });
+
+    // Send request with proper headers
     await fetch(CONFIG.PROXY_URL, {
       method: 'POST',
-      body: formPayload
+      body: submissionData
     });
 
   } catch (error) {
     console.error('Submission error:', error);
-    showError('Submission failed. Please check your connection.');
+    showError('Submission failed. Please try again.');
   } finally {
     showLoading(false);
     resetForm();
