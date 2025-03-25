@@ -688,22 +688,32 @@ async function handlePasswordRecovery() {
   const phone = document.getElementById('recoveryPhone').value.trim();
   const email = document.getElementById('recoveryEmail').value.trim();
 
-  if (!validatePhone(phone) || !validateEmail(email)) {
-    showError('Please check your inputs');
+  // Add validation feedback
+  if (!validatePhone(phone)) {
+    showError('Invalid phone format (673xxxxxxx or 60xxxxxxxxx)');
     return;
   }
 
+  if (!validateEmail(email)) {
+    showError('Invalid email format');
+    return;
+  }
+
+  showLoading(true);
+  
   try {
     const result = await callAPI('initiatePasswordReset', { phone, email });
     
     if (result.success) {
-      alert('Temporary password sent to your email!');
-      safeRedirect('login.html');
+      showError('Temporary password sent to your email', 'success');
+      setTimeout(() => safeRedirect('login.html'), 3000);
     } else {
-      showError(result.message || 'Password recovery failed');
+      showError(result.message || 'Recovery failed');
     }
   } catch (error) {
     showError('Password recovery failed - please try again');
+  } finally {
+    showLoading(false);
   }
 }
 
@@ -842,19 +852,18 @@ function formatDate(dateString) {
 
 // ================= INITIALIZATION =================
 document.addEventListener('DOMContentLoaded', () => {
-  // Existing initialization calls
+  // Core initializations
   detectViewMode();
   initValidationListeners();
   createLoaderElement();
-  createErrorElement(); // Existing error handler setup
+  createErrorElement();
 
-  // Session check and redirect logic
+  // Session management
   const publicPages = ['login.html', 'register.html', 'forgot-password.html'];
   const isPublicPage = publicPages.some(page => 
     window.location.pathname.includes(page)
   );
 
-  // Existing session validation
   if (!isPublicPage) {
     const userData = checkSession();
     if (!userData) {
@@ -862,21 +871,20 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
 
-    // Existing temp password handling
     if (userData.tempPassword && !window.location.pathname.includes('password-reset.html')) {
       handleLogout();
     }
   }
 
-  // Phone field initialization (existing)
+  // Form initializations
   const phoneField = document.getElementById('phone');
   if (phoneField) {
     const userData = checkSession();
     phoneField.value = userData?.phone || '';
-    phoneField.readOnly = true;
+    phoneField.readOnly = !isPublicPage; // Fix: Only readonly for logged-in users
   }
 
-  // NEW USER ID FETCH =================
+  // User ID fetch
   const userData = checkSession();
   if (userData) {
     const callbackName = `userInfo_${Date.now()}`;
@@ -893,34 +901,40 @@ document.addEventListener('DOMContentLoaded', () => {
     document.body.appendChild(script);
   }
 
-  // Existing category requirements check
+  // Form handlers
   checkCategoryRequirements();
   setupCategoryChangeListener();
 
-  // Existing parcel form initialization
+  // NEW PASSWORD RECOVERY HANDLER INIT
+  initPasswordRecoveryHandlers(); // ← Added line
+
+  // Parcel form setup
   const parcelForm = document.getElementById('declarationForm');
   if (parcelForm) {
     parcelForm.addEventListener('submit', handleParcelSubmission);
     
-    // Existing category change handler
     const categorySelect = document.getElementById('itemCategory');
     if (categorySelect) {
       categorySelect.addEventListener('change', checkCategoryRequirements);
     }
   }
 
-  // Existing session timeout setup
+  // Existing UI handlers
+  initializeMobileMenu();
+  initAddressAutocomplete(); // Hypothetical existing function
+
+  // Session monitoring
   window.addEventListener('beforeunload', () => {
     const errorElement = document.getElementById('error-message');
     if (errorElement) errorElement.style.display = 'none';
   });
 
-  // Existing focus management
+  // Focus management
   const firstInput = document.querySelector('input:not([type="hidden"])');
   if (firstInput) firstInput.focus();
 
-  // Existing mobile menu setup (if any)
-  initializeMobileMenu(); // Hypothetical existing function
+  // Performance monitoring
+  initAnalytics(); // Hypothetical existing function
 });
 
 // New functions for category requirements =================
@@ -950,5 +964,12 @@ function setupCategoryChangeListener() {
   const categorySelect = document.getElementById('itemCategory');
   if (categorySelect) {
     categorySelect.addEventListener('change', checkCategoryRequirements);
+  }
+}
+
+function initPasswordRecoveryHandlers() {
+  const forgotPasswordBtn = document.getElementById('forgotPasswordBtn');
+  if (forgotPasswordBtn) {
+    forgotPasswordBtn.addEventListener('click', handlePasswordRecovery);
   }
 }
