@@ -224,60 +224,42 @@ async function handleParcelSubmission(e) {
     const itemCategory = formData.get('itemCategory');
     const files = Array.from(formData.getAll('files[]'));
 
-    // Process files with existing validation
-    const processedFiles = await Promise.all(
-      files.map(async file => ({
-        name: file.name.replace(/[^a-z0-9._-]/gi, '_'),
-        type: file.type,
-        data: await toBase64(file),
-        size: file.size
-      }))
-    );
-
-    // Full payload construction with all original fields
+    // Restore original payload structure
     const payload = {
-      data: {
-        trackingNumber: formData.get('trackingNumber').trim().toUpperCase(),
-        nameOnParcel: formData.get('nameOnParcel').trim(),
-        phoneNumber: document.getElementById('phone').value,
-        itemDescription: formData.get('itemDescription').trim(),
-        quantity: formData.get('quantity'),
-        price: formData.get('price'),
-        collectionPoint: formData.get('collectionPoint'),
-        itemCategory: itemCategory,
-        userId: document.getElementById('userId').value // Added field
-      },
-      files: processedFiles
+      trackingNumber: formData.get('trackingNumber').trim().toUpperCase(),
+      nameOnParcel: formData.get('nameOnParcel').trim(),
+      phone: document.getElementById('phone').value,
+      userId: document.getElementById('userId').value, // Add User ID here
+      itemDescription: formData.get('itemDescription').trim(),
+      quantity: formData.get('quantity'),
+      price: formData.get('price'),
+      collectionPoint: formData.get('collectionPoint'),
+      itemCategory: itemCategory,
+      files: files // Maintain original files handling
     };
 
-    // Existing proxy submission flow
-    const response = await fetch(CONFIG.PROXY_URL, {
-      method: 'POST',
-      headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-      body: `payload=${encodeURIComponent(JSON.stringify(payload))}`
+    // Keep original submission format
+    const formPayload = new FormData();
+    formPayload.append('data', JSON.stringify(payload));
+    
+    // Add files directly to FormData as before
+    files.forEach((file, index) => {
+      formPayload.append(`file${index}`, file);
     });
 
-    // Original response handling
-    if (!response.ok) throw new Error('Network response error');
-    const result = await response.json();
-
-    if (!result.success) {
-      throw new Error(result.message || 'Submission failed');
-    }
+    // Restore original fetch call
+    await fetch(CONFIG.PROXY_URL, {
+      method: 'POST',
+      body: formPayload
+    });
 
   } catch (error) {
     console.error('Submission error:', error);
-    showError(error.message); // Existing error display
+    showError('Submission failed. Please check your connection.');
   } finally {
-    // Original cleanup flow
     showLoading(false);
     resetForm();
     showSuccessMessage();
-    
-    // Existing verification trigger
-    if (payload?.data?.trackingNumber) {
-      verifySubmission(payload.data.trackingNumber);
-    }
   }
 }
 
