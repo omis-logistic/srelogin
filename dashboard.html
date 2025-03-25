@@ -283,62 +283,45 @@
       document.body.style.overflow = 'auto';
     }
 
-document.addEventListener('DOMContentLoaded', () => {
-  // Enhanced session validation
-  const userData = checkSession();
-  if (!userData?.userId || !userData?.phone) {
-    console.error('Session validation failed - missing critical user data');
-    handleLogout();
-    return;
+(function initDashboard() {
+  const userData = JSON.parse(sessionStorage.getItem('userData'));
+  if (!userData) return safeRedirect('login.html');
+  if (userData.tempPassword) return safeRedirect('password-reset.html');
+
+  // New URL parameter check
+  const urlParams = new URLSearchParams(window.location.search);
+  if (urlParams.has('fresh')) {
+    // Show modal and clean URL
+    document.getElementById('welcomeModal').style.display = 'block';
+    window.history.replaceState({}, '', 'dashboard.html');
   }
 
-  // Initialize dashboard functions
-  (function initDashboard() {
-    const urlParams = new URLSearchParams(window.location.search);
-    
-    // Welcome modal logic
-    if (urlParams.has('fresh')) {
-      document.getElementById('welcomeModal').style.display = 'block';
-      window.history.replaceState({}, '', 'dashboard.html');
-    }
+  const modal = document.getElementById('welcomeModal');
 
-    const modal = document.getElementById('welcomeModal');
+  // Dual verification check
+  if (localStorage.getItem('freshLogin') === 'true' && 
+      sessionStorage.getItem('modalShown') === 'false') {
+    document.body.style.overflow = 'hidden';
+    modal.style.display = 'block';
+    sessionStorage.setItem('modalShown', 'true');
+    localStorage.removeItem('freshLogin');
+  }
 
-    // Dual verification check
-    if (localStorage.getItem('freshLogin') === 'true' && 
-        sessionStorage.getItem('modalShown') === 'false') {
-      document.body.style.overflow = 'hidden';
-      modal.style.display = 'block';
-      sessionStorage.setItem('modalShown', 'true');
-      localStorage.removeItem('freshLogin');
+  window.onclick = (event) => {
+    if(event.target === document.getElementById('welcomeModal')) {
+      document.getElementById('welcomeModal').style.display = 'none';
     }
+  }
 
-    // Event handlers
-    window.onclick = (event) => {
-      if(event.target === modal) {
-        modal.style.display = 'none';
-      }
-    }
-
-    // Navigation functions
-    window.showMyInfo = () => safeRedirect('my-info.html');
-    window.showParcelDeclaration = () => {
-      if (userData?.userId) {  // Additional validation
-        safeRedirect('parcel-declaration.html');
-      } else {
-        showError('Session invalid - please login again');
-        handleLogout();
-      }
-    };
-    
-    window.showTrackParcel = () => safeRedirect('track-parcel.html');
-    
-    window.handleLogout = () => {
-      sessionStorage.clear();
-      safeRedirect('login.html');
-    }
-  })();
-});
+  window.showMyInfo = () => safeRedirect('my-info.html');
+  window.showParcelDeclaration = () => safeRedirect('parcel-declaration.html');
+  window.showTrackParcel = () => safeRedirect('track-parcel.html');
+  
+  window.handleLogout = () => {
+    sessionStorage.clear();
+    safeRedirect('login.html');
+  }
+})();
   </script>
   <div class="footer-text">
   Built by Omis Logistics. For more info 👉 
