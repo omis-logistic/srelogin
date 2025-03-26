@@ -835,29 +835,7 @@ document.addEventListener('DOMContentLoaded', () => {
   detectViewMode();
   initValidationListeners();
   createLoaderElement();
-
-  // Initialize category requirements on page load
   checkCategoryRequirements();
-
-  // Initialize parcel declaration form
-  const parcelForm = document.getElementById('declarationForm');
-  if (parcelForm) {
-    parcelForm.addEventListener('submit', handleParcelSubmission);
-    
-    // Set up category change listener
-    const categorySelect = document.getElementById('itemCategory');
-    if (categorySelect) {
-      categorySelect.addEventListener('change', checkCategoryRequirements);
-    }
-
-    // Phone field setup
-    const phoneField = document.getElementById('phone');
-    if (phoneField) {
-      const userData = checkSession();
-      phoneField.value = userData?.phone || '';
-      phoneField.readOnly = true;
-    }
-  }
 
   // Session management
   const publicPages = ['login.html', 'register.html', 'forgot-password.html'];
@@ -865,9 +843,40 @@ document.addEventListener('DOMContentLoaded', () => {
     window.location.pathname.includes(page)
   );
 
+  // Parcel declaration page specific setup
+  const parcelForm = document.getElementById('declarationForm');
+  if (parcelForm) {
+    // Only run on parcel declaration page
+    parcelForm.addEventListener('submit', handleParcelSubmission);
+
+    // Phone field setup
+    const phoneField = document.getElementById('phone');
+    const userIdField = document.getElementById('userId');
+    if (phoneField && userIdField) {
+      const userData = checkSession();
+      if (userData) {
+        phoneField.value = userData.phone || '';
+        phoneField.readOnly = true;
+        
+        // NEW: Populate User ID
+        userIdField.value = userData.userId || 'Loading...';
+      }
+    }
+
+    // Category change listener
+    const categorySelect = document.getElementById('itemCategory');
+    if (categorySelect) {
+      categorySelect.addEventListener('change', checkCategoryRequirements);
+    }
+  }
+
+  // Session validation for protected pages
   if (!isPublicPage) {
     const userData = checkSession();
-    if (!userData) return;
+    if (!userData) {
+      handleLogout();
+      return;
+    }
     
     if (userData.tempPassword && !window.location.pathname.includes('password-reset.html')) {
       handleLogout();
