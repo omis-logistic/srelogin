@@ -1,7 +1,7 @@
 //scripts/app.js
 // ================= CONFIGURATION =================
 const CONFIG = {
-  GAS_URL: 'https://script.google.com/macros/s/AKfycbzGQeZDpwH95F9YaW6Czke4JEzGxDXGbuov-ZxT86BEQQPNRo37KlzOU_BECbonFXS7SQ/exec',
+  GAS_URL: 'https://script.google.com/macros/s/AKfycbxCmS7LFq_ozCzn8oeYpPm-f_CLAxfubgCe8zrnkUPc7E341vZi93egTaHCSiFsICz7EA/exec',
   PROXY_URL: 'https://script.google.com/macros/s/AKfycbz1p1FvRx93CXLCSS_LVaCGXcVhWtJ7n91C03xmzjzbhfao2GX2anQiWn5Yxkf6NJg/exec',
   SESSION_TIMEOUT: 3600,
   MAX_FILE_SIZE: 5 * 1024 * 1024,
@@ -843,34 +843,36 @@ document.addEventListener('DOMContentLoaded', () => {
     window.location.pathname.includes(page)
   );
 
-  // Parcel declaration page specific setup
+  // Initialize parcel declaration form
   const parcelForm = document.getElementById('declarationForm');
   if (parcelForm) {
-    // Only run on parcel declaration page
     parcelForm.addEventListener('submit', handleParcelSubmission);
-
-    // Phone field setup
-    const phoneField = document.getElementById('phone');
-    const userIdField = document.getElementById('userId');
-    if (phoneField && userIdField) {
-      const userData = checkSession();
-      if (userData) {
-        phoneField.value = userData.phone || '';
-        phoneField.readOnly = true;
-        
-        // NEW: Populate User ID
-        userIdField.value = userData.userId || 'Loading...';
-      }
-    }
-
-    // Category change listener
+    
+    // Set up category change listener
     const categorySelect = document.getElementById('itemCategory');
     if (categorySelect) {
       categorySelect.addEventListener('change', checkCategoryRequirements);
     }
+
+    // Auto-populate fields
+    const userData = checkSession();
+    if (userData) {
+      // Phone field
+      const phoneField = document.getElementById('phone');
+      if (phoneField) {
+        phoneField.value = userData.phone || '';
+        phoneField.readOnly = true;
+      }
+      
+      // UserID field - NEW IMPLEMENTATION
+      const userIdField = document.getElementById('userId');
+      if (userIdField) {
+        userIdField.value = userData.userId || 'N/A';
+      }
+    }
   }
 
-  // Session validation for protected pages
+  // Session validation
   if (!isPublicPage) {
     const userData = checkSession();
     if (!userData) {
