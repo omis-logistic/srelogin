@@ -1,7 +1,7 @@
 //scripts/app.js
 // ================= CONFIGURATION =================
 const CONFIG = {
-  GAS_URL: 'https://script.google.com/macros/s/AKfycbw7AdOzvpWqjhjA73SoNw1jmlu5NhThraNEYAMQ0O98lyMX4Pivko_g8bP_ocF36vtayg/exec',
+  GAS_URL: 'https://script.google.com/macros/s/AKfycbyr7qD75LT1gCALQQAz8GIsFO1p7AArTeksIiXSL8LxVFbEbf3ae4Q8YZtfDuWfZoS6SA/exec',
   PROXY_URL: 'https://script.google.com/macros/s/AKfycbz1p1FvRx93CXLCSS_LVaCGXcVhWtJ7n91C03xmzjzbhfao2GX2anQiWn5Yxkf6NJg/exec',
   SESSION_TIMEOUT: 3600,
   MAX_FILE_SIZE: 5 * 1024 * 1024,
@@ -194,8 +194,8 @@ function resetForm() {
   const form = document.getElementById('declarationForm');
   if (!form) return;
 
-  // Clear all fields except phone
-  form.querySelectorAll('input:not(#phone), select, textarea').forEach(field => {
+  // Preserve both phone AND user ID
+  form.querySelectorAll('input:not(#phone,#userId), select, textarea').forEach(field => {
     if (field.type === 'file') {
       field.value = null;
     } else if (field.tagName === 'SELECT') {
@@ -205,11 +205,16 @@ function resetForm() {
     }
   });
 
-  // Preserve phone number styling
+  // Keep existing phone styling
   const phoneField = document.getElementById('phone');
+  const userIdField = document.getElementById('userId');
   if (phoneField) {
     phoneField.style.backgroundColor = '#2a2a2a';
     phoneField.style.color = '#ffffff';
+  }
+  if (userIdField) {
+    userIdField.style.backgroundColor = '#2a2a2a';
+    userIdField.style.color = '#ffffff';
   }
 }
 
@@ -245,6 +250,8 @@ async function handleParcelSubmission(e) {
       userId: document.getElementById('userId').value,
       files: processedFiles
     };
+
+    console.log('Submission Payload:', payload); // Debug log
 
     await fetch(CONFIG.PROXY_URL, {
       method: 'POST',
