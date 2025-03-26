@@ -1,7 +1,7 @@
 //scripts/app.js
 // ================= CONFIGURATION =================
 const CONFIG = {
-  GAS_URL: 'https://script.google.com/macros/s/AKfycbxxQjcx8_LHzKtgD8vnQKfugVOVzwHxhrSMNwzpmyZ-qPqsoFkTdVOGTkbcsf1CHTzM/exec',
+  GAS_URL: 'https://script.google.com/macros/s/AKfycbzGQeZDpwH95F9YaW6Czke4JEzGxDXGbuov-ZxT86BEQQPNRo37KlzOU_BECbonFXS7SQ/exec',
   PROXY_URL: 'https://script.google.com/macros/s/AKfycbz1p1FvRx93CXLCSS_LVaCGXcVhWtJ7n91C03xmzjzbhfao2GX2anQiWn5Yxkf6NJg/exec',
   SESSION_TIMEOUT: 3600,
   MAX_FILE_SIZE: 5 * 1024 * 1024,
@@ -70,73 +70,30 @@ function createErrorElement() {
 }
 
 // ================= SESSION MANAGEMENT =================
-function checkSession() {
-  // Get session data from storage
+const checkSession = () => {
   const sessionData = sessionStorage.getItem('userData');
   const lastActivity = localStorage.getItem('lastActivity');
 
-  // NEW: Handle legacy sessions missing User ID
-  if (sessionData) {
-    try {
-      const parsedData = JSON.parse(sessionData);
-      
-      // Modified validation (only enforce User ID if not in temp password flow)
-      if (!parsedData.userId && !parsedData.tempPassword) {
-        console.warn('Session validation: Missing User ID in persistent session');
-        handleLogout();
-        return null;
-      }
-    } catch (e) {
-      console.error('Session data corruption:', e);
-      handleLogout();
-      return null;
-    }
-  }
-
-  // Existing session checks
   if (!sessionData) {
-    console.log('No session data found');
     handleLogout();
     return null;
   }
 
-  // Existing timeout check
   if (lastActivity && Date.now() - lastActivity > CONFIG.SESSION_TIMEOUT * 1000) {
-    console.warn('Session expired due to inactivity');
     handleLogout();
     return null;
   }
 
-  // Update activity timestamp
   localStorage.setItem('lastActivity', Date.now());
-
-  // Parse and validate session structure
-  let userData;
-  try {
-    userData = JSON.parse(sessionData);
-    
-    // Existing temporary password check
-    if (userData.tempPassword && !window.location.pathname.includes('password-reset.html')) {
-      console.warn('Temp password requires reset');
-      handleLogout();
-      return null;
-    }
-
-    // Maintained legacy field check
-    if (!userData.phone) {
-      console.error('Session missing phone number');
-      handleLogout();
-      return null;
-    }
-
-  } catch (error) {
-    console.error('Invalid session data:', error);
+  const userData = JSON.parse(sessionData);
+  
+  if (userData?.tempPassword && !window.location.pathname.includes('password-reset.html')) {
     handleLogout();
     return null;
   }
 
   return userData;
-}
+};
 
 function handleLogout() {
   sessionStorage.clear(); // This clears the freshLogin flag
@@ -263,28 +220,20 @@ async function handleParcelSubmission(e) {
   showLoading(true);
 
   try {
-    // Debug: Check session data
-    const userData = checkSession();
-    console.log('[DEBUG] Submission User Data:', userData);
-    
-    if (!userData) throw new Error('Session expired - please login again');
-    
     const formData = new FormData(form);
-    const files = Array.from(formData.getAll('files[]'));
+    const itemCategory = formData.get('itemCategory');
+    const files = Array.from(formData.getAll('files[]')); // Changed to match input name
 
-    // Process files (existing validation)
+    // Process ALL files regardless of category
     const processedFiles = await Promise.all(
       files.map(async file => ({
-        name: file.name.replace(/[^a-z0-9._-]/gi, '_'),
+        name: file.name,
         type: file.type,
-        data: await readFileAsBase64(file),
-        size: file.size
+        data: await readFileAsBase64(file)
       }))
     );
 
-    // Build payload with debug logging
     const payload = {
-      userId: userData.userId, // User ID from session
       trackingNumber: formData.get('trackingNumber').trim().toUpperCase(),
       nameOnParcel: formData.get('nameOnParcel').trim(),
       phone: document.getElementById('phone').value,
@@ -292,38 +241,22 @@ async function handleParcelSubmission(e) {
       quantity: formData.get('quantity'),
       price: formData.get('price'),
       collectionPoint: formData.get('collectionPoint'),
-      itemCategory: formData.get('itemCategory'),
+      itemCategory: itemCategory,
       files: processedFiles
     };
-    console.log('[DEBUG] Submission Payload:', payload);
 
-    // Existing submission flow
     await fetch(CONFIG.PROXY_URL, {
       method: 'POST',
       headers: {'Content-Type': 'application/x-www-form-urlencoded'},
       body: `payload=${encodeURIComponent(JSON.stringify(payload))}`
     });
 
-    // Existing success handling
-    showSuccessMessage();
-    resetForm();
-
   } catch (error) {
-    // Existing error handling
     console.error('Submission error:', error);
-    showError(`Submission failed: ${error.message}`);
-    
-    // Existing security logging
-    if(typeof gtag !== 'undefined') {
-      gtag('event', 'exception', {
-        description: `Parcel submission error: ${error.message}`,
-        fatal: false
-      });
-    }
-    
   } finally {
-    // Existing cleanup
     showLoading(false);
+    resetForm();
+    showSuccessMessage();
   }
 }
 
@@ -333,6 +266,24 @@ function readFileAsBase64(file) {
     reader.onload = () => resolve(reader.result.split(',')[1]);
     reader.readAsDataURL(file);
   });
+}
+
+async function populateUserInfo() {
+  try {
+    const userData = checkSession();
+    if (!userData) return;
+
+    // Get User ID from backend
+    const response = await fetch(`${CONFIG.GAS_URL}?action=getUserID&phone=${userData.phone}&callback=callback${Date.now()}`);
+    const data = await response.json();
+    
+    if(data.success) {
+      document.getElementById('userId').value = data.userId;
+      document.getElementById('phone').value = userData.phone;
+    }
+  } catch (error) {
+    console.error('Error populating user info:', error);
+  }
 }
 
 // ================= VALIDATION CORE =================
@@ -669,7 +620,6 @@ async function handleLogin() {
   const phone = document.getElementById('phone').value.trim();
   const password = document.getElementById('password').value;
 
-  // Existing validation
   if (!validatePhone(phone)) {
     showError('Invalid phone number format');
     return;
@@ -684,44 +634,19 @@ async function handleLogin() {
     const result = await callAPI('processLogin', { phone, password });
     
     if (result.success) {
-      // Ensure complete session data
-      sessionStorage.setItem('userData', JSON.stringify({
-        phone: result.phone,
-        userId: result.userId, // Mandatory field
-        tempPassword: result.tempPassword,
-        email: result.email
-      }));
-      
+      sessionStorage.setItem('userData', JSON.stringify(result));
       localStorage.setItem('lastActivity', Date.now());
       
-      // Existing redirect logic
       if (result.tempPassword) {
         safeRedirect('password-reset.html');
       } else {
         safeRedirect('dashboard.html');
       }
-      
-      // Existing analytics tracking
-      if(typeof gtag !== 'undefined') {
-        gtag('event', 'login', {
-          'event_category': 'authentication',
-          'event_label': 'success'
-        });
-      }
     } else {
-      // Existing error handling
       showError(result.message || 'Authentication failed');
-      
-      // Existing security logging
-      console.warn(`Failed login attempt for: ${phone}`);
     }
   } catch (error) {
-    // Existing error handling
-    console.error('Login error:', error);
     showError('Login failed - please try again');
-    
-    // Existing session cleanup
-    sessionStorage.removeItem('userData');
   }
 }
 
@@ -907,69 +832,69 @@ function formatDate(dateString) {
 
 // ================= INITIALIZATION =================
 document.addEventListener('DOMContentLoaded', () => {
+  // Existing initialization code
   detectViewMode();
   initValidationListeners();
   createLoaderElement();
+  setupCategoryChangeListener();
 
-  // Initialize category requirements on page load
-  checkCategoryRequirements();
+  // Session management
+  const publicPages = ['login.html', 'register.html', 'forgot-password.html'];
+  const isPublicPage = publicPages.some(page => 
+    window.location.pathname.includes(page)
+  );
 
-  // Initialize parcel declaration form
+  // NEW ADDITION: Populate user info on parcel declaration page
+  if (window.location.pathname.includes('parcel-declaration.html')) {
+    const userData = checkSession();
+    if (!userData) return;
+    
+    // Our added function to populate User ID and phone
+    populateUserInfo(userData.phone); // Pass the phone from session
+    
+    // Existing phone field setup
+    const phoneField = document.getElementById('phone');
+    if (phoneField) {
+      phoneField.value = userData.phone || '';
+      phoneField.readOnly = true;
+    }
+  }
+
+  // Existing form initialization
   const parcelForm = document.getElementById('declarationForm');
   if (parcelForm) {
     parcelForm.addEventListener('submit', handleParcelSubmission);
     
-    // Set up category change listener
+    // Existing category handler
     const categorySelect = document.getElementById('itemCategory');
     if (categorySelect) {
       categorySelect.addEventListener('change', checkCategoryRequirements);
     }
+  }
 
-    // Set up user data
+  // Session management
+  const publicPages = ['login.html', 'register.html', 'forgot-password.html'];
+  const isPublicPage = publicPages.some(page => 
+    window.location.pathname.includes(page)
+  );
+
+  if (!isPublicPage) {
     const userData = checkSession();
-    console.log('User Data:', userData); // Check browser console for this output
-    if (userData) {
-      document.getElementById('phone').value = userData.phone || '';
-      // NEW USER ID POPULATION ===============
-      document.getElementById('userId').value = userData.userId || ''; 
-      // ======================================
-      document.getElementById('phone').readOnly = true;
+    if (!userData) return;
+    
+    if (userData.tempPassword && !window.location.pathname.includes('password-reset.html')) {
+      handleLogout();
     }
-
-    // Session management
-    const publicPages = ['login.html', 'register.html', 'forgot-password.html'];
-    const isPublicPage = publicPages.some(page => 
-      window.location.pathname.includes(page)
-    );
-
-    if (!isPublicPage) {
-      const userData = checkSession();
-      if (!userData) return;
-      
-      if (userData.tempPassword && !window.location.pathname.includes('password-reset.html')) {
-        handleLogout();
-      }
-    }
-
-    window.addEventListener('beforeunload', () => {
-      const errorElement = document.getElementById('error-message');
-      if (errorElement) errorElement.style.display = 'none';
-    });
-
-    const firstInput = document.querySelector('input:not([type="hidden"])');
-    if (firstInput) firstInput.focus();
   }
 
-  // Original initialization continues
-  setupCategoryChangeListener();
-  const userData = checkSession();
-  if(userData) {
-    loadUserInfo(userData.phone);
-  }
+  // Existing UI initialization
+  window.addEventListener('beforeunload', () => {
+    const errorElement = document.getElementById('error-message');
+    if (errorElement) errorElement.style.display = 'none';
+  });
 
-  // Existing session timeout checks
-  window.addEventListener('mousemove', () => localStorage.setItem('lastActivity', Date.now()));
-  window.addEventListener('keypress', () => localStorage.setItem('lastActivity', Date.now()));
+  const firstInput = document.querySelector('input:not([type="hidden"])');
+  if (firstInput) firstInput.focus();
 });
 
 // New functions for category requirements =================
