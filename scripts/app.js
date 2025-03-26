@@ -1,7 +1,7 @@
 //scripts/app.js
 // ================= CONFIGURATION =================
 const CONFIG = {
-  GAS_URL: 'https://script.google.com/macros/s/AKfycbwAnjjUQp9Fs8O0eajicPkUoeGN1mJdlwn2OLhnsJpoC9wBBY0doyfYAwE-AVdk1JiXPA/exec',
+  GAS_URL: 'https://script.google.com/macros/s/AKfycbzc10qcs2B-HfhmhjuUgughzXqW3wjaf-AAO2vp2r1pxxzh0VGZIEXYBbzKSk888X8VGQ/exec',
   PROXY_URL: 'https://script.google.com/macros/s/AKfycbz1p1FvRx93CXLCSS_LVaCGXcVhWtJ7n91C03xmzjzbhfao2GX2anQiWn5Yxkf6NJg/exec',
   SESSION_TIMEOUT: 3600,
   MAX_FILE_SIZE: 5 * 1024 * 1024,
@@ -837,6 +837,42 @@ function formatDate(dateString) {
   return new Date(dateString).toLocaleDateString('en-MY', options);
 }
 
+function initParcelDeclarationPage(userData) {
+  const phoneField = document.getElementById('phone');
+  const userIdField = document.getElementById('parcelUserId'); // Note different ID
+  
+  if (!phoneField || !userIdField) return;
+
+  phoneField.value = userData.phone || '';
+  phoneField.readOnly = true;
+
+  // First try session data
+  if (userData.userId) {
+    userIdField.value = userData.userId;
+    return;
+  }
+
+  // Fallback to API call
+  const callbackName = `userIdCallback_${Date.now()}`;
+  const script = document.createElement('script');
+  script.src = `${CONFIG.GAS_URL}?action=getParcelUserId&phone=${encodeURIComponent(userData.phone)}&callback=${callbackName}`;
+
+  window[callbackName] = (response) => {
+    if (response.success) {
+      userIdField.value = response.userId;
+      // Update session data
+      sessionStorage.setItem('userData', JSON.stringify({
+        ...userData,
+        userId: response.userId
+      }));
+    }
+    document.body.removeChild(script);
+    delete window[callbackName];
+  };
+  
+  document.body.appendChild(script);
+}
+
 // ================= INITIALIZATION =================
 document.addEventListener('DOMContentLoaded', () => {
   detectViewMode();
@@ -850,39 +886,20 @@ document.addEventListener('DOMContentLoaded', () => {
     window.location.pathname.includes(page)
   );
 
-  // Parcel declaration form setup
-  const parcelForm = document.getElementById('declarationForm');
-  if (parcelForm) {
-    // Existing form setup
-    parcelForm.addEventListener('submit', handleParcelSubmission);
-    document.getElementById('itemCategory').addEventListener('change', checkCategoryRequirements);
-
-    // New User ID population
+  // Parcel declaration page specific
+  if (window.location.pathname.includes('parcel-declaration.html')) {
     const userData = checkSession();
-    const phoneField = document.getElementById('phone');
-    const userIdField = document.getElementById('userId');
-
-    if (userData && phoneField && userIdField) {
-      phoneField.value = userData.phone || '';
-      phoneField.readOnly = true;
-
-      // Direct ID population with fallback
-      if (userData.userId) {
-        userIdField.value = userData.userId;
-      } else {
-        // Fallback API call
-        fetch(`${CONFIG.GAS_URL}?action=getUserID&phone=${userData.phone}&callback=cb${Date.now()}`)
-          .then(res => res.json())
-          .then(data => {
-            if(data.success) {
-              userIdField.value = data.userId;
-              sessionStorage.setItem('userData', JSON.stringify({
-                ...userData,
-                userId: data.userId
-              }));
-            }
-          });
-      }
+    if (!userData) {
+      handleLogout();
+      return;
+    }
+    
+    // Initialize parcel page components
+    const parcelForm = document.getElementById('declarationForm');
+    if (parcelForm) {
+      parcelForm.addEventListener('submit', handleParcelSubmission);
+      document.getElementById('itemCategory').addEventListener('change', checkCategoryRequirements);
+      initParcelDeclarationPage(userData); // Initialize User ID
     }
   }
 
@@ -895,7 +912,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  // Rest of existing code
+  // Rest remains unchanged
   window.addEventListener('beforeunload', () => {
     document.getElementById('error-message').style.display = 'none';
   });
