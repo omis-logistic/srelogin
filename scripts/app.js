@@ -832,43 +832,30 @@ function formatDate(dateString) {
 
 // ================= INITIALIZATION =================
 document.addEventListener('DOMContentLoaded', () => {
-  // Existing initialization code
   detectViewMode();
   initValidationListeners();
   createLoaderElement();
-  setupCategoryChangeListener();
 
-  // Session management
-  const publicPages = ['login.html', 'register.html', 'forgot-password.html'];
-  const isPublicPage = publicPages.some(page => 
-    window.location.pathname.includes(page)
-  );
+  // Initialize category requirements on page load
+  checkCategoryRequirements();
 
-  // NEW ADDITION: Populate user info on parcel declaration page
-  if (window.location.pathname.includes('parcel-declaration.html')) {
-    const userData = checkSession();
-    if (!userData) return;
-    
-    // Our added function to populate User ID and phone
-    populateUserInfo(userData.phone); // Pass the phone from session
-    
-    // Existing phone field setup
-    const phoneField = document.getElementById('phone');
-    if (phoneField) {
-      phoneField.value = userData.phone || '';
-      phoneField.readOnly = true;
-    }
-  }
-
-  // Existing form initialization
+  // Initialize parcel declaration form
   const parcelForm = document.getElementById('declarationForm');
   if (parcelForm) {
     parcelForm.addEventListener('submit', handleParcelSubmission);
     
-    // Existing category handler
+    // Set up category change listener
     const categorySelect = document.getElementById('itemCategory');
     if (categorySelect) {
       categorySelect.addEventListener('change', checkCategoryRequirements);
+    }
+
+    // Phone field setup
+    const phoneField = document.getElementById('phone');
+    if (phoneField) {
+      const userData = checkSession();
+      phoneField.value = userData?.phone || '';
+      phoneField.readOnly = true;
     }
   }
 
@@ -887,7 +874,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  // Existing UI initialization
   window.addEventListener('beforeunload', () => {
     const errorElement = document.getElementById('error-message');
     if (errorElement) errorElement.style.display = 'none';
