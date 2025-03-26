@@ -1,7 +1,7 @@
 //scripts/app.js
 // ================= CONFIGURATION =================
 const CONFIG = {
-  GAS_URL: 'https://script.google.com/macros/s/AKfycbxCmS7LFq_ozCzn8oeYpPm-f_CLAxfubgCe8zrnkUPc7E341vZi93egTaHCSiFsICz7EA/exec',
+  GAS_URL: 'https://script.google.com/macros/s/AKfycbzysz6wghdvkScnN9YJRS2iH3d8yLPnPoRvSsXP8gLHO8AlgYFno0NDyQYF0uUee74/exec',
   PROXY_URL: 'https://script.google.com/macros/s/AKfycbz1p1FvRx93CXLCSS_LVaCGXcVhWtJ7n91C03xmzjzbhfao2GX2anQiWn5Yxkf6NJg/exec',
   SESSION_TIMEOUT: 3600,
   MAX_FILE_SIZE: 5 * 1024 * 1024,
@@ -620,24 +620,22 @@ async function handleLogin() {
   const phone = document.getElementById('phone').value.trim();
   const password = document.getElementById('password').value;
 
-  if (!validatePhone(phone)) {
-    showError('Invalid phone number format');
-    return;
-  }
-
   try {
-    const callbackName = `loginCallback_${Date.now()}`;
+    const callbackName = `login_${Date.now()}`;
     const script = document.createElement('script');
     script.src = `${CONFIG.GAS_URL}?action=processLogin&phone=${encodeURIComponent(phone)}&password=${encodeURIComponent(password)}&callback=${callbackName}`;
 
     window[callbackName] = (response) => {
+      console.log('Login response:', response); // Debug log
       if (response.success) {
-        sessionStorage.setItem('userData', JSON.stringify({
+        const userData = {
           phone: response.phone,
           email: response.email,
           userId: response.userId,
           tempPassword: response.tempPassword
-        }));
+        };
+        console.log('Storing session:', userData); // Debug log
+        sessionStorage.setItem('userData', JSON.stringify(userData));
         localStorage.setItem('lastActivity', Date.now());
         
         if (response.tempPassword) {
@@ -654,6 +652,7 @@ async function handleLogin() {
     
     document.body.appendChild(script);
   } catch (error) {
+    console.error('Login error:', error);
     showError('Login failed - please try again');
   }
 }
@@ -845,54 +844,39 @@ document.addEventListener('DOMContentLoaded', () => {
   createLoaderElement();
   checkCategoryRequirements();
 
-  // Session management
-  const publicPages = ['login.html', 'register.html', 'forgot-password.html'];
-  const isPublicPage = publicPages.some(page => 
-    window.location.pathname.includes(page)
-  );
+  // Debug session
+  console.log('Initial session:', checkSession());
 
   // Parcel declaration form setup
   const parcelForm = document.getElementById('declarationForm');
   if (parcelForm) {
-    parcelForm.addEventListener('submit', handleParcelSubmission);
-
-    // Auto-populate fields
     const userData = checkSession();
-    const phoneField = document.getElementById('phone');
-    const userIdField = document.getElementById('userId');
+    console.log('Parcel form user data:', userData); // Debug log
 
-    if (userData && phoneField && userIdField) {
-      phoneField.value = userData.phone || '';
-      phoneField.readOnly = true;
-      userIdField.value = userData.userId || ''; // Empty if missing
+    if (userData) {
+      document.getElementById('phone').value = userData.phone || '';
+      document.getElementById('userId').value = userData.userId || 'N/A';
     }
 
-    // Category change listener
-    const categorySelect = document.getElementById('itemCategory');
-    if (categorySelect) {
-      categorySelect.addEventListener('change', checkCategoryRequirements);
-    }
+    parcelForm.addEventListener('submit', handleParcelSubmission);
+    document.getElementById('itemCategory').addEventListener('change', checkCategoryRequirements);
   }
 
   // Session validation
-  if (!isPublicPage) {
+  const publicPages = ['login.html', 'register.html', 'forgot-password.html'];
+  if (!publicPages.some(p => location.pathname.includes(p))) {
     const userData = checkSession();
-    if (!userData) {
-      handleLogout();
-      return;
-    }
-    if (userData.tempPassword && !window.location.pathname.includes('password-reset.html')) {
+    if (!userData) handleLogout();
+    if (userData?.tempPassword && !location.pathname.includes('password-reset.html')) {
       handleLogout();
     }
   }
 
   window.addEventListener('beforeunload', () => {
-    const errorElement = document.getElementById('error-message');
-    if (errorElement) errorElement.style.display = 'none';
+    document.getElementById('error-message').style.display = 'none';
   });
 
-  const firstInput = document.querySelector('input:not([type="hidden"])');
-  if (firstInput) firstInput.focus();
+  document.querySelector('input:not([type="hidden"])')?.focus();
 });
 
 // New functions for category requirements =================
