@@ -260,6 +260,13 @@ select {
 }
 
 /* ======== TRACKING PAGE STYLES ======== */
+#userId {
+  font-weight: bold;
+  color: #2ecc71;
+  border: 2px solid #27ae60;
+  background: rgba(39, 174, 96, 0.1);
+}
+
 .tracking-layout {
   display: grid;
   gap: 20px;
