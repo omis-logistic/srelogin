@@ -1,7 +1,7 @@
 //scripts/app.js
 // ================= CONFIGURATION =================
 const CONFIG = {
-  GAS_URL: 'https://script.google.com/macros/s/AKfycbzA863Ci3sTzTYR3u2Fn8wSQRTYsjOFeoQntgNWCq4prwEC1daAY9aF_KoRjZ5-SxTMXQ/exec',
+  GAS_URL: 'https://script.google.com/macros/s/AKfycbw7AdOzvpWqjhjA73SoNw1jmlu5NhThraNEYAMQ0O98lyMX4Pivko_g8bP_ocF36vtayg/exec',
   PROXY_URL: 'https://script.google.com/macros/s/AKfycbz1p1FvRx93CXLCSS_LVaCGXcVhWtJ7n91C03xmzjzbhfao2GX2anQiWn5Yxkf6NJg/exec',
   SESSION_TIMEOUT: 3600,
   MAX_FILE_SIZE: 5 * 1024 * 1024,
@@ -236,14 +236,14 @@ async function handleParcelSubmission(e) {
     const payload = {
       trackingNumber: formData.get('trackingNumber').trim().toUpperCase(),
       nameOnParcel: formData.get('nameOnParcel').trim(),
-      phone: document.getElementById('phone').value,
+      phoneNumber: document.getElementById('phone').value, 
       itemDescription: formData.get('itemDescription').trim(),
       quantity: formData.get('quantity'),
       price: formData.get('price'),
       collectionPoint: formData.get('collectionPoint'),
       itemCategory: itemCategory,
-      files: processedFiles,
-      userId: formData.get('userId')
+      userId: document.getElementById('userId').value,
+      files: processedFiles
     };
 
     await fetch(CONFIG.PROXY_URL, {
