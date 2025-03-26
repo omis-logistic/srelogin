@@ -221,43 +221,40 @@ async function handleParcelSubmission(e) {
 
   try {
     const formData = new FormData(form);
-    const itemCategory = formData.get('itemCategory');
-    const files = Array.from(formData.getAll('files[]')); // Changed to match input name
-
-    // Process ALL files regardless of category
-    const processedFiles = await Promise.all(
-      files.map(async file => ({
-        name: file.name,
-        type: file.type,
-        data: await readFileAsBase64(file)
-      }))
-    );
+    const userData = checkSession();
+    
+    // Explicitly add User ID to payload
+    formData.append('userId', userData.userId);
 
     const payload = {
-      trackingNumber: formData.get('trackingNumber').trim().toUpperCase(),
-      nameOnParcel: formData.get('nameOnParcel').trim(),
-      phone: document.getElementById('phone').value,
-      itemDescription: formData.get('itemDescription').trim(),
-      quantity: formData.get('quantity'),
-      price: formData.get('price'),
-      collectionPoint: formData.get('collectionPoint'),
-      itemCategory: itemCategory,
-      files: processedFiles,
-      userId: formData.get('userId')
+      data: {
+        trackingNumber: formData.get('trackingNumber'),
+        nameOnParcel: formData.get('nameOnParcel'),
+        phoneNumber: formData.get('phone'),
+        itemDescription: formData.get('itemDescription'),
+        quantity: formData.get('quantity'),
+        price: formData.get('price'),
+        collectionPoint: formData.get('collectionPoint'),
+        itemCategory: formData.get('itemCategory'),
+        userId: formData.get('userId') // Ensure User ID is included
+      },
+      files: await processFiles(formData.getAll('files[]'))
     };
 
-    await fetch(CONFIG.PROXY_URL, {
-      method: 'POST',
-      headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-      body: `payload=${encodeURIComponent(JSON.stringify(payload))}`
-    });
-
+    // Existing submission code remains unchanged
+    const response = await submitDeclaration(payload);
+    
+    if (response.success) {
+      showSuccessMessage();
+      resetForm();
+    } else {
+      showError(response.message);
+    }
   } catch (error) {
     console.error('Submission error:', error);
+    showError('Submission failed - please try again');
   } finally {
     showLoading(false);
-    resetForm();
-    showSuccessMessage();
   }
 }
 
