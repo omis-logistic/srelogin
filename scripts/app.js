@@ -1,7 +1,7 @@
 //scripts/app.js
 // ================= CONFIGURATION =================
 const CONFIG = {
-  GAS_URL: 'https://script.google.com/macros/s/AKfycbw6r2KDZ4cWpx2mk8G9U2-ZeDDeUfeyV0N01FcvPtVHNguBezcWvq40kFNXhx7s2xLz3A/exec',
+  GAS_URL: 'https://script.google.com/macros/s/AKfycbzA863Ci3sTzTYR3u2Fn8wSQRTYsjOFeoQntgNWCq4prwEC1daAY9aF_KoRjZ5-SxTMXQ/exec',
   PROXY_URL: 'https://script.google.com/macros/s/AKfycbz1p1FvRx93CXLCSS_LVaCGXcVhWtJ7n91C03xmzjzbhfao2GX2anQiWn5Yxkf6NJg/exec',
   SESSION_TIMEOUT: 3600,
   MAX_FILE_SIZE: 5 * 1024 * 1024,
@@ -242,7 +242,8 @@ async function handleParcelSubmission(e) {
       price: formData.get('price'),
       collectionPoint: formData.get('collectionPoint'),
       itemCategory: itemCategory,
-      files: processedFiles
+      files: processedFiles,
+      userId: formData.get('userId')
     };
 
     await fetch(CONFIG.PROXY_URL, {
