@@ -625,26 +625,34 @@ async function handleLogin() {
     return;
   }
 
-  if (!password) {
-    showError('Please enter your password');
-    return;
-  }
-
   try {
-    const result = await callAPI('processLogin', { phone, password });
-    
-    if (result.success) {
-      sessionStorage.setItem('userData', JSON.stringify(result));
-      localStorage.setItem('lastActivity', Date.now());
-      
-      if (result.tempPassword) {
-        safeRedirect('password-reset.html');
+    const callbackName = `loginCallback_${Date.now()}`;
+    const script = document.createElement('script');
+    script.src = `${CONFIG.GAS_URL}?action=processLogin&phone=${encodeURIComponent(phone)}&password=${encodeURIComponent(password)}&callback=${callbackName}`;
+
+    window[callbackName] = (response) => {
+      if (response.success) {
+        sessionStorage.setItem('userData', JSON.stringify({
+          phone: response.phone,
+          email: response.email,
+          userId: response.userId,
+          tempPassword: response.tempPassword
+        }));
+        localStorage.setItem('lastActivity', Date.now());
+        
+        if (response.tempPassword) {
+          safeRedirect('password-reset.html');
+        } else {
+          safeRedirect('dashboard.html');
+        }
       } else {
-        safeRedirect('dashboard.html');
+        showError(response.message || 'Authentication failed');
       }
-    } else {
-      showError(result.message || 'Authentication failed');
-    }
+      document.body.removeChild(script);
+      delete window[callbackName];
+    };
+    
+    document.body.appendChild(script);
   } catch (error) {
     showError('Login failed - please try again');
   }
@@ -843,32 +851,26 @@ document.addEventListener('DOMContentLoaded', () => {
     window.location.pathname.includes(page)
   );
 
-  // Initialize parcel declaration form
+  // Parcel declaration form setup
   const parcelForm = document.getElementById('declarationForm');
   if (parcelForm) {
     parcelForm.addEventListener('submit', handleParcelSubmission);
-    
-    // Set up category change listener
-    const categorySelect = document.getElementById('itemCategory');
-    if (categorySelect) {
-      categorySelect.addEventListener('change', checkCategoryRequirements);
-    }
 
     // Auto-populate fields
     const userData = checkSession();
-    if (userData) {
-      // Phone field
-      const phoneField = document.getElementById('phone');
-      if (phoneField) {
-        phoneField.value = userData.phone || '';
-        phoneField.readOnly = true;
-      }
-      
-      // UserID field - NEW IMPLEMENTATION
-      const userIdField = document.getElementById('userId');
-      if (userIdField) {
-        userIdField.value = userData.userId || 'N/A';
-      }
+    const phoneField = document.getElementById('phone');
+    const userIdField = document.getElementById('userId');
+
+    if (userData && phoneField && userIdField) {
+      phoneField.value = userData.phone || '';
+      phoneField.readOnly = true;
+      userIdField.value = userData.userId || ''; // Empty if missing
+    }
+
+    // Category change listener
+    const categorySelect = document.getElementById('itemCategory');
+    if (categorySelect) {
+      categorySelect.addEventListener('change', checkCategoryRequirements);
     }
   }
 
@@ -879,7 +881,6 @@ document.addEventListener('DOMContentLoaded', () => {
       handleLogout();
       return;
     }
-    
     if (userData.tempPassword && !window.location.pathname.includes('password-reset.html')) {
       handleLogout();
     }
