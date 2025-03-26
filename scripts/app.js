@@ -1,7 +1,7 @@
 //scripts/app.js
 // ================= CONFIGURATION =================
 const CONFIG = {
-  GAS_URL: 'https://script.google.com/macros/s/AKfycbzysz6wghdvkScnN9YJRS2iH3d8yLPnPoRvSsXP8gLHO8AlgYFno0NDyQYF0uUee74/exec',
+  GAS_URL: 'https://script.google.com/macros/s/AKfycbwAnjjUQp9Fs8O0eajicPkUoeGN1mJdlwn2OLhnsJpoC9wBBY0doyfYAwE-AVdk1JiXPA/exec',
   PROXY_URL: 'https://script.google.com/macros/s/AKfycbz1p1FvRx93CXLCSS_LVaCGXcVhWtJ7n91C03xmzjzbhfao2GX2anQiWn5Yxkf6NJg/exec',
   SESSION_TIMEOUT: 3600,
   MAX_FILE_SIZE: 5 * 1024 * 1024,
@@ -844,27 +844,50 @@ document.addEventListener('DOMContentLoaded', () => {
   createLoaderElement();
   checkCategoryRequirements();
 
-  // Debug session
-  console.log('Initial session:', checkSession());
+  // Session management
+  const publicPages = ['login.html', 'register.html', 'forgot-password.html'];
+  const isPublicPage = publicPages.some(page => 
+    window.location.pathname.includes(page)
+  );
 
   // Parcel declaration form setup
   const parcelForm = document.getElementById('declarationForm');
   if (parcelForm) {
-    const userData = checkSession();
-    console.log('Parcel form user data:', userData); // Debug log
-
-    if (userData) {
-      document.getElementById('phone').value = userData.phone || '';
-      document.getElementById('userId').value = userData.userId || 'N/A';
-    }
-
+    // Existing form setup
     parcelForm.addEventListener('submit', handleParcelSubmission);
     document.getElementById('itemCategory').addEventListener('change', checkCategoryRequirements);
+
+    // New User ID population
+    const userData = checkSession();
+    const phoneField = document.getElementById('phone');
+    const userIdField = document.getElementById('userId');
+
+    if (userData && phoneField && userIdField) {
+      phoneField.value = userData.phone || '';
+      phoneField.readOnly = true;
+
+      // Direct ID population with fallback
+      if (userData.userId) {
+        userIdField.value = userData.userId;
+      } else {
+        // Fallback API call
+        fetch(`${CONFIG.GAS_URL}?action=getUserID&phone=${userData.phone}&callback=cb${Date.now()}`)
+          .then(res => res.json())
+          .then(data => {
+            if(data.success) {
+              userIdField.value = data.userId;
+              sessionStorage.setItem('userData', JSON.stringify({
+                ...userData,
+                userId: data.userId
+              }));
+            }
+          });
+      }
+    }
   }
 
-  // Session validation
-  const publicPages = ['login.html', 'register.html', 'forgot-password.html'];
-  if (!publicPages.some(p => location.pathname.includes(p))) {
+  // Existing session validation
+  if (!isPublicPage) {
     const userData = checkSession();
     if (!userData) handleLogout();
     if (userData?.tempPassword && !location.pathname.includes('password-reset.html')) {
@@ -872,10 +895,10 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
+  // Rest of existing code
   window.addEventListener('beforeunload', () => {
     document.getElementById('error-message').style.display = 'none';
   });
-
   document.querySelector('input:not([type="hidden"])')?.focus();
 });
 
