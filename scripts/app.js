@@ -993,7 +993,7 @@ function checkCategoryRequirements() {
     fileHelp.style.color = '#ff4444';
   } else {
     fileInput.required = false;
-    fileHelp.innerHTML = 'Optional: JPEG, PNG, PDF (Max 5MB each)';
+    fileHelp.innerHTML = '3 files maximum upload: JPEG, PNG, PDF (Max 5MB each)';
     fileHelp.style.color = '#888';
   }
 }
