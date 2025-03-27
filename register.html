@@ -116,7 +116,7 @@
     <div class="container">
         <h2>New User Registration</h2>
         <form id="registrationForm" 
-              action="https://script.google.com/macros/s/AKfycbyr7qD75LT1gCALQQAz8GIsFO1p7AArTeksIiXSL8LxVFbEbf3ae4Q8YZtfDuWfZoS6SA/exec" 
+              action="https://script.google.com/macros/s/AKfycbxownaXszKI4O0DWisYawD7VV76sqLiiBunVTu7RiRosq7l6AYqrfl0h8F_iLI7R9C2Gg/exec" 
               method="POST" 
               enctype="application/x-www-form-urlencoded">
             
@@ -226,7 +226,10 @@
 
     <script>
         // Real-time Validations
-        document.getElementById('phone').addEventListener('input', validatePhoneNumber);
+        document.getElementById('phone').addEventListener('input', async () => {
+  await validatePhoneNumber();
+  updateSubmitButtonState();
+});
         document.getElementById('password').addEventListener('input', validatePassword);
         document.getElementById('confirmPassword').addEventListener('input', validateConfirmPassword);
         document.getElementById('email').addEventListener('input', validateEmail);
@@ -245,20 +248,36 @@
         });
 
         // Validation Functions
-        function validatePhoneNumber() {
-            const phone = document.getElementById('phone');
-            const validation = document.getElementById('phoneValidation');
-            const pattern = /^(673\d{7}|60\d{9,})$/;
-            
-            if (!pattern.test(phone.value)) {
-                validation.textContent = "Format: 673XXXXXXX (Brunei) or 60XXXXXXXXXX (Malaysia)";
-                validation.className = 'validation-message invalid';
-                return false;
-            }
-            validation.textContent = "✓ Valid phone number";
-            validation.className = 'validation-message valid';
-            return true;
-        }
+        async function validatePhoneNumber() {
+  const phone = document.getElementById('phone');
+  const validation = document.getElementById('phoneValidation');
+  const pattern = /^(673\d{7}|60\d{9,})$/;
+  
+  // Clear previous messages
+  validation.textContent = '';
+  validation.className = 'validation-message';
+  
+  // Format validation
+  if (!pattern.test(phone.value)) {
+    validation.textContent = "Format: 673XXXXXXX (Brunei) or 60XXXXXXXXXX (Malaysia)";
+    validation.className = 'validation-message invalid';
+    return false;
+  }
+  
+  // Availability check
+  validation.textContent = "Checking availability...";
+  const isAvailable = await checkPhoneAvailability(phone.value);
+  
+  if (isAvailable) {
+    validation.textContent = "✓ Phone number available";
+    validation.className = 'validation-message valid';
+    return true;
+  } else {
+    validation.textContent = "✗ Phone number already registered";
+    validation.className = 'validation-message invalid';
+    return false;
+  }
+}
 
         function validatePassword() {
             const password = document.getElementById('password');
@@ -341,7 +360,7 @@
         // Main Validation Function
         function validateForm() {
             const validations = [
-                validatePhoneNumber(),
+                await validatePhoneNumber(),
                 validatePassword(),
                 validateConfirmPassword(),
                 validateEmail(),
@@ -409,7 +428,7 @@
         };
 
         // Submit data
-        const response = await fetch('https://script.google.com/macros/s/AKfycbyr7qD75LT1gCALQQAz8GIsFO1p7AArTeksIiXSL8LxVFbEbf3ae4Q8YZtfDuWfZoS6SA/exec', {
+        const response = await fetch('https://script.google.com/macros/s/AKfycbxownaXszKI4O0DWisYawD7VV76sqLiiBunVTu7RiRosq7l6AYqrfl0h8F_iLI7R9C2Gg/exec', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/x-www-form-urlencoded'
@@ -454,6 +473,21 @@
                 reader.readAsDataURL(file);
             });
         }
+
+        async function checkPhoneAvailability(phone) {
+  try {
+    const callbackName = `phoneCheck_${Date.now()}`;
+    return new Promise((resolve) => {
+      window[callbackName] = (response) => resolve(response.exists);
+      const script = document.createElement('script');
+      script.src = `${CONFIG.GAS_URL}?action=checkPhoneExists&phone=${encodeURIComponent(phone)}&callback=${callbackName}`;
+      document.body.appendChild(script);
+    });
+  } catch (error) {
+    console.error('Phone check error:', error);
+    return false;
+  }
+}
 
         // Show Error Messages
         function showError(text) {
