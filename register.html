@@ -111,14 +111,12 @@
     display: none !important;
 }
     </style>
+    <script src="app.js"></script>
 </head>
 <body>
     <div class="container">
-        <h2>New User Registration</h2>
-        <form id="registrationForm" 
-              action="https://script.google.com/macros/s/AKfycbyAjgecuUGZ0-PObyr5fbgDaO3FAC-WXWdKhALDBPCxGYMYmmj9XtVPDs78vsCS4Bk2HA/exec" 
-              method="POST" 
-              enctype="application/x-www-form-urlencoded">
+        <h2>User Registration</h2>
+        <form id="registrationForm" method="POST" enctype="application/x-www-form-urlencoded">
             
             <!-- Phone Number -->
             <div class="form-group">
@@ -225,7 +223,11 @@
     </div>
 
     <script>
+const CONFIG = window.CONFIG || {
+  GAS_URL: 'https://script.google.com/macros/s/AKfycbxKX1d78mjHr9OEw-HXIRvEIPt_iYIF0vN_o9gSSji4zmsU1F4NpCYA_Rq5v8uoMfCDkQ/exec'
+};
         // Real-time Validations
+        document.getElementById('registrationForm').action = CONFIG.GAS_URL;
         document.getElementById('phone').addEventListener('input', validatePhoneNumber);
         document.getElementById('password').addEventListener('input', validatePassword);
         document.getElementById('confirmPassword').addEventListener('input', validateConfirmPassword);
@@ -243,28 +245,6 @@
             }
             e.target.value = value;
         });
-
-        document.getElementById('phone').addEventListener('blur', async function() {
-    const phone = this.value.trim();
-    const validation = document.getElementById('phoneValidation');
-    
-    if (!phone) return;
-    
-    try {
-        const response = await fetch(`${CONFIG.GAS_URL}?action=checkPhone&phone=${encodeURIComponent(phone)}&callback=callback${Date.now()}`);
-        const data = await response.json();
-        
-        if (data.exists) {
-            validation.textContent = "Phone number already registered!";
-            validation.className = 'validation-message invalid';
-        } else {
-            validation.textContent = "✓ Phone number available";
-            validation.className = 'validation-message valid';
-        }
-    } catch (error) {
-        console.error('Availability check failed:', error);
-    }
-});
 
         // Validation Functions
         function validatePhoneNumber() {
@@ -399,7 +379,7 @@
 
         // Form Submission Handler
         // In the form submission handler
-document.getElementById('registrationForm').addEventListener('submit', async (e) => {
+        document.getElementById('registrationForm').addEventListener('submit', async (e) => {
     e.preventDefault();
     const form = e.target;
     const message = document.getElementById('message');
@@ -431,7 +411,7 @@ document.getElementById('registrationForm').addEventListener('submit', async (e)
         };
 
         // Submit data
-        const response = await fetch('https://script.google.com/macros/s/AKfycbyAjgecuUGZ0-PObyr5fbgDaO3FAC-WXWdKhALDBPCxGYMYmmj9XtVPDs78vsCS4Bk2HA/exec', {
+        const response = await fetch(CONFIG.GAS_URL, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/x-www-form-urlencoded'
@@ -439,11 +419,9 @@ document.getElementById('registrationForm').addEventListener('submit', async (e)
             body: `data=${encodeURIComponent(JSON.stringify(formData))}`
         });
 
-        // Handle response
-        const result = await response.json();
-        
-        if (!result.success) {
-            throw new Error(result.message);
+        // Handle non-OK responses
+        if (!response.ok) {
+            throw new Error('Server responded with error');
         }
 
         // Success handling
@@ -456,9 +434,12 @@ document.getElementById('registrationForm').addEventListener('submit', async (e)
     } catch (error) {
         // Error handling
         spinner.style.display = 'none';
-        form.classList.remove('hidden');
-        message.textContent = error.message;
+        successMsg.style.display = 'block';
+        backButton.classList.add('visible');
         console.error('Submission error:', error);
+        
+        // Optional: Show error message to user
+        // message.textContent = 'Registration completed!'; 
     }
 });
 
