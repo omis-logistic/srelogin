@@ -219,7 +219,7 @@
 
     <script>
 const CONFIG = window.CONFIG || {
-  GAS_URL: 'https://script.google.com/macros/s/AKfycbwsfVmkq-qWM2Km_1z6BSx-KyGvkiUvpkCF4RZKyBZK3bqT-KJqaKybHwjW3pV6x4V6bQ/exec'
+  GAS_URL: 'https://script.google.com/macros/s/AKfycbx6CVbKnp3WwUdxanMSwv9-twLFLz-n_MHWtj9SKEpCMzt_EeO45xXE3nsRz8bdMG1lIQ/exec'
 };
 
 // Initialize form action
@@ -258,14 +258,16 @@ async function checkPhoneAvailability(phone) {
   }
 }
 
+let phoneCheckTimeout;
+
 async function validatePhoneNumber() {
   const phone = document.getElementById('phone');
   const validation = document.getElementById('phoneValidation');
   const pattern = /^(673\d{7}|60\d{9,})$/;
   
-  validation.textContent = '';
-  validation.className = '';
-
+  // Clear previous timeout
+  if (phoneCheckTimeout) clearTimeout(phoneCheckTimeout);
+  
   // Immediate format check
   if (!pattern.test(phone.value)) {
     validation.textContent = "Invalid format";
@@ -273,17 +275,24 @@ async function validatePhoneNumber() {
     return false;
   }
 
-  try {
-    validation.textContent = 'Checking...';
-    const exists = await checkPhoneAvailability(phone.value);
-    validation.textContent = exists ? "✗ Already exists" : "✓ Available";
-    validation.className = exists ? 'invalid' : 'valid';
-    return !exists;
-  } catch (error) {
-    validation.textContent = "Check failed";
-    validation.className = 'invalid';
-    return false;
-  }
+  // Debounced server check
+  return new Promise((resolve) => {
+    phoneCheckTimeout = setTimeout(async () => {
+      try {
+        validation.textContent = 'Checking...';
+        const response = await fetch(`${CONFIG.GAS_URL}?action=checkPhone&phone=${encodeURIComponent(phone.value)}`);
+        const data = await response.json();
+        
+        validation.textContent = data.exists ? "✗ Already exists" : "✓ Available";
+        validation.className = data.exists ? 'invalid' : 'valid';
+        resolve(!data.exists);
+      } catch (error) {
+        validation.textContent = "Verification failed";
+        validation.className = 'invalid';
+        resolve(false);
+      }
+    }, 500);
+  });
 }
 
 function validatePassword() {
@@ -409,21 +418,24 @@ document.getElementById('registrationForm').addEventListener('submit', async (e)
   const backButton = document.getElementById('backButton');
 
   try {
-    // Validate form first
-    if (!await validateForm()) {
-      showError('Please fix validation errors');
-      return;
+    // Step 1: Validate phone number first
+    const phoneValid = await validatePhoneNumber();
+    if (!phoneValid) {
+      showError('Please fix phone number validation first');
+      return; // Stop submission if phone invalid
     }
 
+    // Original submission flow below
     form.classList.add('hidden');
     successMsg.style.display = 'none';
     backButton.classList.remove('visible');
     spinner.style.display = 'block';
 
+    // Prepare original form data
     const formData = {
       action: 'registerUser',
       icNumber: document.getElementById('icNumber').value,
-      phone: document.getElementById('phone').value.replace(/[^0-9]/g, ''),
+      phone: document.getElementById('phone').value,
       password: document.getElementById('password').value,
       email: document.getElementById('email').value,
       fullName: document.getElementById('fullName').value,
@@ -435,14 +447,20 @@ document.getElementById('registrationForm').addEventListener('submit', async (e)
       backICType: document.getElementById('backIC').files[0].type
     };
 
+    // Original submission code
     const response = await fetch(CONFIG.GAS_URL, {
       method: 'POST',
       headers: {'Content-Type': 'application/x-www-form-urlencoded'},
       body: `data=${encodeURIComponent(JSON.stringify(formData))}`
     });
 
-    if (!response.ok) throw new Error(await response.text());
+    // Handle original response
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || 'Registration failed');
+    }
 
+    // Original success handling
     setTimeout(() => {
       spinner.style.display = 'none';
       successMsg.style.display = 'block';
@@ -450,14 +468,17 @@ document.getElementById('registrationForm').addEventListener('submit', async (e)
     }, 2000);
 
   } catch (error) {
+    // Enhanced error handling
     spinner.style.display = 'none';
     form.classList.remove('hidden');
-    const errorMsg = error.message.includes('DUPLICATE_PHONE') 
-      ? 'Phone number already registered!' 
-      : error.message.includes('already registered') 
-      ? 'Phone number exists!' 
-      : 'Registration failed. Please try again.';
-    showError(errorMsg);
+    
+    if (error.message.includes('DUPLICATE_PHONE')) {
+      showError('This phone number is already registered!');
+      document.getElementById('phoneValidation').textContent = "✗ Already exists";
+      document.getElementById('phoneValidation').className = 'invalid';
+    } else {
+      showError(error.message || 'Registration failed. Please try again.');
+    }
   }
 });
 
