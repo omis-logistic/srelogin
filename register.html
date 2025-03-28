@@ -223,7 +223,7 @@
 
     <script>
 const CONFIG = window.CONFIG || {
-  GAS_URL: 'https://script.google.com/macros/s/AKfycbzG1bQd9uKWMiJjo0zvDrRf6-6kr_zSykeO3a2lGlXxwHjNbJn_MnjW_UoVwZRzcgmbVA/exec'
+  GAS_URL: 'https://script.google.com/macros/s/AKfycby4m1m-jT8rPm_cwmRaWdNvBOieo-zQTwvdo4YrnCCPcsI6mv_yvqVquVQHotvSw6PW/exec'
 };
 
 // Initialize form action
@@ -250,47 +250,59 @@ document.getElementById('icNumber').addEventListener('input', function(e) {
 
 // Phone Availability Check
 async function checkPhoneAvailability(phone) {
-    try {
-        const callbackName = `phoneCheck_${Date.now()}`;
-        return new Promise((resolve) => {
-            window[callbackName] = (response) => {
-                resolve(response.exists);
-                delete window[callbackName];
-            };
-            
-            const script = document.createElement('script');
-            script.src = `${CONFIG.GAS_URL}?action=checkPhone&phone=${encodeURIComponent(phone)}&callback=${callbackName}`;
-            document.body.appendChild(script);
-        });
-    } catch (error) {
-        console.error('Phone check failed:', error);
-        return true;
+  try {
+    const validation = document.getElementById('phoneValidation');
+    if (!phone || phone.length < 8) {
+      validation.textContent = "Please enter a valid phone number first";
+      return true; // Prevent submission while typing
     }
+
+    const callbackName = `phoneCheck_${Date.now()}`;
+    return new Promise((resolve) => {
+      window[callbackName] = (response) => {
+        // Cleanup after response
+        document.body.removeChild(script);
+        delete window[callbackName];
+        resolve(response.exists);
+      };
+      
+      const script = document.createElement('script');
+      script.src = `${CONFIG.GAS_URL}?action=checkPhone&phone=${encodeURIComponent(phone)}&callback=${callbackName}`;
+      script.onerror = () => {
+        console.error('Phone check failed');
+        resolve(false); // Fail open if error occurs
+      };
+      document.body.appendChild(script);
+    });
+  } catch (error) {
+    console.error('Phone check error:', error);
+    return false;
+  }
 }
 
 // Validation Functions
-function validatePhoneNumber() {
-    const phone = document.getElementById('phone');
-    const validation = document.getElementById('phoneValidation');
-    const pattern = /^(673\d{7}|60\d{9,})$/;
-    
-    if (!pattern.test(phone.value)) {
-        validation.textContent = "Format: 673XXXXXXX (Brunei) or 60XXXXXXXXXX (Malaysia)";
-        validation.className = 'validation-message invalid';
-        return false;
-    }
-    
-    checkPhoneAvailability(phone.value).then(exists => {
-        if (exists) {
-            validation.textContent = "✗ Phone number already registered";
-            validation.className = 'validation-message invalid';
-        } else {
-            validation.textContent = "✓ Phone number available";
-            validation.className = 'validation-message valid';
-        }
-    });
-    
-    return true;
+async function validatePhoneNumber() {
+  const phone = document.getElementById('phone');
+  const validation = document.getElementById('phoneValidation');
+  const pattern = /^(673\d{7}|60\d{9,})$/;
+  
+  // Immediate format validation
+  if (!pattern.test(phone.value)) {
+    validation.textContent = "Format: 673XXXXXXX (Brunei) or 60XXXXXXXXXX (Malaysia)";
+    validation.className = 'validation-message invalid';
+    return false;
+  }
+  
+  // Real-time availability check
+  const exists = await checkPhoneAvailability(phone.value);
+  validation.textContent = exists 
+    ? "✗ Phone number already registered" 
+    : "✓ Phone number available";
+  validation.className = exists 
+    ? 'validation-message invalid' 
+    : 'validation-message valid';
+  
+  return !exists;
 }
 
 function validatePassword() {
@@ -415,56 +427,83 @@ function validateFiles() {
 
 // Form Submission Handler
 document.getElementById('registrationForm').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const form = e.target;
-    const message = document.getElementById('message');
-    const spinner = document.getElementById('loadingSpinner');
-    const successMsg = document.getElementById('successMessage');
-    const backButton = document.getElementById('backButton');
+  e.preventDefault();
+  
+  // Disable submit button during processing
+  const submitBtn = document.querySelector('button[type="submit"]');
+  const message = document.getElementById('message');
+  const spinner = document.getElementById('loadingSpinner');
+  const successMsg = document.getElementById('successMessage');
+  const backButton = document.getElementById('backButton');
+  const form = e.target;
 
-    try {
-        form.classList.add('hidden');
-        successMsg.style.display = 'none';
-        backButton.classList.remove('visible');
-        spinner.style.display = 'block';
+  try {
+    // Initial state setup
+    submitBtn.disabled = true;
+    form.classList.add('hidden');
+    successMsg.style.display = 'none';
+    backButton.classList.remove('visible');
+    spinner.style.display = 'block';
+    message.textContent = '';
 
-        const formData = {
-            action: 'registerUser',
-            icNumber: document.getElementById('icNumber').value,
-            phone: document.getElementById('phone').value,
-            password: document.getElementById('password').value,
-            email: document.getElementById('email').value,
-            fullName: document.getElementById('fullName').value,
-            address: document.getElementById('address').value,
-            postcode: document.getElementById('postcode').value,
-            frontIC: await fileToBase64(document.getElementById('frontIC').files[0]),
-            backIC: await fileToBase64(document.getElementById('backIC').files[0]),
-            frontICType: document.getElementById('frontIC').files[0].type,
-            backICType: document.getElementById('backIC').files[0].type
-        };
-
-        const response = await fetch(CONFIG.GAS_URL, {
-            method: 'POST',
-            headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-            body: `data=${encodeURIComponent(JSON.stringify(formData))}`
-        });
-
-        if (!response.ok) throw new Error(await response.text());
-
-        setTimeout(() => {
-            spinner.style.display = 'none';
-            successMsg.style.display = 'block';
-            backButton.classList.add('visible');
-        }, 2000);
-
-    } catch (error) {
-        spinner.style.display = 'none';
-        successMsg.style.display = 'block';
-        backButton.classList.add('visible');
-        showError(error.message.includes("already registered") 
-            ? "Phone number already exists!" 
-            : "Registration failed. Please try again.");
+    // Validate form before submission
+    if (!validateForm()) {
+      throw new Error('Please fix form errors before submitting');
     }
+
+    // Prepare form data
+    const formData = {
+      action: 'registerUser',
+      icNumber: document.getElementById('icNumber').value,
+      phone: document.getElementById('phone').value,
+      password: document.getElementById('password').value,
+      email: document.getElementById('email').value,
+      fullName: document.getElementById('fullName').value,
+      address: document.getElementById('address').value,
+      postcode: document.getElementById('postcode').value,
+      frontIC: await fileToBase64(document.getElementById('frontIC').files[0]),
+      backIC: await fileToBase64(document.getElementById('backIC').files[0]),
+      frontICType: document.getElementById('frontIC').files[0].type,
+      backICType: document.getElementById('backIC').files[0].type
+    };
+
+    // Submit data
+    const response = await fetch(CONFIG.GAS_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded'
+      },
+      body: `data=${encodeURIComponent(JSON.stringify(formData))}`
+    });
+
+    // Handle non-OK responses
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || 'Server error');
+    }
+
+    // Success handling
+    setTimeout(() => {
+      spinner.style.display = 'none';
+      successMsg.style.display = 'block';
+      backButton.classList.add('visible');
+    }, 2000);
+
+  } catch (error) {
+    // Error handling
+    console.error('Submission error:', error);
+    const errorMessage = error.message.includes("already registered") 
+      ? "This phone number is already registered!" 
+      : error.message.includes("form errors")
+      ? error.message
+      : "Registration failed. Please try again.";
+    
+    showError(errorMessage);
+  } finally {
+    // Cleanup
+    submitBtn.disabled = false;
+    spinner.style.display = 'none';
+  }
 });
 
 // File Handling
