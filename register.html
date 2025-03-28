@@ -249,55 +249,57 @@ let phoneCheckCallback;
 
 async function checkPhoneAvailability(phone) {
   try {
-    const cleanPhone = String(phone).trim().replace(/[^0-9]/g, '');
-    const apiUrl = `${CONFIG.GAS_URL}?action=checkPhone&phone=${encodeURIComponent(cleanPhone)}&_=${Date.now()}`;
+    const timestamp = Date.now(); // Cache busting
+    const url = `${CONFIG.GAS_URL}?action=checkPhone&phone=${encodeURIComponent(phone)}&_=${timestamp}`;
     
-    const response = await fetch(apiUrl);
-    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+    const response = await fetch(url);
+    if (!response.ok) throw new Error('Network error');
     
     const result = await response.json();
-    return result.exists;
+    return !!result.exists;
     
   } catch (error) {
     console.error('Phone check failed:', error);
-    return false; // Fail-safe return
+    return false; // Fail safe
   }
 }
 
-// Update validation handler with enhanced error states
 async function validatePhoneNumber() {
-  const phoneInput = document.getElementById('phone');
-  const validationElement = document.getElementById('phoneValidation');
-  const rawValue = phoneInput.value.trim();
+  const phone = document.getElementById('phone');
+  const validation = document.getElementById('phoneValidation');
+  const rawValue = phone.value;
   
-  // Reset states
-  validationElement.textContent = '';
-  phoneInput.classList.remove('valid', 'invalid');
+  // Reset state
+  validation.textContent = '';
+  validation.className = '';
+  phone.classList.remove('valid', 'invalid');
 
-  // Basic format validation
+  // Basic format check
   if (!/^(673\d{7}|60\d{9,})$/.test(rawValue)) {
-    validationElement.textContent = 'Invalid phone format';
-    phoneInput.classList.add('invalid');
+    validation.textContent = "Invalid format";
+    validation.className = 'invalid';
+    phone.classList.add('invalid');
     return false;
   }
 
-  // Clean phone number
+  // Clean for comparison
   const cleanPhone = rawValue.replace(/[^0-9]/g, '');
   
   try {
-    validationElement.textContent = 'Checking availability...';
+    validation.textContent = 'Checking availability...';
     const exists = await checkPhoneAvailability(cleanPhone);
     
-    // Update UI based on result
-    validationElement.textContent = exists ? '✖ Number already registered' : '✓ Available';
-    phoneInput.classList.toggle('invalid', exists);
-    phoneInput.classList.toggle('valid', !exists);
+    validation.textContent = exists ? "✖ Already registered" : "✓ Available";
+    validation.className = exists ? 'invalid' : 'valid';
+    phone.classList.toggle('invalid', exists);
+    phone.classList.toggle('valid', !exists);
     
     return !exists;
     
   } catch (error) {
-    validationElement.textContent = 'Verification service unavailable';
-    phoneInput.classList.add('invalid');
+    validation.textContent = "Verification service unavailable";
+    validation.className = 'invalid';
+    phone.classList.add('invalid');
     return false;
   }
 }
