@@ -223,7 +223,7 @@
 
     <script>
 const CONFIG = window.CONFIG || {
-  GAS_URL: 'https://script.google.com/macros/s/AKfycbyHuW55xgenbWcMKOO8164yXtj-cudzp1NlL548T_TERiugSWRfziOZkA3GxPaqarIAwA/exec'
+  GAS_URL: 'https://script.google.com/macros/s/AKfycbzJN29JkLR1khCbZy7abeHbhIWmXxftAh3jHNE7HKc2RBNvRWPljslV0z2ViFINmmbChw/exec'
 };
 
 // Initialize form action
@@ -249,22 +249,25 @@ document.getElementById('icNumber').addEventListener('input', function(e) {
 });
 
 // Phone Availability Check
+let isPhoneValid = false;
+
 async function checkPhoneAvailability(phone) {
   try {
     const callbackName = `phoneCheck_${Date.now()}`;
     return new Promise((resolve) => {
       window[callbackName] = (response) => {
+        document.body.removeChild(document.getElementById(callbackName));
         resolve(response.exists);
-        delete window[callbackName];
       };
       
       const script = document.createElement('script');
+      script.id = callbackName;
       script.src = `${CONFIG.GAS_URL}?action=checkPhone&phone=${encodeURIComponent(phone)}&callback=${callbackName}`;
       document.body.appendChild(script);
     });
   } catch (error) {
     console.error('Phone check failed:', error);
-    return true; // Prevent false negatives
+    return true; // Fail-safe
   }
 }
 
@@ -274,28 +277,32 @@ async function validatePhoneNumber() {
   const validation = document.getElementById('phoneValidation');
   const pattern = /^(673\d{7}|60\d{9,})$/;
   
-  // Immediate format check
+  // Reset state
+  isPhoneValid = false;
+  validation.textContent = 'Checking...';
+  validation.className = 'validation-message';
+
+  // Format check
   if (!pattern.test(phone.value)) {
-    validation.textContent = "Format: 673XXXXXXX (Brunei) or 60XXXXXXXXXX (Malaysia)";
+    validation.textContent = "Invalid format! Use 673XXXXXXX or 60XXXXXXXXXX";
     validation.className = 'validation-message invalid';
     return false;
   }
-  
-  // Server check with error handling
+
+  // Server check
   try {
     const exists = await checkPhoneAvailability(phone.value);
+    isPhoneValid = !exists;
     validation.textContent = exists 
-      ? "✗ Phone number already registered" 
-      : "✓ Phone number available";
-    validation.className = exists 
-      ? 'validation-message invalid' 
-      : 'validation-message valid';
+      ? "✗ Number already registered" 
+      : "✓ Number available";
+    validation.className = exists ? 'invalid' : 'valid';
     return !exists;
   } catch (error) {
-    console.error('Validation error:', error);
-    validation.textContent = "✓ Validation skipped (server error)";
-    validation.className = 'validation-message valid';
-    return true; // Allow submission if check fails
+    isPhoneValid = false;
+    validation.textContent = "⚠️ Verification failed";
+    validation.className = 'validation-message invalid';
+    return false;
   }
 }
 
@@ -420,6 +427,64 @@ function validateFiles() {
 }
 
 // Form Submission Handler
+// REAL-TIME PHONE VALIDATION
+let isPhoneValid = false;
+
+async function checkPhoneAvailability(phone) {
+  try {
+    const callbackName = `phoneCheck_${Date.now()}`;
+    return new Promise((resolve) => {
+      window[callbackName] = (response) => {
+        document.body.removeChild(document.getElementById(callbackName));
+        resolve(response.exists);
+      };
+      
+      const script = document.createElement('script');
+      script.id = callbackName;
+      script.src = `${CONFIG.GAS_URL}?action=checkPhone&phone=${encodeURIComponent(phone)}&callback=${callbackName}`;
+      document.body.appendChild(script);
+    });
+  } catch (error) {
+    console.error('Phone check failed:', error);
+    return true; // Fail-safe
+  }
+}
+
+async function validatePhoneNumber() {
+  const phone = document.getElementById('phone');
+  const validation = document.getElementById('phoneValidation');
+  const pattern = /^(673\d{7}|60\d{9,})$/;
+  
+  // Reset state
+  isPhoneValid = false;
+  validation.textContent = 'Checking...';
+  validation.className = 'validation-message';
+
+  // Format check
+  if (!pattern.test(phone.value)) {
+    validation.textContent = "Invalid format! Use 673XXXXXXX or 60XXXXXXXXXX";
+    validation.className = 'validation-message invalid';
+    return false;
+  }
+
+  // Server check
+  try {
+    const exists = await checkPhoneAvailability(phone.value);
+    isPhoneValid = !exists;
+    validation.textContent = exists 
+      ? "✗ Number already registered" 
+      : "✓ Number available";
+    validation.className = exists ? 'invalid' : 'valid';
+    return !exists;
+  } catch (error) {
+    isPhoneValid = false;
+    validation.textContent = "⚠️ Verification failed";
+    validation.className = 'validation-message invalid';
+    return false;
+  }
+}
+
+// MODIFIED SUBMISSION HANDLER
 document.getElementById('registrationForm').addEventListener('submit', async (e) => {
   e.preventDefault();
   const form = e.target;
@@ -428,14 +493,20 @@ document.getElementById('registrationForm').addEventListener('submit', async (e)
   const successMsg = document.getElementById('successMessage');
   const backButton = document.getElementById('backButton');
 
+  // Immediate validation check
+  if (!isPhoneValid) {
+    showError('Please fix phone number validation first!');
+    return;
+  }
+
   try {
-    // Initial state setup (original)
+    // Original submission flow
     form.classList.add('hidden');
     successMsg.style.display = 'none';
     backButton.classList.remove('visible');
     spinner.style.display = 'block';
 
-    // Prepare form data (original)
+    // Prepare data
     const formData = {
       action: 'registerUser',
       icNumber: document.getElementById('icNumber').value,
@@ -451,17 +522,19 @@ document.getElementById('registrationForm').addEventListener('submit', async (e)
       backICType: document.getElementById('backIC').files[0].type
     };
 
-    // Submit data (original)
+    // Submit data
     const response = await fetch(CONFIG.GAS_URL, {
       method: 'POST',
       headers: {'Content-Type': 'application/x-www-form-urlencoded'},
       body: `data=${encodeURIComponent(JSON.stringify(formData))}`
     });
 
-    // Handle response (original)
-    if (!response.ok) throw new Error('Server responded with error');
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || 'Registration failed');
+    }
 
-    // Success handling (original)
+    // Success handling
     setTimeout(() => {
       spinner.style.display = 'none';
       successMsg.style.display = 'block';
@@ -469,12 +542,15 @@ document.getElementById('registrationForm').addEventListener('submit', async (e)
     }, 2000);
 
   } catch (error) {
-    // === ONLY CHANGE THIS PART ===
-    const errorMsg = error.message.includes('PHONE_EXISTS') 
-      ? 'Phone number already registered!' 
-      : 'Registration failed. Please try again.';
-    showError(errorMsg);
-    // === END CHANGE ===
+    spinner.style.display = 'none';
+    if (error.message.includes('PHONE_EXISTS')) {
+      showError('This phone number is already registered!');
+      document.getElementById('phoneValidation').textContent = "✗ Number already registered";
+      document.getElementById('phoneValidation').className = 'validation-message invalid';
+      isPhoneValid = false;
+    } else {
+      showError(error.message || 'Registration failed. Please try again.');
+    }
   }
 });
 
