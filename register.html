@@ -219,7 +219,7 @@
 
     <script>
 const CONFIG = window.CONFIG || {
-  GAS_URL: 'https://script.google.com/macros/s/AKfycbzadzF6EFUxuRYStv4fKh7awWdhRwbIVuRHnzUqriCAWLuKgw9cV1Aq0UpUrmmKGmi_IQ/exec'
+  GAS_URL: 'https://script.google.com/macros/s/AKfycbz2VC5bTISKWHBx7nciwUREN71HdwNMFWFkeaAPQXFgdKeiYGSuR6XzaBVfFsoFtiK21g/exec'
 };
 
 // Initialize form action
@@ -249,12 +249,22 @@ let isPhoneValid = false;
 
 async function checkPhoneAvailability(phone) {
   try {
-    const response = await fetch(`${CONFIG.GAS_URL}?action=checkPhone&phone=${encodeURIComponent(phone)}`);
-    const data = await response.json();
-    return data.exists;
+    const callbackName = `phoneCheck_${Date.now()}`;
+    return new Promise((resolve) => {
+      window[callbackName] = (response) => {
+        const exists = response && response.exists;
+        document.body.removeChild(document.getElementById(callbackName));
+        resolve(exists);
+      };
+      
+      const script = document.createElement('script');
+      script.id = callbackName;
+      script.src = `${CONFIG.GAS_URL}?action=checkPhone&phone=${encodeURIComponent(phone)}&callback=${callbackName}`;
+      document.body.appendChild(script);
+    });
   } catch (error) {
     console.error('Phone check failed:', error);
-    return true; // Fail-safe
+    return false;
   }
 }
 
@@ -268,19 +278,26 @@ async function validatePhoneNumber() {
 
   // Immediate format check
   if (!pattern.test(phone.value)) {
-    validation.textContent = "Invalid format";
+    validation.textContent = "Invalid phone format";
     validation.className = 'invalid';
     return false;
   }
 
+  // Clean phone number
+  const cleanPhone = phone.value.replace(/[^0-9]/g, '');
+  
   try {
-    validation.textContent = 'Checking...';
-    const exists = await checkPhoneAvailability(phone.value);
-    validation.textContent = exists ? "✗ Already exists" : "✓ Available";
+    validation.textContent = 'Checking availability...';
+    const exists = await checkPhoneAvailability(cleanPhone);
+    
+    validation.textContent = exists 
+      ? "✗ Number already registered" 
+      : "✓ Number available";
     validation.className = exists ? 'invalid' : 'valid';
+    
     return !exists;
   } catch (error) {
-    validation.textContent = "Check failed";
+    validation.textContent = "Verification failed";
     validation.className = 'invalid';
     return false;
   }
@@ -409,17 +426,13 @@ document.getElementById('registrationForm').addEventListener('submit', async (e)
   const backButton = document.getElementById('backButton');
 
   try {
-    // Validate form first
-    if (!await validateForm()) {
-      showError('Please fix validation errors');
-      return;
-    }
-
+    // Original flow
     form.classList.add('hidden');
     successMsg.style.display = 'none';
     backButton.classList.remove('visible');
     spinner.style.display = 'block';
 
+    // Prepare data
     const formData = {
       action: 'registerUser',
       icNumber: document.getElementById('icNumber').value,
@@ -435,6 +448,7 @@ document.getElementById('registrationForm').addEventListener('submit', async (e)
       backICType: document.getElementById('backIC').files[0].type
     };
 
+    // Submit data
     const response = await fetch(CONFIG.GAS_URL, {
       method: 'POST',
       headers: {'Content-Type': 'application/x-www-form-urlencoded'},
@@ -443,6 +457,7 @@ document.getElementById('registrationForm').addEventListener('submit', async (e)
 
     if (!response.ok) throw new Error(await response.text());
 
+    // Success handling
     setTimeout(() => {
       spinner.style.display = 'none';
       successMsg.style.display = 'block';
@@ -451,13 +466,17 @@ document.getElementById('registrationForm').addEventListener('submit', async (e)
 
   } catch (error) {
     spinner.style.display = 'none';
-    form.classList.remove('hidden');
-    const errorMsg = error.message.includes('DUPLICATE_PHONE') 
-      ? 'Phone number already registered!' 
-      : error.message.includes('already registered') 
-      ? 'Phone number exists!' 
-      : 'Registration failed. Please try again.';
+    let errorMsg = 'Registration failed. Please try again.';
+    
+    if (error.message.includes('DUPLICATE_PHONE') || 
+        error.message.includes('already registered')) {
+      errorMsg = 'This phone number is already registered!';
+      document.getElementById('phoneValidation').textContent = "✗ Already exists";
+      document.getElementById('phoneValidation').className = 'invalid';
+    }
+    
     showError(errorMsg);
+    form.classList.remove('hidden');
   }
 });
 
