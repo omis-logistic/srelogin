@@ -219,7 +219,7 @@
 
     <script>
 const CONFIG = window.CONFIG || {
-  GAS_URL: 'https://script.google.com/macros/s/AKfycbwkcT04-qf-_CRPgk2hhi0f8auAg9GKcrPJ6PRam2QCYI0y0Hkw_p7GxNfej_99AnpA2g/exec'
+  GAS_URL: 'https://script.google.com/macros/s/AKfycbwTs4U_K21skXCQN-_4ZbKP3mcNwx5jUkFV-G5ubpcc7x8fpRDCOpRBmWXZxODcBjz37Q/exec'
 };
 
 // Initialize form action
@@ -229,9 +229,7 @@ document.getElementById('registrationForm').action = CONFIG.GAS_URL;
 let debounceTimer;
 document.getElementById('phone').addEventListener('input', () => {
   clearTimeout(debounceTimer);
-  debounceTimer = setTimeout(() => {
-    validatePhoneNumber();
-  }, 700); // Optimal debounce time
+  debounceTimer = setTimeout(validatePhoneNumber, 500);
 });
 document.getElementById('password').addEventListener('input', validatePassword);
 document.getElementById('confirmPassword').addEventListener('input', validateConfirmPassword);
@@ -281,14 +279,13 @@ async function checkPhoneAvailability(phone) {
   }
 }
 
-// Validation State
+// Updated validation state
 const validationState = {
   isValid: false,
-  lastChecked: '',
-  inProgress: false
+  lastChecked: null
 };
 
-// Real-Time Phone Validation (Updated)
+// Improved phone validation
 async function validatePhoneNumber() {
   const phoneInput = document.getElementById('phone');
   const validation = document.getElementById('phoneValidation');
@@ -301,25 +298,28 @@ async function validatePhoneNumber() {
 
   // Basic format check
   if (!/^(673\d{7}|60\d{9,})$/.test(rawValue)) {
-    validation.textContent = "Invalid format";
+    validation.textContent = "Invalid phone format";
     validation.className = 'invalid';
     return;
   }
 
-  // Clean and check for duplicates
+  // Clean phone number
   const cleanPhone = rawValue.replace(/[^0-9]/g, '');
   
-  // Avoid redundant checks
+  // Skip duplicate checks for same number
   if (validationState.lastChecked === cleanPhone) return;
   validationState.lastChecked = cleanPhone;
 
   try {
-    validationState.inProgress = true;
-    validation.textContent = 'Verifying...';
+    validation.textContent = 'Checking...';
     
-    // Direct CORS request (replace JSONP)
     const response = await fetch(`${CONFIG.GAS_URL}?action=checkPhone&phone=${cleanPhone}`);
+    
+    if (!response.ok) throw new Error('Server error');
+    
     const result = await response.json();
+    
+    if (typeof result.exists !== 'boolean') throw new Error('Invalid response');
     
     validationState.isValid = !result.exists;
     validation.textContent = result.exists 
@@ -328,12 +328,10 @@ async function validatePhoneNumber() {
     validation.className = result.exists ? 'invalid' : 'valid';
 
   } catch (error) {
-    console.error('Validation failed:', error);
-    validation.textContent = "Verification error";
+    console.error('Validation error:', error);
+    validation.textContent = "Service unavailable - try again later";
     validation.className = 'invalid';
     validationState.isValid = false;
-  } finally {
-    validationState.inProgress = false;
   }
 }
 
