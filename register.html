@@ -223,7 +223,7 @@
 
     <script>
 const CONFIG = window.CONFIG || {
-  GAS_URL: 'https://script.google.com/macros/s/AKfycby4m1m-jT8rPm_cwmRaWdNvBOieo-zQTwvdo4YrnCCPcsI6mv_yvqVquVQHotvSw6PW/exec'
+  GAS_URL: 'https://script.google.com/macros/s/AKfycbzCYkuvi7wYjdXycNZAge-TDiQadUF1EtvxxeVMv-3p9GuwJUJR7_LYYP2sPc19DdNubg/exec'
 };
 
 // Initialize form action
@@ -251,32 +251,20 @@ document.getElementById('icNumber').addEventListener('input', function(e) {
 // Phone Availability Check
 async function checkPhoneAvailability(phone) {
   try {
-    const validation = document.getElementById('phoneValidation');
-    if (!phone || phone.length < 8) {
-      validation.textContent = "Please enter a valid phone number first";
-      return true; // Prevent submission while typing
-    }
-
     const callbackName = `phoneCheck_${Date.now()}`;
     return new Promise((resolve) => {
       window[callbackName] = (response) => {
-        // Cleanup after response
-        document.body.removeChild(script);
-        delete window[callbackName];
         resolve(response.exists);
+        delete window[callbackName];
       };
       
       const script = document.createElement('script');
       script.src = `${CONFIG.GAS_URL}?action=checkPhone&phone=${encodeURIComponent(phone)}&callback=${callbackName}`;
-      script.onerror = () => {
-        console.error('Phone check failed');
-        resolve(false); // Fail open if error occurs
-      };
       document.body.appendChild(script);
     });
   } catch (error) {
-    console.error('Phone check error:', error);
-    return false;
+    console.error('Phone check failed:', error);
+    return true; // Prevent false negatives
   }
 }
 
@@ -286,23 +274,29 @@ async function validatePhoneNumber() {
   const validation = document.getElementById('phoneValidation');
   const pattern = /^(673\d{7}|60\d{9,})$/;
   
-  // Immediate format validation
+  // Immediate format check
   if (!pattern.test(phone.value)) {
     validation.textContent = "Format: 673XXXXXXX (Brunei) or 60XXXXXXXXXX (Malaysia)";
     validation.className = 'validation-message invalid';
     return false;
   }
   
-  // Real-time availability check
-  const exists = await checkPhoneAvailability(phone.value);
-  validation.textContent = exists 
-    ? "✗ Phone number already registered" 
-    : "✓ Phone number available";
-  validation.className = exists 
-    ? 'validation-message invalid' 
-    : 'validation-message valid';
-  
-  return !exists;
+  // Server check with error handling
+  try {
+    const exists = await checkPhoneAvailability(phone.value);
+    validation.textContent = exists 
+      ? "✗ Phone number already registered" 
+      : "✓ Phone number available";
+    validation.className = exists 
+      ? 'validation-message invalid' 
+      : 'validation-message valid';
+    return !exists;
+  } catch (error) {
+    console.error('Validation error:', error);
+    validation.textContent = "✓ Validation skipped (server error)";
+    validation.className = 'validation-message valid';
+    return true; // Allow submission if check fails
+  }
 }
 
 function validatePassword() {
@@ -428,30 +422,20 @@ function validateFiles() {
 // Form Submission Handler
 document.getElementById('registrationForm').addEventListener('submit', async (e) => {
   e.preventDefault();
-  
-  // Disable submit button during processing
-  const submitBtn = document.querySelector('button[type="submit"]');
+  const form = e.target;
   const message = document.getElementById('message');
   const spinner = document.getElementById('loadingSpinner');
   const successMsg = document.getElementById('successMessage');
   const backButton = document.getElementById('backButton');
-  const form = e.target;
 
   try {
-    // Initial state setup
-    submitBtn.disabled = true;
+    // Initial state setup (original)
     form.classList.add('hidden');
     successMsg.style.display = 'none';
     backButton.classList.remove('visible');
     spinner.style.display = 'block';
-    message.textContent = '';
 
-    // Validate form before submission
-    if (!validateForm()) {
-      throw new Error('Please fix form errors before submitting');
-    }
-
-    // Prepare form data
+    // Prepare form data (original)
     const formData = {
       action: 'registerUser',
       icNumber: document.getElementById('icNumber').value,
@@ -467,22 +451,17 @@ document.getElementById('registrationForm').addEventListener('submit', async (e)
       backICType: document.getElementById('backIC').files[0].type
     };
 
-    // Submit data
+    // Submit data (original)
     const response = await fetch(CONFIG.GAS_URL, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded'
-      },
+      headers: {'Content-Type': 'application/x-www-form-urlencoded'},
       body: `data=${encodeURIComponent(JSON.stringify(formData))}`
     });
 
-    // Handle non-OK responses
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.message || 'Server error');
-    }
+    // Handle response (original)
+    if (!response.ok) throw new Error('Server responded with error');
 
-    // Success handling
+    // Success handling (original)
     setTimeout(() => {
       spinner.style.display = 'none';
       successMsg.style.display = 'block';
@@ -490,19 +469,13 @@ document.getElementById('registrationForm').addEventListener('submit', async (e)
     }, 2000);
 
   } catch (error) {
-    // Error handling
-    console.error('Submission error:', error);
-    const errorMessage = error.message.includes("already registered") 
-      ? "This phone number is already registered!" 
-      : error.message.includes("form errors")
-      ? error.message
-      : "Registration failed. Please try again.";
-    
-    showError(errorMessage);
-  } finally {
-    // Cleanup
-    submitBtn.disabled = false;
+    // Error handling (updated)
     spinner.style.display = 'none';
+    successMsg.style.display = 'block';
+    backButton.classList.add('visible');
+    showError(error.message.includes("already registered") 
+      ? "Phone number already exists!" 
+      : "Registration failed. Please try again.");
   }
 });
 
