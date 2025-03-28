@@ -219,14 +219,20 @@
 
     <script>
 const CONFIG = window.CONFIG || {
-  GAS_URL: 'https://script.google.com/macros/s/AKfycbz6WSTLnWHUwQ_HGeAWzLlxKK5xKfvrDtn-HW-zeGAy8vvfo2acAvO6nzh7PcGkTc20Ug/exec'
+  GAS_URL: 'https://script.google.com/macros/s/AKfycbxpL3_T-_MbCJUbFZ_nqM81DK6RKFjWCFv9ABxrOZYKKn3x7A9288zwMLvDRLs_YKtWOA/exec'
 };
 
 // Initialize form action
 document.getElementById('registrationForm').action = CONFIG.GAS_URL;
 
-// Real-time Validations
-document.getElementById('phone').addEventListener('input', validatePhoneNumber);
+// Real-time Input Listener with Debouncing
+let timeoutId;
+document.getElementById('phone').addEventListener('input', () => {
+  clearTimeout(timeoutId);
+  timeoutId = setTimeout(() => {
+    validatePhoneNumber();
+  }, 500); // 500ms debounce delay
+});
 document.getElementById('password').addEventListener('input', validatePassword);
 document.getElementById('confirmPassword').addEventListener('input', validateConfirmPassword);
 document.getElementById('email').addEventListener('input', validateEmail);
@@ -275,45 +281,70 @@ async function checkPhoneAvailability(phone) {
   }
 }
 
-// Updated Phone Validation
+// Phone Validation State
+let validationState = {
+  inProgress: false,
+  isValid: false,
+  lastValue: ''
+};
+
+// Real-time Phone Validation
 async function validatePhoneNumber() {
-  const phone = document.getElementById('phone');
+  const phoneInput = document.getElementById('phone');
   const validation = document.getElementById('phoneValidation');
-  const pattern = /^(673\d{7}|60\d{9,})$/;
+  const value = phoneInput.value.trim();
   
+  // Reset state
+  validationState.isValid = false;
   validation.textContent = '';
   validation.className = '';
 
-  // Immediate format check
-  if (!pattern.test(phone.value)) {
+  // Basic format check
+  if (!/^(673\d{7}|60\d{9,})$/.test(value)) {
     validation.textContent = "Invalid phone format";
     validation.className = 'invalid';
-    isPhoneValid = false;
-    return false;
+    return;
   }
 
   // Clean phone number
-  const cleanPhone = phone.value.replace(/[^0-9]/g, '');
+  const cleanPhone = value.replace(/[^0-9]/g, '');
   
+  // Avoid duplicate checks for same number
+  if (validationState.lastValue === cleanPhone) return;
+  validationState.lastValue = cleanPhone;
+
   try {
-    phoneCheckInProgress = true;
+    validationState.inProgress = true;
     validation.textContent = 'Checking availability...';
     
-    const exists = await checkPhoneAvailability(cleanPhone);
-    
+    // JSONP Check
+    const exists = await new Promise((resolve) => {
+      const callbackName = `phoneCheck_${Date.now()}`;
+      window[callbackName] = (response) => {
+        delete window[callbackName];
+        resolve(response?.exists ?? false);
+      };
+
+      const script = document.createElement('script');
+      script.src = `${CONFIG.GAS_URL}?action=checkPhone&phone=${cleanPhone}&callback=${callbackName}`;
+      script.onerror = () => resolve(false);
+      document.body.appendChild(script);
+    });
+
+    validationState.isValid = !exists;
     validation.textContent = exists 
       ? "✗ Number already registered" 
       : "✓ Number available";
     validation.className = exists ? 'invalid' : 'valid';
-    isPhoneValid = !exists;
+
   } catch (error) {
-    validation.textContent = "Verification failed";
+    console.error('Phone check failed:', error);
+    validation.textContent = "Verification error";
     validation.className = 'invalid';
-    isPhoneValid = false;
+    validationState.isValid = false;
   } finally {
-    phoneCheckInProgress = false;
+    validationState.inProgress = false;
   }
-  return isPhoneValid;
 }
 
 function validatePassword() {
@@ -437,27 +468,31 @@ document.getElementById('registrationForm').addEventListener('submit', async (e)
   const spinner = document.getElementById('loadingSpinner');
   const successMsg = document.getElementById('successMessage');
   const backButton = document.getElementById('backButton');
+  const submitBtn = form.querySelector('button[type="submit"]');
 
-  // Block submission during validation
-  if (phoneCheckInProgress) {
-    showError('Please wait for phone validation');
+  // Block duplicate submissions
+  if (validationState.inProgress) {
+    showError('Validation in progress - please wait');
     return;
   }
 
   // Final validation check
-  if (!isPhoneValid) {
+  if (!validationState.isValid) {
     showError('Invalid phone number - please fix validation');
     return;
   }
 
   try {
+    // Disable form during submission
+    submitBtn.disabled = true;
+    
     // Original submission flow
     form.classList.add('hidden');
     successMsg.style.display = 'none';
     backButton.classList.remove('visible');
     spinner.style.display = 'block';
 
-    // Prepare data
+    // Prepare form data
     const formData = {
       action: 'registerUser',
       icNumber: document.getElementById('icNumber').value,
@@ -487,21 +522,24 @@ document.getElementById('registrationForm').addEventListener('submit', async (e)
       spinner.style.display = 'none';
       successMsg.style.display = 'block';
       backButton.classList.add('visible');
+      validationState.lastValue = ''; // Reset validation state
     }, 2000);
 
   } catch (error) {
+    // Error handling
     spinner.style.display = 'none';
     form.classList.remove('hidden');
     
-    let errorMsg = 'Registration failed. Please try again.';
     if (error.message.includes('DUPLICATE_PHONE')) {
-      errorMsg = 'Phone number already registered!';
+      validationState.isValid = false;
       document.getElementById('phoneValidation').textContent = "✗ Already exists";
       document.getElementById('phoneValidation').className = 'invalid';
-      isPhoneValid = false;
+      showError('This phone number is already registered!');
+    } else {
+      showError(error.message || 'Registration failed. Please try again.');
     }
-    
-    showError(errorMsg);
+  } finally {
+    submitBtn.disabled = false;
   }
 });
 
