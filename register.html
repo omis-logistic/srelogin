@@ -244,62 +244,44 @@ document.getElementById('icNumber').addEventListener('input', function(e) {
     e.target.value = value;
 });
 
-// Replace phone validation functions
-let phoneCheckCallback;
+// Phone Validation State
+let isPhoneValid = false;
 
 async function checkPhoneAvailability(phone) {
   try {
-    const timestamp = Date.now(); // Cache busting
-    const url = `${CONFIG.GAS_URL}?action=checkPhone&phone=${encodeURIComponent(phone)}&_=${timestamp}`;
-    
-    const response = await fetch(url);
-    if (!response.ok) throw new Error('Network error');
-    
-    const result = await response.json();
-    return !!result.exists;
-    
+    const response = await fetch(`${CONFIG.GAS_URL}?action=checkPhone&phone=${encodeURIComponent(phone)}`);
+    const data = await response.json();
+    return data.exists;
   } catch (error) {
     console.error('Phone check failed:', error);
-    return false; // Fail safe
+    return true; // Fail-safe
   }
 }
 
 async function validatePhoneNumber() {
   const phone = document.getElementById('phone');
   const validation = document.getElementById('phoneValidation');
-  const rawValue = phone.value;
+  const pattern = /^(673\d{7}|60\d{9,})$/;
   
-  // Reset state
   validation.textContent = '';
   validation.className = '';
-  phone.classList.remove('valid', 'invalid');
 
-  // Basic format check
-  if (!/^(673\d{7}|60\d{9,})$/.test(rawValue)) {
+  // Immediate format check
+  if (!pattern.test(phone.value)) {
     validation.textContent = "Invalid format";
     validation.className = 'invalid';
-    phone.classList.add('invalid');
     return false;
   }
 
-  // Clean for comparison
-  const cleanPhone = rawValue.replace(/[^0-9]/g, '');
-  
   try {
-    validation.textContent = 'Checking availability...';
-    const exists = await checkPhoneAvailability(cleanPhone);
-    
-    validation.textContent = exists ? "✖ Already registered" : "✓ Available";
+    validation.textContent = 'Checking...';
+    const exists = await checkPhoneAvailability(phone.value);
+    validation.textContent = exists ? "✗ Already exists" : "✓ Available";
     validation.className = exists ? 'invalid' : 'valid';
-    phone.classList.toggle('invalid', exists);
-    phone.classList.toggle('valid', !exists);
-    
     return !exists;
-    
   } catch (error) {
-    validation.textContent = "Verification service unavailable";
+    validation.textContent = "Check failed";
     validation.className = 'invalid';
-    phone.classList.add('invalid');
     return false;
   }
 }
@@ -427,30 +409,21 @@ document.getElementById('registrationForm').addEventListener('submit', async (e)
   const backButton = document.getElementById('backButton');
 
   try {
-    // 1. Force fresh validation
-    const isValid = await validatePhoneNumber();
-    if (!isValid) {
-      showError('Please fix phone validation first');
+    // Validate form first
+    if (!await validateForm()) {
+      showError('Please fix validation errors');
       return;
     }
 
-    // 2. Validate all other fields
-    if (!(await validateForm())) {
-      showError('Please fix all validation errors');
-      return;
-    }
-
-    // 3. UI State Changes
     form.classList.add('hidden');
     successMsg.style.display = 'none';
     backButton.classList.remove('visible');
     spinner.style.display = 'block';
 
-    // 4. Prepare Form Data
     const formData = {
       action: 'registerUser',
       icNumber: document.getElementById('icNumber').value,
-      phone: document.getElementById('phone').value.replace(/[^\d]/g, ''), // Clean phone number
+      phone: document.getElementById('phone').value.replace(/[^0-9]/g, ''),
       password: document.getElementById('password').value,
       email: document.getElementById('email').value,
       fullName: document.getElementById('fullName').value,
@@ -462,69 +435,29 @@ document.getElementById('registrationForm').addEventListener('submit', async (e)
       backICType: document.getElementById('backIC').files[0].type
     };
 
-    // 5. File Validation
-    const fileValidation = validateFiles();
-    if (!fileValidation) {
-      throw new Error('Invalid file uploads');
-    }
-
-    // 6. Create FormData for multipart upload
-    const formPayload = new FormData();
-    formPayload.append('data', JSON.stringify(formData));
-    formPayload.append('frontIC', document.getElementById('frontIC').files[0]);
-    formPayload.append('backIC', document.getElementById('backIC').files[0]);
-
-    // 7. Submit Request
     const response = await fetch(CONFIG.GAS_URL, {
       method: 'POST',
-      body: formPayload,
-      headers: {
-        // Let browser set Content-Type with boundary
-      }
+      headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+      body: `data=${encodeURIComponent(JSON.stringify(formData))}`
     });
 
-    // 8. Handle Response
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.message || 'Registration failed');
-    }
+    if (!response.ok) throw new Error(await response.text());
 
-    // 9. Success Handling
     setTimeout(() => {
       spinner.style.display = 'none';
       successMsg.style.display = 'block';
       backButton.classList.add('visible');
-      
-      // Auto-redirect after 5 seconds
-      setTimeout(() => {
-        window.location.href = 'login.html';
-      }, 5000);
     }, 2000);
 
   } catch (error) {
-    // 10. Error Handling
     spinner.style.display = 'none';
     form.classList.remove('hidden');
-    
-    if (error.message.includes('DUPLICATE_PHONE')) {
-      showError('This phone number is already registered!');
-      document.getElementById('phoneValidation').textContent = "✗ Already exists";
-      document.getElementById('phoneValidation').className = 'invalid';
-    } else if (error.message.includes('NetworkError')) {
-      showError('Network connection failed. Please check your internet');
-    } else {
-      showError(error.message || 'Registration failed. Please try again.');
-    }
-    
-    // Log detailed error for debugging
-    console.error('Submission Error:', {
-      error: error.stack,
-      formData: formData,
-      validation: {
-        phone: document.getElementById('phone').value,
-        cleanPhone: document.getElementById('phone').value.replace(/[^\d]/g, '')
-      }
-    });
+    const errorMsg = error.message.includes('DUPLICATE_PHONE') 
+      ? 'Phone number already registered!' 
+      : error.message.includes('already registered') 
+      ? 'Phone number exists!' 
+      : 'Registration failed. Please try again.';
+    showError(errorMsg);
   }
 });
 
