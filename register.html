@@ -219,7 +219,7 @@
 
     <script>
 const CONFIG = window.CONFIG || {
-  GAS_URL: 'https://script.google.com/macros/s/AKfycbx6CVbKnp3WwUdxanMSwv9-twLFLz-n_MHWtj9SKEpCMzt_EeO45xXE3nsRz8bdMG1lIQ/exec'
+  GAS_URL: 'https://script.google.com/macros/s/AKfycbyMOWIcZU4ln80Xg2HtWH306k-KCsTw1tTZcUyzcJQA5n4rgLze57Scj8jqjL7EX75hTw/exec'
 };
 
 // Initialize form action
@@ -244,55 +244,57 @@ document.getElementById('icNumber').addEventListener('input', function(e) {
     e.target.value = value;
 });
 
-// Phone Validation State
-let isPhoneValid = false;
+// Replace phone validation functions
+let phoneCheckCallback;
 
 async function checkPhoneAvailability(phone) {
-  try {
-    const response = await fetch(`${CONFIG.GAS_URL}?action=checkPhone&phone=${encodeURIComponent(phone)}`);
-    const data = await response.json();
-    return data.exists;
-  } catch (error) {
-    console.error('Phone check failed:', error);
-    return true; // Fail-safe
-  }
+  return new Promise((resolve) => {
+    const callbackName = `phoneCheck_${Date.now()}`;
+    
+    window[callbackName] = (response) => {
+      resolve(response.exists);
+      delete window[callbackName];
+      document.body.removeChild(document.getElementById(callbackName));
+    };
+
+    const script = document.createElement('script');
+    script.id = callbackName;
+    script.src = `${CONFIG.GAS_URL}?action=checkPhone&phone=${encodeURIComponent(phone)}&callback=${callbackName}`;
+    script.onerror = () => resolve(false); // Fallback on error
+    document.body.appendChild(script);
+  });
 }
 
-let phoneCheckTimeout;
-
+// Update validatePhoneNumber
 async function validatePhoneNumber() {
   const phone = document.getElementById('phone');
   const validation = document.getElementById('phoneValidation');
   const pattern = /^(673\d{7}|60\d{9,})$/;
-  
-  // Clear previous timeout
-  if (phoneCheckTimeout) clearTimeout(phoneCheckTimeout);
-  
-  // Immediate format check
+
+  // Clear previous state
+  validation.textContent = '';
+  validation.className = '';
+
+  // Format check
   if (!pattern.test(phone.value)) {
     validation.textContent = "Invalid format";
     validation.className = 'invalid';
     return false;
   }
 
-  // Debounced server check
-  return new Promise((resolve) => {
-    phoneCheckTimeout = setTimeout(async () => {
-      try {
-        validation.textContent = 'Checking...';
-        const response = await fetch(`${CONFIG.GAS_URL}?action=checkPhone&phone=${encodeURIComponent(phone.value)}`);
-        const data = await response.json();
-        
-        validation.textContent = data.exists ? "✗ Already exists" : "✓ Available";
-        validation.className = data.exists ? 'invalid' : 'valid';
-        resolve(!data.exists);
-      } catch (error) {
-        validation.textContent = "Verification failed";
-        validation.className = 'invalid';
-        resolve(false);
-      }
-    }, 500);
-  });
+  try {
+    validation.textContent = 'Checking...';
+    const exists = await checkPhoneAvailability(phone.value);
+    
+    validation.textContent = exists ? "✗ Already exists" : "✓ Available";
+    validation.className = exists ? 'invalid' : 'valid';
+    return !exists;
+    
+  } catch (error) {
+    validation.textContent = "Verification failed";
+    validation.className = 'invalid';
+    return false;
+  }
 }
 
 function validatePassword() {
