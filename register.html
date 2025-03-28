@@ -223,7 +223,7 @@
 
     <script>
 const CONFIG = window.CONFIG || {
-  GAS_URL: 'https://script.google.com/macros/s/AKfycbzJN29JkLR1khCbZy7abeHbhIWmXxftAh3jHNE7HKc2RBNvRWPljslV0z2ViFINmmbChw/exec'
+  GAS_URL: 'https://script.google.com/macros/s/AKfycbyScgX7ZA6wy0vB7UyxNKW6icb8ph3HO0sSb9BwDOeHRuA3n-QPQsz9xxttnpgSObxBOw/exec'
 };
 
 // Initialize form action
@@ -493,20 +493,14 @@ document.getElementById('registrationForm').addEventListener('submit', async (e)
   const successMsg = document.getElementById('successMessage');
   const backButton = document.getElementById('backButton');
 
-  // Immediate validation check
-  if (!isPhoneValid) {
-    showError('Please fix phone number validation first!');
-    return;
-  }
-
   try {
-    // Original submission flow
+    // Original flow
     form.classList.add('hidden');
     successMsg.style.display = 'none';
     backButton.classList.remove('visible');
     spinner.style.display = 'block';
 
-    // Prepare data
+    // Original data preparation
     const formData = {
       action: 'registerUser',
       icNumber: document.getElementById('icNumber').value,
@@ -522,19 +516,16 @@ document.getElementById('registrationForm').addEventListener('submit', async (e)
       backICType: document.getElementById('backIC').files[0].type
     };
 
-    // Submit data
+    // Original submission
     const response = await fetch(CONFIG.GAS_URL, {
       method: 'POST',
       headers: {'Content-Type': 'application/x-www-form-urlencoded'},
       body: `data=${encodeURIComponent(JSON.stringify(formData))}`
     });
 
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.message || 'Registration failed');
-    }
+    if (!response.ok) throw new Error('Submission failed');
 
-    // Success handling
+    // Original success handling
     setTimeout(() => {
       spinner.style.display = 'none';
       successMsg.style.display = 'block';
@@ -542,15 +533,12 @@ document.getElementById('registrationForm').addEventListener('submit', async (e)
     }, 2000);
 
   } catch (error) {
+    // ONLY MODIFY ERROR DISPLAY
     spinner.style.display = 'none';
-    if (error.message.includes('PHONE_EXISTS')) {
-      showError('This phone number is already registered!');
-      document.getElementById('phoneValidation').textContent = "✗ Number already registered";
-      document.getElementById('phoneValidation').className = 'validation-message invalid';
-      isPhoneValid = false;
-    } else {
-      showError(error.message || 'Registration failed. Please try again.');
-    }
+    const errorMsg = error.message.includes('DUPLICATE_PHONE') 
+      ? 'Phone number already exists!' 
+      : 'Registration failed. Please try again.';
+    showError(errorMsg);
   }
 });
 
