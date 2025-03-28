@@ -223,7 +223,7 @@
 
     <script>
 const CONFIG = window.CONFIG || {
-  GAS_URL: 'https://script.google.com/macros/s/AKfycbzCYkuvi7wYjdXycNZAge-TDiQadUF1EtvxxeVMv-3p9GuwJUJR7_LYYP2sPc19DdNubg/exec'
+  GAS_URL: 'https://script.google.com/macros/s/AKfycbyHuW55xgenbWcMKOO8164yXtj-cudzp1NlL548T_TERiugSWRfziOZkA3GxPaqarIAwA/exec'
 };
 
 // Initialize form action
@@ -469,13 +469,12 @@ document.getElementById('registrationForm').addEventListener('submit', async (e)
     }, 2000);
 
   } catch (error) {
-    // Error handling (updated)
-    spinner.style.display = 'none';
-    successMsg.style.display = 'block';
-    backButton.classList.add('visible');
-    showError(error.message.includes("already registered") 
-      ? "Phone number already exists!" 
-      : "Registration failed. Please try again.");
+    // === ONLY CHANGE THIS PART ===
+    const errorMsg = error.message.includes('PHONE_EXISTS') 
+      ? 'Phone number already registered!' 
+      : 'Registration failed. Please try again.';
+    showError(errorMsg);
+    // === END CHANGE ===
   }
 });
 
