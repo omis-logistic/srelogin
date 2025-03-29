@@ -224,7 +224,7 @@
 
     <script>
 const CONFIG = window.CONFIG || {
-  GAS_URL: 'https://script.google.com/macros/s/AKfycbwUTEVO5qxGm0PYaslruxDkylJDhmk0Bamjy9RNUvz3kbOqnV2S7LKjjuFMANnMopEqTA/exec'
+  GAS_URL: 'https://script.google.com/macros/s/AKfycbwX-s4JCIbnrpmFfZeu4LrdIVQTdFQBG4mbhu8Y7RM47PrWrHrm_1nkrvlOaAfEnTW9Wg/exec'
 };
         // Real-time Validations
         document.getElementById('registrationForm').action = CONFIG.GAS_URL;
@@ -251,35 +251,73 @@ document.getElementById('phone').addEventListener('input', function(e) {
     const phone = e.target.value.trim();
     const validation = document.getElementById('phoneValidation');
     
-    // Clear previous checks
+    // Clear previous state
     clearTimeout(this.validationTimer);
     validation.textContent = '';
     validation.className = 'validation-message';
-    
-    // First validate format
-    if (!validatePhoneNumber()) return;
 
-    // Debounce duplicate check
+    // Basic format validation first
+    if (!/^(673|60)\d+$/.test(phone)) return;
+
+    // Debounce server check
     this.validationTimer = setTimeout(() => {
+        // Clean up previous callbacks
+        const previousCallbacks = Object.keys(window)
+            .filter(key => key.startsWith('phoneCheck_'));
+        previousCallbacks.forEach(key => delete window[key]);
+
+        // Create new JSONP callback
         const callbackName = `phoneCheck_${Date.now()}`;
         const script = document.createElement('script');
         
-        script.src = `${CONFIG.GAS_URL}?action=checkPhoneExists&phone=${encodeURIComponent(phone)}&callback=${callbackName}`;
+        // Encode parameters
+        const params = new URLSearchParams({
+            action: 'checkPhoneExists',
+            phone: phone,
+            callback: callbackName
+        });
 
+        // Configure script tag
+        script.src = `${CONFIG.GAS_URL}?${params}`;
+        script.onerror = () => {
+            validation.textContent = 'Validation service unavailable';
+            validation.className = 'validation-message invalid';
+            document.body.removeChild(script);
+            delete window[callbackName];
+        };
+
+        // Handle response
         window[callbackName] = (response) => {
-            if (response.exists) {
-                validation.textContent = 'Phone number already exists in system';
+            // Error handling
+            if (response.success !== undefined && !response.success) {
+                validation.textContent = 'System error: ' + (response.message || '');
                 validation.className = 'validation-message invalid';
-            } else {
-                validation.textContent = '✓ Available phone number';
-                validation.className = 'validation-message valid';
+            } 
+            // Successful response
+            else {
+                if (response.exists) {
+                    validation.textContent = 'Phone number already exists in system';
+                    validation.className = 'validation-message invalid';
+                    // Add visual feedback
+                    e.target.classList.add('invalid-input');
+                    e.target.classList.remove('valid-input');
+                } else {
+                    validation.textContent = '✓ Available phone number';
+                    validation.className = 'validation-message valid';
+                    // Add visual feedback
+                    e.target.classList.add('valid-input');
+                    e.target.classList.remove('invalid-input');
+                }
             }
+            
+            // Cleanup
             delete window[callbackName];
             document.body.removeChild(script);
         };
 
+        // Inject script
         document.body.appendChild(script);
-    }, 500);
+    }, 500); // 500ms debounce
 });
         
         // Validation Functions
