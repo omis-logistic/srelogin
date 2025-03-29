@@ -224,11 +224,10 @@
 
     <script>
 // ====== PHONE VALIDATION STATE ======
-const phoneState = {
-  value: '',
-  isValidFormat: false,
-  isUnique: null, // null=not checked, true=unique, false=duplicate
-  isChecking: false
+let phoneCheckState = {
+  validFormat: false,
+  isUnique: null, // null=unchecked, true=unique, false=duplicate
+  checking: false
 };
         
 const CONFIG = window.CONFIG || {
@@ -261,35 +260,29 @@ document.getElementById('phone').addEventListener('input', function(e) {
   
   clearTimeout(this.validationTimer);
   validation.textContent = '';
-  phoneState.value = phone;
-  phoneState.isValidFormat = false;
-  phoneState.isUnique = null;
-  phoneState.isChecking = false;
+  phoneCheckState = { validFormat: false, isUnique: null, checking: false };
 
   // Immediate format validation
-  if (!validatePhoneFormat(phone)) {
+  const pattern = /^(673\d{7}|60\d{9,})$/;
+  if (!pattern.test(phone)) {
     validation.textContent = "Invalid phone format";
     validation.className = 'validation-message invalid';
     return;
   }
+  phoneCheckState.validFormat = true;
 
   // Start duplicate check
-  phoneState.isChecking = true;
+  phoneCheckState.checking = true;
   validation.textContent = 'Checking availability...';
   validation.className = 'validation-message';
 
   this.validationTimer = setTimeout(async () => {
     try {
-      const response = await fetch(
-        `${CONFIG.GAS_URL}?action=checkPhoneExists&phone=${encodeURIComponent(phone)}`
-      );
+      const response = await fetch(`${CONFIG.GAS_URL}?action=checkPhoneExists&phone=${encodeURIComponent(phone)}`);
       const data = await response.json();
       
-      // Ensure we're still validating the same value
-      if (phone !== phoneState.value) return;
-
-      phoneState.isChecking = false;
-      phoneState.isUnique = !data.exists;
+      phoneCheckState.checking = false;
+      phoneCheckState.isUnique = !data.exists;
       
       validation.textContent = data.exists 
         ? 'Number already registered' 
@@ -299,11 +292,9 @@ document.getElementById('phone').addEventListener('input', function(e) {
         : 'validation-message valid';
 
     } catch (error) {
-      validation.textContent = 'Verification failed - try again';
+      validation.textContent = 'Verification failed';
       validation.className = 'validation-message invalid';
-      phoneState.isUnique = null;
-    } finally {
-      phoneState.isChecking = false;
+      phoneCheckState.isUnique = null;
     }
   }, 800);
 });
@@ -397,7 +388,7 @@ function validatePhoneFormat(phone) {
 function validateForm() {
   // Validate all fields
   const validations = [
-    validatePhoneFormat(document.getElementById('phone').value),
+    phoneCheckState.validFormat,
     validatePassword(),
     validateConfirmPassword(),
     validateEmail(),
@@ -406,24 +397,17 @@ function validateForm() {
   ].every(v => v);
 
   // Check phone uniqueness
-  const validation = document.getElementById('phoneValidation');
-  
-  if (phoneState.isChecking) {
-    validation.textContent = 'Final verification...';
+  if (phoneCheckState.checking) {
+    document.getElementById('phoneValidation').textContent = 'Final verification...';
     return false;
   }
   
-  if (phoneState.isUnique === false) {
-    validation.textContent = 'Number already registered';
-    return false;
-  }
-  
-  if (phoneState.isUnique === null) {
-    validation.textContent = 'Complete phone validation';
+  if (phoneCheckState.isUnique === false) {
+    document.getElementById('phoneValidation').textContent = 'Number already registered';
     return false;
   }
 
-  return validations;
+  return validations && phoneCheckState.isUnique === true;
 }
 
         function validateFiles() {
@@ -455,56 +439,42 @@ document.getElementById('registrationForm').addEventListener('submit', async (e)
   e.preventDefault();
   const form = e.target;
   const submitBtn = form.querySelector('button[type="submit"]');
-  const validation = document.getElementById('phoneValidation');
   const message = document.getElementById('message');
   const spinner = document.getElementById('loadingSpinner');
   const successMsg = document.getElementById('successMessage');
   const backButton = document.getElementById('backButton');
-  
-  // Initial state setup
+
+  // Initial state
   submitBtn.disabled = true;
-  submitBtn.innerHTML = '<div class="loader"></div> Validating...';
+  submitBtn.innerHTML = '<div class="loader"></div> Processing...';
   message.textContent = '';
   successMsg.style.display = 'none';
   backButton.classList.remove('visible');
 
-  // 1. Validate all fields
+  // Validate form
   if (!validateForm()) {
     submitBtn.disabled = false;
     submitBtn.innerHTML = 'Register Now';
     return;
   }
 
-  // 2. Final phone validation check
-  if (phoneState.isChecking) {
-    validation.textContent = 'Final verification...';
-    await new Promise(resolve => {
-      const checkInterval = setInterval(() => {
-        if (!phoneState.isChecking) {
-          clearInterval(checkInterval);
-          resolve();
-        }
-      }, 100);
-    });
+  // Final verification if check was in progress
+  if (phoneCheckState.checking) {
+    await new Promise(resolve => setTimeout(resolve, 500));
+    if (!validateForm()) {
+      submitBtn.disabled = false;
+      submitBtn.innerHTML = 'Register Now';
+      return;
+    }
   }
 
-  // 3. Final validation after potential async check
-  if (!phoneState.isUnique) {
-    validation.textContent = phoneState.isUnique === false 
-      ? 'Phone number already registered' 
-      : 'Complete phone validation';
-    submitBtn.disabled = false;
-    submitBtn.innerHTML = 'Register Now';
-    return;
-  }
-
-  // 4. Proceed with submission
+  // Proceed with submission
   try {
     // Show loading state
     form.classList.add('hidden');
     spinner.style.display = 'block';
 
-    // Prepare form data
+    // Prepare form data (keep existing code)
     const formData = {
       action: 'registerUser',
       icNumber: document.getElementById('icNumber').value,
@@ -523,41 +493,35 @@ document.getElementById('registrationForm').addEventListener('submit', async (e)
     // Submit data
     const response = await fetch(CONFIG.GAS_URL, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded'
-      },
+      headers: {'Content-Type': 'application/x-www-form-urlencoded'},
       body: `data=${encodeURIComponent(JSON.stringify(formData))}`
     });
 
-    // Handle non-OK responses
-    if (!response.ok) {
-      throw new Error(`Server error: ${response.status}`);
-    }
+    if (!response.ok) throw new Error('Server responded with error');
 
     // Show success state
     spinner.style.display = 'none';
     successMsg.style.display = 'block';
     backButton.classList.add('visible');
     
-    // Reset form after delay
+    // Reset after success
     setTimeout(() => {
       form.reset();
       form.classList.remove('hidden');
-      // Reset phone validation state
-      phoneState.value = '';
-      phoneState.isValidFormat = false;
-      phoneState.isUnique = null;
-      phoneState.isChecking = false;
+      // Reset validation states
+      document.querySelectorAll('.validation-message').forEach(el => {
+        el.textContent = '';
+        el.className = 'validation-message';
+      });
+      phoneCheckState = { validFormat: false, isUnique: null, checking: false };
     }, 2000);
 
   } catch (error) {
     // Error handling
     console.error('Submission error:', error);
     spinner.style.display = 'none';
-    successMsg.style.display = 'none';
     form.classList.remove('hidden');
     showError(`Registration failed: ${error.message}`);
-    
   } finally {
     submitBtn.disabled = false;
     submitBtn.innerHTML = 'Register Now';
