@@ -130,30 +130,6 @@
 #phone.invalid {
     background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%23ff4444" width="24" height="24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/><path d="M0 0h24v24H0z" fill="none"/></svg>');
 }
-
-.success-popup {
-    position: fixed;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    background: white;
-    padding: 2rem;
-    border-radius: 10px;
-    box-shadow: 0 0 20px rgba(0,0,0,0.2);
-    z-index: 1000;
-    text-align: center;
-    display: none;
-}
-.success-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(0,0,0,0.5);
-    z-index: 999;
-    display: none;
-}
     </style>
     <script src="app.js"></script>
 </head>
@@ -266,16 +242,6 @@
         <a href="login.html" class="back-button" id="backButton">Back to Login</a>
     </div>
 
-    <div class="success-overlay"></div>
-<div class="success-popup">
-    <h2>🎉 Registration Successful!</h2>
-    <p>Your account has been created successfully</p>
-    <button class="login-redirect-btn" 
-            style="padding: 10px 20px; margin-top: 15px; cursor: pointer">
-        Continue to Login
-    </button>
-</div>
-    
     <script>
 const CONFIG = window.CONFIG || {
   GAS_URL: 'https://script.google.com/macros/s/AKfycbwX-s4JCIbnrpmFfZeu4LrdIVQTdFQBG4mbhu8Y7RM47PrWrHrm_1nkrvlOaAfEnTW9Wg/exec'
@@ -511,21 +477,32 @@ function checkPhoneExistence(phone) {
 document.getElementById('registrationForm').addEventListener('submit', async (e) => {
     e.preventDefault();
     const form = e.target;
-    const popup = document.querySelector('.success-popup');
-    const overlay = document.querySelector('.success-overlay');
+    const phoneInput = document.getElementById('phone');
+    const validation = document.getElementById('phoneValidation');
     const submitBtn = form.querySelector('button[type="submit"]');
-    const originalBtnText = submitBtn.innerHTML;
+    const messageDiv = document.getElementById('message');
 
     // Show loading state
     submitBtn.disabled = true;
+    const originalBtnText = submitBtn.innerHTML;
     submitBtn.innerHTML = '<div class="loader"></div> Submitting...';
+
+    // Final validation check
+    if (!isFormatValid || !isExistsValid) {
+        validation.textContent = 'Complete phone validation first!';
+        validation.className = 'validation-message invalid';
+        phoneInput.classList.add('invalid');
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = originalBtnText;
+        return;
+    }
 
     try {
         // Collect all form data
         const formData = {
             action: 'registerUser',
             icNumber: document.getElementById('icNumber').value,
-            phone: document.getElementById('phone').value.replace(/\D/g, ''),
+            phone: phoneInput.value,
             password: document.getElementById('password').value,
             email: document.getElementById('email').value,
             fullName: document.getElementById('fullName').value,
@@ -537,44 +514,49 @@ document.getElementById('registrationForm').addEventListener('submit', async (e)
             backICType: document.getElementById('backIC').files[0].type
         };
 
-        // Submit data with timeout
-        await Promise.race([
-            fetch(CONFIG.GAS_URL, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/x-www-form-urlencoded',
-                },
-                body: `data=${encodeURIComponent(JSON.stringify(formData))}`
-            }),
-            new Promise((_, reject) => 
-                setTimeout(() => reject(new Error('Timeout')), 15000)
-        ]);
+        // Submit to backend
+        const response = await fetch(CONFIG.GAS_URL, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: `data=${encodeURIComponent(JSON.stringify(formData))}`
+        });
 
+        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+
+        const result = await response.json();
+
+        if (result.success) {
+            // Show success state
+            messageDiv.textContent = 'Registration successful! Redirecting...';
+            messageDiv.className = 'success-message';
+            messageDiv.style.display = 'block';
+            
+            // Reset form and redirect
+            form.reset();
+            setTimeout(() => {
+                window.location.href = 'login.html';
+            }, 2000);
+        } else {
+            throw new Error(result.message || 'Registration failed on server');
+        }
     } catch (error) {
-        console.log('Background submission:', error.message);
-    } finally {
-        // Always show success UI
-        popup.style.display = 'block';
-        overlay.style.display = 'block';
+        console.error('Submission Error:', error);
+        messageDiv.textContent = error.message;
+        messageDiv.className = 'error-message';
+        messageDiv.style.display = 'block';
         
-        // Reset form state
-        form.reset();
+        // Re-enable form elements
+        phoneInput.focus();
+    } finally {
+        // Reset button state
         submitBtn.disabled = false;
         submitBtn.innerHTML = originalBtnText;
-        
-        // Cleanup validation states
-        document.getElementById('phoneValidation').textContent = '';
-        document.querySelectorAll('.validation-message').forEach(el => {
-            el.textContent = '';
-            el.className = 'validation-message';
-        });
-        
-        // Clear any cached data
-        localStorage.removeItem('registrationDraft');
     }
 });
 
-// File to Base64 helper (required for complete implementation)
+// File to Base64 Converter (Required)
 async function fileToBase64(file) {
     return new Promise((resolve, reject) => {
         const reader = new FileReader();
@@ -584,11 +566,15 @@ async function fileToBase64(file) {
     });
 }
 
-// Close popup on overlay click
-document.querySelector('.success-overlay').addEventListener('click', () => {
-    document.querySelector('.success-popup').style.display = 'none';
-    this.style.display = 'none';
-});
+// Error Display Function (Complete)
+function showError(text, targetId = 'message') {
+    const errorElement = document.getElementById(targetId);
+    if (errorElement) {
+        errorElement.textContent = text;
+        errorElement.className = 'validation-message invalid';
+        errorElement.style.display = 'block';
+    }
+}
         
     </script>
 </body>
