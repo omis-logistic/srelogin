@@ -225,20 +225,22 @@
     </div>
 
     <script>
-        // Real-time Validations
+      
         // ================= REAL-TIME VALIDATION =================
-document.getElementById('phone').addEventListener('input', function(e) {
-  const phone = e.target.value.trim();
-  const errorElement = document.getElementById('phoneError');
+        document.getElementById('phone').addEventListener('input', function(e) {
+  // Existing format validation
+  validatePhoneNumber();
   
-  // Clear previous timeout and error
+  // New duplicate check
+  const phone = e.target.value.trim();
+  const errorElement = document.getElementById('phoneValidation'); // Use existing ID
+  
   clearTimeout(this.validationTimer);
   errorElement.textContent = '';
   
-  if (!phone) return;
+  if (!phone || !validatePhoneNumber()) return;
 
-  // Debounce to prevent spamming
-  this.validationTimer = setTimeout(async () => {
+  this.validationTimer = setTimeout(() => {
     const callbackName = `phoneCheck_${Date.now()}`;
     const script = document.createElement('script');
     
@@ -247,6 +249,12 @@ document.getElementById('phone').addEventListener('input', function(e) {
     window[callbackName] = (response) => {
       if (response.exists) {
         errorElement.textContent = 'Phone number already exists in the system';
+        errorElement.classList.remove('valid');
+        errorElement.classList.add('invalid');
+      } else {
+        errorElement.textContent = '✓ Valid phone number';
+        errorElement.classList.remove('invalid');
+        errorElement.classList.add('valid');
       }
       delete window[callbackName];
       document.body.removeChild(script);
@@ -255,7 +263,6 @@ document.getElementById('phone').addEventListener('input', function(e) {
     document.body.appendChild(script);
   }, 500);
 });
-        document.getElementById('phone').addEventListener('input', validatePhoneNumber);
         document.getElementById('password').addEventListener('input', validatePassword);
         document.getElementById('confirmPassword').addEventListener('input', validateConfirmPassword);
         document.getElementById('email').addEventListener('input', validateEmail);
