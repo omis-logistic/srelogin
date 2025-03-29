@@ -474,86 +474,71 @@ function checkPhoneExistence(phone) {
         }
 
 // Complete Form Submission Handler
-document.getElementById('registrationForm').addEventListener('submit', async (e) => {
+document.getElementById('registrationForm').addEventListener('submit', function(e) {
     e.preventDefault();
     const form = e.target;
     const phoneInput = document.getElementById('phone');
     const validation = document.getElementById('phoneValidation');
-    const submitBtn = form.querySelector('button[type="submit"]');
     const messageDiv = document.getElementById('message');
-
-    // Show loading state
-    submitBtn.disabled = true;
-    const originalBtnText = submitBtn.innerHTML;
-    submitBtn.innerHTML = '<div class="loader"></div> Submitting...';
 
     // Final validation check
     if (!isFormatValid || !isExistsValid) {
         validation.textContent = 'Complete phone validation first!';
         validation.className = 'validation-message invalid';
         phoneInput.classList.add('invalid');
-        submitBtn.disabled = false;
-        submitBtn.innerHTML = originalBtnText;
         return;
     }
 
-    try {
-        // Collect all form data
-        const formData = {
-            action: 'registerUser',
-            icNumber: document.getElementById('icNumber').value,
-            phone: phoneInput.value,
-            password: document.getElementById('password').value,
-            email: document.getElementById('email').value,
-            fullName: document.getElementById('fullName').value,
-            address: document.getElementById('address').value,
-            postcode: document.getElementById('postcode').value,
-            frontIC: await fileToBase64(document.getElementById('frontIC').files[0]),
-            backIC: await fileToBase64(document.getElementById('backIC').files[0]),
-            frontICType: document.getElementById('frontIC').files[0].type,
-            backICType: document.getElementById('backIC').files[0].type
-        };
+    // Original submission logic with dual validation
+    const callbackName = `submitCallback_${Date.now()}`;
+    const script = document.createElement('script');
+    
+    // Build URL parameters matching original format
+    const params = new URLSearchParams({
+        action: 'registerUser',
+        icNumber: document.getElementById('icNumber').value,
+        phone: phoneInput.value,
+        password: document.getElementById('password').value,
+        email: document.getElementById('email').value,
+        fullName: document.getElementById('fullName').value,
+        address: document.getElementById('address').value,
+        postcode: document.getElementById('postcode').value,
+        frontIC: document.getElementById('frontIC').files[0] ? 
+            await fileToBase64(document.getElementById('frontIC').files[0]) : '',
+        backIC: document.getElementById('backIC').files[0] ? 
+            await fileToBase64(document.getElementById('backIC').files[0]) : '',
+        frontICType: document.getElementById('frontIC').files[0]?.type || '',
+        backICType: document.getElementById('backIC').files[0]?.type || '',
+        callback: callbackName
+    });
 
-        // Submit to backend
-        const response = await fetch(CONFIG.GAS_URL, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/x-www-form-urlencoded',
-            },
-            body: `data=${encodeURIComponent(JSON.stringify(formData))}`
-        });
-
-        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-
-        const result = await response.json();
-
-        if (result.success) {
-            // Show success state
-            messageDiv.textContent = 'Registration successful! Redirecting...';
+    script.src = `${CONFIG.GAS_URL}?${params}`;
+    
+    // Original success/error handling
+    window[callbackName] = (response) => {
+        if (response.success) {
+            messageDiv.textContent = 'Registration successful!';
             messageDiv.className = 'success-message';
-            messageDiv.style.display = 'block';
-            
-            // Reset form and redirect
             form.reset();
             setTimeout(() => {
                 window.location.href = 'login.html';
             }, 2000);
         } else {
-            throw new Error(result.message || 'Registration failed on server');
+            messageDiv.textContent = response.message || 'Registration failed';
+            messageDiv.className = 'error-message';
         }
-    } catch (error) {
-        console.error('Submission Error:', error);
-        messageDiv.textContent = error.message;
+        delete window[callbackName];
+        document.body.removeChild(script);
+    };
+
+    script.onerror = () => {
+        messageDiv.textContent = 'Submission failed - please try again';
         messageDiv.className = 'error-message';
-        messageDiv.style.display = 'block';
-        
-        // Re-enable form elements
-        phoneInput.focus();
-    } finally {
-        // Reset button state
-        submitBtn.disabled = false;
-        submitBtn.innerHTML = originalBtnText;
-    }
+        delete window[callbackName];
+        document.body.removeChild(script);
+    };
+
+    document.body.appendChild(script);
 });
 
 // File to Base64 Converter (Required)
