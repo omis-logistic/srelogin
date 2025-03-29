@@ -116,19 +116,18 @@
     <div class="container">
         <h2>New User Registration</h2>
         <form id="registrationForm" 
-              action="https://script.google.com/macros/s/AKfycbweKfNGVAzgiP9RNzoAVGdGn8wvqvAQkb-KI2AAm1qzHQbD4yYyDQGRWs9vOWV7E0Py_g/exec" 
+              action="https://script.google.com/macros/s/AKfycbwmMVJIUBOcbPgviIxzKHkpYv4fT9WClMR6JnrtkVDaWjuMTpbHIcLmgyd1VYw1nYoHaw/exec" 
               method="POST" 
               enctype="application/x-www-form-urlencoded">
             
             <!-- Phone Number -->
             <div class="form-group">
-              <label for="phone">Phone Number:</label>
-              <input type="tel" 
-                     id="phone" 
-                     pattern="^(673\d{7}|60\d{9,})$"
-                     title="Brunei: 673XXXXXXX | Malaysia: 60XXXXXXXXXX"
-                     required>
-              <span class="validation-message" id="phoneValidation"></span>
+                <label for="phone">Phone Number:</label>
+                <input type="tel" id="phone" 
+                       pattern="^(673\d{7}|60\d{9,})$"
+                       title="Brunei: 673XXXXXXX | Malaysia: 60XXXXXXXXXX"
+                       required>
+                <span class="validation-message" id="phoneValidation"></span>
             </div>
 
             <!-- Password -->
@@ -226,42 +225,8 @@
     </div>
 
     <script>
-      
-// ================= REAL-TIME VALIDATION =================
-document.getElementById('phone').addEventListener('input', function(e) {
-  const phone = e.target.value.trim();
-  const validation = document.getElementById('phoneValidation');
-  
-  // Clear previous checks
-  clearTimeout(this.validationTimer);
-  validation.textContent = '';
-  validation.className = 'validation-message';
-  
-  // First validate format
-  if (!validatePhoneNumber()) return;
-
-  // Debounce duplicate check
-  this.validationTimer = setTimeout(() => {
-    const callbackName = `phoneCheck_${Date.now()}`;
-    const script = document.createElement('script');
-    
-    script.src = `${CONFIG.GAS_URL}?action=checkPhoneExists&phone=${encodeURIComponent(phone)}&callback=${callbackName}`;
-
-    window[callbackName] = (response) => {
-      if (response.exists) {
-        validation.textContent = 'Phone number already exists in the system';
-        validation.className = 'validation-message invalid';
-      } else {
-        validation.textContent = '✓ Available phone number';
-        validation.className = 'validation-message valid';
-      }
-      delete window[callbackName];
-      document.body.removeChild(script);
-    };
-
-    document.body.appendChild(script);
-  }, 500);
-});
+        // Real-time Validations
+        document.getElementById('phone').addEventListener('input', validatePhoneNumber);
         document.getElementById('password').addEventListener('input', validatePassword);
         document.getElementById('confirmPassword').addEventListener('input', validateConfirmPassword);
         document.getElementById('email').addEventListener('input', validateEmail);
@@ -280,22 +245,20 @@ document.getElementById('phone').addEventListener('input', function(e) {
         });
 
         // Validation Functions
-function validatePhoneNumber() {
-  const phone = document.getElementById('phone');
-  const validation = document.getElementById('phoneValidation');
-  const pattern = /^(673\d{7}|60\d{9,})$/;
-  
-  // Reset validation state
-  validation.textContent = '';
-  validation.className = 'validation-message';
-
-  if (!pattern.test(phone.value)) {
-    validation.textContent = "Format: 673XXXXXXX (Brunei) or 60XXXXXXXXXX (Malaysia)";
-    validation.className = 'validation-message invalid';
-    return false;
-  }
-  return true; // Only returns format validity
-}
+        function validatePhoneNumber() {
+            const phone = document.getElementById('phone');
+            const validation = document.getElementById('phoneValidation');
+            const pattern = /^(673\d{7}|60\d{9,})$/;
+            
+            if (!pattern.test(phone.value)) {
+                validation.textContent = "Format: 673XXXXXXX (Brunei) or 60XXXXXXXXXX (Malaysia)";
+                validation.className = 'validation-message invalid';
+                return false;
+            }
+            validation.textContent = "✓ Valid phone number";
+            validation.className = 'validation-message valid';
+            return true;
+        }
 
         function validatePassword() {
             const password = document.getElementById('password');
