@@ -88,24 +88,28 @@
         }
 
         .back-button {
-            display: block;
-            width: 200px;
-            margin: 20px auto;
-            padding: 10px;
-            background: #4285f4;
-            color: white;
-            text-align: center;
-            text-decoration: none;
-            border-radius: 5px;
-            opacity: 0;
-            visibility: hidden;
-            transition: opacity 0.3s ease, visibility 0.3s ease;
-        }
+    display: block; /* Changed from display: none */
+    width: 200px;
+    margin: 20px auto;
+    padding: 10px;
+    background: #4285f4;
+    color: white;
+    text-align: center;
+    text-decoration: none;
+    border-radius: 5px;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s ease, visibility 0.3s ease;
+}
 
-        .back-button.visible {
-            opacity: 1;
-            visibility: visible;
-        }
+.back-button.visible {
+    opacity: 1;
+    visibility: visible;
+}
+
+.hidden {
+    display: none !important;
+}
     </style>
     <script src="app.js"></script>
 </head>
@@ -207,13 +211,14 @@
             <div id="message" class="error"></div>
         </form>
 
-        <!-- Loading spinner and success message -->
+        <!-- Add loading spinner and success message -->
         <div class="loader" id="loadingSpinner"></div>
         <div class="success-message" id="successMessage">
             ✓ Registration Successful!<br>
             Click button to login...
         </div>
         
+        <!-- Add back to login button -->
         <a href="login.html" class="back-button" id="backButton">Back to Login</a>
     </div>
 
@@ -221,262 +226,241 @@
 const CONFIG = window.CONFIG || {
   GAS_URL: 'https://script.google.com/macros/s/AKfycbwmMVJIUBOcbPgviIxzKHkpYv4fT9WClMR6JnrtkVDaWjuMTpbHIcLmgyd1VYw1nYoHaw/exec'
 };
+        // Real-time Validations
+        document.getElementById('registrationForm').action = CONFIG.GAS_URL;
+        document.getElementById('phone').addEventListener('input', validatePhoneNumber);
+        document.getElementById('password').addEventListener('input', validatePassword);
+        document.getElementById('confirmPassword').addEventListener('input', validateConfirmPassword);
+        document.getElementById('email').addEventListener('input', validateEmail);
+        document.getElementById('confirmEmail').addEventListener('input', validateEmail);
+        document.getElementById('icNumber').addEventListener('input', validateICNumber);
 
-// Initialize form action
-document.getElementById('registrationForm').action = CONFIG.GAS_URL;
-
-// Real-time Validations
-document.getElementById('phone').addEventListener('input', validatePhoneNumber);
-document.getElementById('password').addEventListener('input', validatePassword);
-document.getElementById('confirmPassword').addEventListener('input', validateConfirmPassword);
-document.getElementById('email').addEventListener('input', validateEmail);
-document.getElementById('confirmEmail').addEventListener('input', validateEmail);
-document.getElementById('icNumber').addEventListener('input', validateICNumber);
-
-// IC Number Auto-Formatting
-document.getElementById('icNumber').addEventListener('input', function(e) {
-    let value = e.target.value.replace(/-/g, '');
-    if (value.length > 2 && value.length <= 8) {
-        value = value.slice(0,2) + '-' + value.slice(2);
-    } else if (value.length > 8) {
-        value = value.slice(0,6) + '-' + value.slice(6,8) + '-' + value.slice(8,12);
-    }
-    e.target.value = value;
-});
-
-// Phone Validation State
-let isPhoneValid = false;
-
-async function checkPhoneAvailability(phone) {
-  try {
-    const response = await fetch(`${CONFIG.GAS_URL}?action=checkPhone&phone=${encodeURIComponent(phone)}`);
-    const data = await response.json();
-    return data.exists;
-  } catch (error) {
-    console.error('Phone check failed:', error);
-    return true; // Fail-safe
-  }
-}
-
-async function validatePhoneNumber() {
-  const phone = document.getElementById('phone');
-  const validation = document.getElementById('phoneValidation');
-  const pattern = /^(673\d{7}|60\d{9,})$/;
-  
-  validation.textContent = '';
-  validation.className = '';
-
-  // Immediate format check
-  if (!pattern.test(phone.value)) {
-    validation.textContent = "Invalid format";
-    validation.className = 'invalid';
-    return false;
-  }
-
-  try {
-    validation.textContent = 'Checking...';
-    const exists = await checkPhoneAvailability(phone.value);
-    validation.textContent = exists ? "✗ Already exists" : "✓ Available";
-    validation.className = exists ? 'invalid' : 'valid';
-    return !exists;
-  } catch (error) {
-    validation.textContent = "Check failed";
-    validation.className = 'invalid';
-    return false;
-  }
-}
-
-function validatePassword() {
-    const password = document.getElementById('password');
-    const validation = document.getElementById('passwordValidation');
-    
-    let messages = [];
-    if (password.value.length < 6) messages.push("6+ characters");
-    if (!/[A-Z]/.test(password.value)) messages.push("1 uppercase letter");
-    if (!/\d/.test(password.value)) messages.push("1 number");
-
-    if (messages.length > 0) {
-        validation.textContent = "Requirements missing: " + messages.join(", ");
-        validation.className = 'validation-message invalid';
-        return false;
-    }
-    validation.textContent = "✓ Strong password";
-    validation.className = 'validation-message valid';
-    return true;
-}
-
-function validateConfirmPassword() {
-    const password = document.getElementById('password').value;
-    const confirm = document.getElementById('confirmPassword').value;
-    const validation = document.getElementById('confirmPasswordValidation');
-    
-    if (confirm === '') {
-        validation.textContent = "Please confirm your password";
-        validation.className = 'validation-message invalid';
-        return false;
-    }
-    
-    if (password !== confirm) {
-        validation.textContent = "Passwords do not match!";
-        validation.className = 'validation-message invalid';
-        return false;
-    }
-    
-    validation.textContent = "✓ Passwords match";
-    validation.className = 'validation-message valid';
-    return true;
-}
-
-function validateEmail() {
-    const email = document.getElementById('email').value;
-    const confirm = document.getElementById('confirmEmail').value;
-    const validation = document.getElementById('emailValidation');
-    
-    if (email !== confirm) {
-        validation.textContent = "Email addresses do not match";
-        validation.className = 'validation-message invalid';
-        return false;
-    }
-    
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-        validation.textContent = "Invalid email format";
-        validation.className = 'validation-message invalid';
-        return false;
-    }
-    
-    validation.textContent = "✓ Emails match";
-    validation.className = 'validation-message valid';
-    return true;
-}
-
-function validateICNumber() {
-    const icNumber = document.getElementById('icNumber').value;
-    const validation = document.getElementById('icValidation');
-    const pattern = /^\d{2}-\d{6}$|^\d{6}-\d{2}-\d{4}$/;
-    
-    if (!pattern.test(icNumber)) {
-        validation.textContent = "Invalid format: Use XX-XXXXXX or XXXXXX-XX-XXXX";
-        validation.className = 'validation-message invalid';
-        return false;
-    }
-    validation.textContent = "✓ Valid IC format";
-    validation.className = 'validation-message valid';
-    return true;
-}
-
-function validateFiles() {
-    const frontIC = document.getElementById('frontIC').files[0];
-    const backIC = document.getElementById('backIC').files[0];
-    const validation = document.getElementById('fileValidation');
-    const validTypes = ['image/jpeg', 'image/png', 'application/pdf'];
-    
-    if (!frontIC || !backIC) {
-        validation.textContent = "Both IC documents are required";
-        validation.className = 'validation-message invalid';
-        return false;
-    }
-
-    if (!validTypes.includes(frontIC.type) || !validTypes.includes(backIC.type)) {
-        validation.textContent = "Only JPG, PNG, or PDF files allowed";
-        validation.className = 'validation-message invalid';
-        return false;
-    }
-
-    validation.textContent = "✓ Valid files selected";
-    validation.className = 'validation-message valid';
-    return true;
-}
-
-async function validateForm() {
-  const validations = [
-    await validatePhoneNumber(),
-    validatePassword(),
-    validateConfirmPassword(),
-    validateEmail(),
-    validateICNumber(),
-    validateFiles()
-  ];
-
-  return validations.every(v => v === true);
-}
-
-document.getElementById('registrationForm').addEventListener('submit', async (e) => {
-  e.preventDefault();
-  const form = e.target;
-  const message = document.getElementById('message');
-  const spinner = document.getElementById('loadingSpinner');
-  const successMsg = document.getElementById('successMessage');
-  const backButton = document.getElementById('backButton');
-
-  try {
-    // Validate form first
-    if (!await validateForm()) {
-      showError('Please fix validation errors');
-      return;
-    }
-
-    form.classList.add('hidden');
-    successMsg.style.display = 'none';
-    backButton.classList.remove('visible');
-    spinner.style.display = 'block';
-
-    const formData = {
-      action: 'registerUser',
-      icNumber: document.getElementById('icNumber').value,
-      phone: document.getElementById('phone').value.replace(/[^0-9]/g, ''),
-      password: document.getElementById('password').value,
-      email: document.getElementById('email').value,
-      fullName: document.getElementById('fullName').value,
-      address: document.getElementById('address').value,
-      postcode: document.getElementById('postcode').value,
-      frontIC: await fileToBase64(document.getElementById('frontIC').files[0]),
-      backIC: await fileToBase64(document.getElementById('backIC').files[0]),
-      frontICType: document.getElementById('frontIC').files[0].type,
-      backICType: document.getElementById('backIC').files[0].type
-    };
-
-    const response = await fetch(CONFIG.GAS_URL, {
-      method: 'POST',
-      headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-      body: `data=${encodeURIComponent(JSON.stringify(formData))}`
-    });
-
-    if (!response.ok) throw new Error(await response.text());
-
-    setTimeout(() => {
-      spinner.style.display = 'none';
-      successMsg.style.display = 'block';
-      backButton.classList.add('visible');
-    }, 2000);
-
-  } catch (error) {
-    spinner.style.display = 'none';
-    form.classList.remove('hidden');
-    const errorMsg = error.message.includes('DUPLICATE_PHONE') 
-      ? 'Phone number already registered!' 
-      : error.message.includes('already registered') 
-      ? 'Phone number exists!' 
-      : 'Registration failed. Please try again.';
-    showError(errorMsg);
-  }
-});
-
-function fileToBase64(file) {
-    return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onloadend = () => {
-            if (reader.readyState === FileReader.DONE) {
-                resolve(reader.result.split(',')[1]);
+        // IC Number Auto-Formatting
+        document.getElementById('icNumber').addEventListener('input', function(e) {
+            let value = e.target.value.replace(/-/g, '');
+            if (value.length > 2 && value.length <= 8) {
+                value = value.slice(0,2) + '-' + value.slice(2);
+            } else if (value.length > 8) {
+                value = value.slice(0,6) + '-' + value.slice(6,8) + '-' + value.slice(8,12);
             }
-        };
-        reader.onerror = error => reject(error);
-        reader.readAsDataURL(file);
-    });
-}
+            e.target.value = value;
+        });
 
-function showError(text) {
-    document.getElementById('message').textContent = text;
-}
+        // Validation Functions
+        function validatePhoneNumber() {
+            const phone = document.getElementById('phone');
+            const validation = document.getElementById('phoneValidation');
+            const pattern = /^(673\d{7}|60\d{9,})$/;
+            
+            if (!pattern.test(phone.value)) {
+                validation.textContent = "Format: 673XXXXXXX (Brunei) or 60XXXXXXXXXX (Malaysia)";
+                validation.className = 'validation-message invalid';
+                return false;
+            }
+            validation.textContent = "✓ Valid phone number";
+            validation.className = 'validation-message valid';
+            return true;
+        }
+
+        function validatePassword() {
+            const password = document.getElementById('password');
+            const validation = document.getElementById('passwordValidation');
+            
+            let messages = [];
+            if (password.value.length < 6) messages.push("6+ characters");
+            if (!/[A-Z]/.test(password.value)) messages.push("1 uppercase letter");
+            if (!/\d/.test(password.value)) messages.push("1 number");
+
+            if (messages.length > 0) {
+                validation.textContent = "Requirements missing: " + messages.join(", ");
+                validation.className = 'validation-message invalid';
+                return false;
+            }
+            validation.textContent = "✓ Strong password";
+            validation.className = 'validation-message valid';
+            return true;
+        }
+
+        function validateConfirmPassword() {
+            const password = document.getElementById('password').value;
+            const confirm = document.getElementById('confirmPassword').value;
+            const validation = document.getElementById('confirmPasswordValidation');
+            
+            if (confirm === '') {
+                validation.textContent = "Please confirm your password";
+                validation.className = 'validation-message invalid';
+                return false;
+            }
+            
+            if (password !== confirm) {
+                validation.textContent = "Passwords do not match!";
+                validation.className = 'validation-message invalid';
+                return false;
+            }
+            
+            validation.textContent = "✓ Passwords match";
+            validation.className = 'validation-message valid';
+            return true;
+        }
+
+        function validateEmail() {
+            const email = document.getElementById('email').value;
+            const confirm = document.getElementById('confirmEmail').value;
+            const validation = document.getElementById('emailValidation');
+            
+            if (email !== confirm) {
+                validation.textContent = "Email addresses do not match";
+                validation.className = 'validation-message invalid';
+                return false;
+            }
+            
+            if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+                validation.textContent = "Invalid email format";
+                validation.className = 'validation-message invalid';
+                return false;
+            }
+            
+            validation.textContent = "✓ Emails match";
+            validation.className = 'validation-message valid';
+            return true;
+        }
+
+        function validateICNumber() {
+            const icNumber = document.getElementById('icNumber').value;
+            const validation = document.getElementById('icValidation');
+            const pattern = /^\d{2}-\d{6}$|^\d{6}-\d{2}-\d{4}$/;
+            
+            if (!pattern.test(icNumber)) {
+                validation.textContent = "Invalid format: Use XX-XXXXXX or XXXXXX-XX-XXXX";
+                validation.className = 'validation-message invalid';
+                return false;
+            }
+            validation.textContent = "✓ Valid IC format";
+            validation.className = 'validation-message valid';
+            return true;
+        }
+
+        // Main Validation Function
+        function validateForm() {
+            const validations = [
+                validatePhoneNumber(),
+                validatePassword(),
+                validateConfirmPassword(),
+                validateEmail(),
+                validateICNumber(),
+                validateFiles()
+            ];
+
+            return validations.every(validation => validation === true);
+        }
+
+        function validateFiles() {
+            const frontIC = document.getElementById('frontIC').files[0];
+            const backIC = document.getElementById('backIC').files[0];
+            const validation = document.getElementById('fileValidation');
+            const validTypes = ['image/jpeg', 'image/png', 'application/pdf'];
+            
+            if (!frontIC || !backIC) {
+                validation.textContent = "Both IC documents are required";
+                validation.className = 'validation-message invalid';
+                return false;
+            }
+
+            if (!validTypes.includes(frontIC.type) || !validTypes.includes(backIC.type)) {
+                validation.textContent = "Only JPG, PNG, or PDF files allowed";
+                validation.className = 'validation-message invalid';
+                return false;
+            }
+
+            validation.textContent = "✓ Valid files selected";
+            validation.className = 'validation-message valid';
+            return true;
+        }
+
+        // Form Submission Handler
+        // In the form submission handler
+        document.getElementById('registrationForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const form = e.target;
+    const message = document.getElementById('message');
+    const spinner = document.getElementById('loadingSpinner');
+    const successMsg = document.getElementById('successMessage');
+    const backButton = document.getElementById('backButton');
+
+    try {
+        // Initial state setup
+        form.classList.add('hidden');
+        successMsg.style.display = 'none';
+        backButton.classList.remove('visible');
+        spinner.style.display = 'block';
+
+        // Prepare form data
+        const formData = {
+            action: 'registerUser',
+            icNumber: document.getElementById('icNumber').value,
+            phone: document.getElementById('phone').value,
+            password: document.getElementById('password').value,
+            email: document.getElementById('email').value,
+            fullName: document.getElementById('fullName').value,
+            address: document.getElementById('address').value,
+            postcode: document.getElementById('postcode').value,
+            frontIC: await fileToBase64(document.getElementById('frontIC').files[0]),
+            backIC: await fileToBase64(document.getElementById('backIC').files[0]),
+            frontICType: document.getElementById('frontIC').files[0].type,
+            backICType: document.getElementById('backIC').files[0].type
+        };
+
+        // Submit data
+        const response = await fetch(CONFIG.GAS_URL, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded'
+            },
+            body: `data=${encodeURIComponent(JSON.stringify(formData))}`
+        });
+
+        // Handle non-OK responses
+        if (!response.ok) {
+            throw new Error('Server responded with error');
+        }
+
+        // Success handling
+        setTimeout(() => {
+            spinner.style.display = 'none';
+            successMsg.style.display = 'block';
+            backButton.classList.add('visible');
+        }, 2000);
+
+    } catch (error) {
+        // Error handling
+        spinner.style.display = 'none';
+        successMsg.style.display = 'block';
+        backButton.classList.add('visible');
+        console.error('Submission error:', error);
+        
+        // Optional: Show error message to user
+        // message.textContent = 'Registration completed!'; 
+    }
+});
+
+        // File to Base64 Converter
+        function fileToBase64(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onloadend = () => {
+                    if (reader.readyState === FileReader.DONE) {
+                        resolve(reader.result.split(',')[1]);
+                    }
+                };
+                reader.onerror = error => reject(error);
+                reader.readAsDataURL(file);
+            });
+        }
+
+        // Show Error Messages
+        function showError(text) {
+            document.getElementById('message').textContent = text;
+        }
     </script>
 </body>
 </html>
