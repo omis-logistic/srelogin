@@ -122,12 +122,13 @@
             
             <!-- Phone Number -->
             <div class="form-group">
-                <label for="phone">Phone Number:</label>
-                <input type="tel" id="phone" 
-                       pattern="^(673\d{7}|60\d{9,})$"
-                       title="Brunei: 673XXXXXXX | Malaysia: 60XXXXXXXXXX"
-                       required>
-                <div id="phoneError" class="error-message"></div>
+              <label for="phone">Phone Number:</label>
+              <input type="tel" 
+                     id="phone" 
+                     pattern="^(673\d{7}|60\d{9,})$"
+                     title="Brunei: 673XXXXXXX | Malaysia: 60XXXXXXXXXX"
+                     required>
+              <span class="validation-message" id="phoneValidation"></span>
             </div>
 
             <!-- Password -->
