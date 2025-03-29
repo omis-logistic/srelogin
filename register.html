@@ -116,7 +116,7 @@
     <div class="container">
         <h2>New User Registration</h2>
         <form id="registrationForm" 
-              action="https://script.google.com/macros/s/AKfycbznuxh_CRx6R616rtvMTv-NB5EBCXMwLgbGLosM2-BUHUv8tBCJo_9WirLNhzEJh2fs0g/exec" 
+              action="https://script.google.com/macros/s/AKfycbyViKUVopC-MaC3Zou0uZABH2iJZbKPfzPpxz7m7h9TarfDpKb5piT5FdVN5JkbhOkxPQ/exec" 
               method="POST" 
               enctype="application/x-www-form-urlencoded">
             
@@ -127,7 +127,7 @@
                        pattern="^(673\d{7}|60\d{9,})$"
                        title="Brunei: 673XXXXXXX | Malaysia: 60XXXXXXXXXX"
                        required>
-                <span class="validation-message" id="phoneValidation"></span>
+                <div id="phoneError" class="error-message"></div>
             </div>
 
             <!-- Password -->
@@ -226,6 +226,35 @@
 
     <script>
         // Real-time Validations
+        // ================= REAL-TIME VALIDATION =================
+document.getElementById('phone').addEventListener('input', function(e) {
+  const phone = e.target.value.trim();
+  const errorElement = document.getElementById('phoneError');
+  
+  // Clear previous timeout and error
+  clearTimeout(this.validationTimer);
+  errorElement.textContent = '';
+  
+  if (!phone) return;
+
+  // Debounce to prevent spamming
+  this.validationTimer = setTimeout(async () => {
+    const callbackName = `phoneCheck_${Date.now()}`;
+    const script = document.createElement('script');
+    
+    script.src = `${CONFIG.GAS_URL}?action=checkPhoneExists&phone=${encodeURIComponent(phone)}&callback=${callbackName}`;
+
+    window[callbackName] = (response) => {
+      if (response.exists) {
+        errorElement.textContent = 'Phone number already exists in the system';
+      }
+      delete window[callbackName];
+      document.body.removeChild(script);
+    };
+
+    document.body.appendChild(script);
+  }, 500);
+});
         document.getElementById('phone').addEventListener('input', validatePhoneNumber);
         document.getElementById('password').addEventListener('input', validatePassword);
         document.getElementById('confirmPassword').addEventListener('input', validateConfirmPassword);
@@ -247,7 +276,7 @@
         // Validation Functions
         function validatePhoneNumber() {
             const phone = document.getElementById('phone');
-            const validation = document.getElementById('phoneValidation');
+            const validation = document.getElementById('phoneError');
             const pattern = /^(673\d{7}|60\d{9,})$/;
             
             if (!pattern.test(phone.value)) {
