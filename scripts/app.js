@@ -9,6 +9,54 @@ const CONFIG = {
   MAX_FILES: 3
 };
 
+// ================= POPUP CREATION ================= 
+// Add this right after your config constants
+const successPopupCSS = `
+.success-popup {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: white;
+    padding: 2rem;
+    border-radius: 10px;
+    box-shadow: 0 0 20px rgba(0,0,0,0.2);
+    z-index: 1000;
+    text-align: center;
+    display: none;
+}
+.success-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0,0,0,0.5);
+    z-index: 999;
+}
+`;
+
+// Create and inject styles
+const style = document.createElement('style');
+style.textContent = successPopupCSS;
+document.head.appendChild(style);
+
+// Create popup HTML structure
+const popupHTML = `
+<div class="success-overlay"></div>
+<div class="success-popup">
+    <h2>🎉 Registration Successful!</h2>
+    <p>Your account has been created successfully</p>
+    <button onclick="window.location.href='login.html'" 
+            style="padding: 10px 20px; margin-top: 15px; cursor: pointer">
+        Continue to Login
+    </button>
+</div>
+`;
+
+// Inject popup into DOM
+document.body.insertAdjacentHTML('beforeend', popupHTML);
+
 // ================= VIEWPORT MANAGEMENT =================
 function detectViewMode() {
   const isMobile = (
