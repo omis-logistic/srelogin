@@ -130,6 +130,30 @@
 #phone.invalid {
     background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%23ff4444" width="24" height="24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/><path d="M0 0h24v24H0z" fill="none"/></svg>');
 }
+
+.success-popup {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: white;
+    padding: 2rem;
+    border-radius: 10px;
+    box-shadow: 0 0 20px rgba(0,0,0,0.2);
+    z-index: 1000;
+    text-align: center;
+    display: none;
+}
+.success-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0,0,0,0.5);
+    z-index: 999;
+    display: none;
+}
     </style>
     <script src="app.js"></script>
 </head>
@@ -242,6 +266,16 @@
         <a href="login.html" class="back-button" id="backButton">Back to Login</a>
     </div>
 
+    <div class="success-overlay"></div>
+<div class="success-popup">
+    <h2>🎉 Registration Successful!</h2>
+    <p>Your account has been created successfully</p>
+    <button class="login-redirect-btn" 
+            style="padding: 10px 20px; margin-top: 15px; cursor: pointer">
+        Continue to Login
+    </button>
+</div>
+    
     <script>
 const CONFIG = window.CONFIG || {
   GAS_URL: 'https://script.google.com/macros/s/AKfycbwX-s4JCIbnrpmFfZeu4LrdIVQTdFQBG4mbhu8Y7RM47PrWrHrm_1nkrvlOaAfEnTW9Wg/exec'
