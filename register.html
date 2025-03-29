@@ -223,6 +223,13 @@
     </div>
 
     <script>
+// ====== PHONE VALIDATION STATE ======
+const phoneValidation = {
+  isValidFormat: false,
+  isUnique: false,
+  isChecking: false,
+  lastValue: ''
+};
         
 const CONFIG = window.CONFIG || {
   GAS_URL: 'https://script.google.com/macros/s/AKfycbwUTEVO5qxGm0PYaslruxDkylJDhmk0Bamjy9RNUvz3kbOqnV2S7LKjjuFMANnMopEqTA/exec'
@@ -248,67 +255,63 @@ const CONFIG = window.CONFIG || {
         });
 
 // ====== REAL-TIME DUPLICATE CHECK ======
+// ====== REAL-TIME DUPLICATE CHECK ======
 document.getElementById('phone').addEventListener('input', function(e) {
   const phone = e.target.value.trim();
   const validation = document.getElementById('phoneValidation');
   
   clearTimeout(this.validationTimer);
   validation.textContent = '';
+  phoneValidation.isValidFormat = false;
+  phoneValidation.isUnique = false;
+  phoneValidation.isChecking = false;
+
+  // Immediate format validation
+  if (!validatePhoneNumber()) {
+    validation.textContent = "Invalid phone format";
+    validation.className = 'validation-message invalid';
+    return;
+  }
+  
+  // Debounced duplicate check
+  phoneValidation.isChecking = true;
+  phoneValidation.lastValue = phone;
+  validation.textContent = 'Checking availability...';
   validation.className = 'validation-message';
-  phoneValidationState.isChecking = false;
-  phoneValidationState.isUnique = false;
 
-  if (!validatePhoneFormat()) return;
+  this.validationTimer = setTimeout(async () => {
+    try {
+      const response = await fetch(`${CONFIG.GAS_URL}?action=checkPhoneExists&phone=${encodeURIComponent(phone)}`);
+      const data = await response.json();
+      
+      phoneValidation.isChecking = false;
+      if (phone !== phoneValidation.lastValue) return;
 
-  phoneValidationState.isChecking = true;
-  this.validationTimer = setTimeout(() => {
-    const callbackName = `phoneCheck_${Date.now()}`;
-    const script = document.createElement('script');
-    
-    script.src = `${CONFIG.GAS_URL}?action=checkPhoneExists&phone=${encodeURIComponent(phone)}&callback=${callbackName}`;
-
-    window[callbackName] = (response) => {
-      phoneValidationState.isChecking = false;
-      if (response.exists) {
+      if (data.exists) {
         validation.textContent = 'Number already registered';
         validation.className = 'validation-message invalid';
-        phoneValidationState.isUnique = false;
+        phoneValidation.isUnique = false;
       } else {
         validation.textContent = '✓ Available';
         validation.className = 'validation-message valid';
-        phoneValidationState.isUnique = true;
+        phoneValidation.isUnique = true;
       }
-      delete window[callbackName];
-      document.body.removeChild(script);
-    };
+      phoneValidation.isValidFormat = true;
 
-    document.body.appendChild(script);
+    } catch (error) {
+      validation.textContent = 'Verification failed';
+      validation.className = 'validation-message invalid';
+      phoneValidation.isValidFormat = false;
+      phoneValidation.isUnique = false;
+    }
   }, 800);
 });
-        
-// ====== PHONE VALIDATION STATE ======
-let phoneValidationState = {
-  isValidFormat: false,
-  isUnique: false,
-  isChecking: false
-};
 
 // ====== FORMAT VALIDATION ======
-function validatePhoneFormat() {
-  const phone = document.getElementById('phone');
-  const validation = document.getElementById('phoneValidation');
+function validatePhoneNumber() {
+  const phone = document.getElementById('phone').value;
   const pattern = /^(673\d{7}|60\d{9,})$/;
-  
-  phoneValidationState.isValidFormat = pattern.test(phone.value);
-  
-  if (!phoneValidationState.isValidFormat) {
-    validation.textContent = "Invalid phone format";
-    validation.className = 'validation-message invalid';
-    return false;
-  }
-  validation.textContent = 'Checking availability...';
-  validation.className = 'validation-message';
-  return true;
+  return pattern.test(phone);
 }
 
         function validatePassword() {
@@ -392,8 +395,8 @@ function validatePhoneFormat() {
         // Main Validation Function
 function validateForm() {
   // Validate all fields
-  const formatValid = [
-    validatePhoneFormat(),
+  const validations = [
+    validatePhoneNumber(), // Format check
     validatePassword(),
     validateConfirmPassword(),
     validateEmail(),
@@ -401,13 +404,14 @@ function validateForm() {
     validateFiles()
   ].every(v => v);
 
-  // Check phone uniqueness
-  if (!phoneValidationState.isUnique) {
-    document.getElementById('phoneValidation').textContent = 'Complete phone validation first';
+  // Additional duplicate check
+  if (!phoneValidation.isUnique) {
+    document.getElementById('phoneValidation').textContent = 
+      phoneValidation.isChecking ? 'Checking availability...' : 'Phone validation required';
     return false;
   }
 
-  return formatValid && phoneValidationState.isUnique;
+  return validations;
 }
 
         function validateFiles() {
@@ -439,55 +443,66 @@ document.getElementById('registrationForm').addEventListener('submit', async (e)
   e.preventDefault();
   const form = e.target;
   const submitBtn = form.querySelector('button[type="submit"]');
-  const validation = document.getElementById('phoneValidation');
   const message = document.getElementById('message');
   const spinner = document.getElementById('loadingSpinner');
   const successMsg = document.getElementById('successMessage');
   const backButton = document.getElementById('backButton');
-  
-  // Initial state
+
+  // Initial state reset
   submitBtn.disabled = true;
   submitBtn.innerHTML = '<div class="loader"></div> Validating...';
   message.textContent = '';
   successMsg.style.display = 'none';
   backButton.classList.remove('visible');
 
-  // Final format check
-  if (!validatePhoneFormat()) {
-    showError('Invalid phone format');
+  // Step 1: Client-side validation
+  if (!validateForm()) {
+    showError('Please fix validation errors');
     submitBtn.disabled = false;
     submitBtn.innerHTML = 'Register Now';
     return;
   }
 
-  // Wait for duplicate check completion
-  if (phoneValidationState.isChecking) {
-    validation.textContent = 'Final verification...';
-    await new Promise(resolve => {
-      const checkInterval = setInterval(() => {
-        if (!phoneValidationState.isChecking) {
-          clearInterval(checkInterval);
-          resolve();
-        }
-      }, 100);
-    });
-  }
+  // Step 2: Final phone validation
+  const phoneValidation = document.getElementById('phoneValidation');
+  try {
+    // Wait for ongoing duplicate check
+    if (phoneValidationState.isChecking) {
+      phoneValidation.textContent = 'Final verification...';
+      await new Promise(resolve => {
+        const checkInterval = setInterval(() => {
+          if (!phoneValidationState.isChecking) {
+            clearInterval(checkInterval);
+            resolve();
+          }
+        }, 100);
+      });
+    }
 
-  // Final validation
-  if (!phoneValidationState.isUnique) {
-    showError('Phone number validation not completed');
+    // Verify final state
+    if (!phoneValidationState.isUnique) {
+      showError('Phone number validation failed');
+      submitBtn.disabled = false;
+      submitBtn.innerHTML = 'Register Now';
+      return;
+    }
+  } catch (error) {
+    showError('Validation service unavailable');
     submitBtn.disabled = false;
     submitBtn.innerHTML = 'Register Now';
     return;
   }
 
-  // Proceed with submission
+  // Step 3: Prepare submission data
   try {
     // Show loading state
     form.classList.add('hidden');
     spinner.style.display = 'block';
 
-    // Prepare form data
+    // Process files
+    const frontICFile = document.getElementById('frontIC').files[0];
+    const backICFile = document.getElementById('backIC').files[0];
+
     const formData = {
       action: 'registerUser',
       icNumber: document.getElementById('icNumber').value,
@@ -497,13 +512,13 @@ document.getElementById('registrationForm').addEventListener('submit', async (e)
       fullName: document.getElementById('fullName').value,
       address: document.getElementById('address').value,
       postcode: document.getElementById('postcode').value,
-      frontIC: await fileToBase64(document.getElementById('frontIC').files[0]),
-      backIC: await fileToBase64(document.getElementById('backIC').files[0]),
-      frontICType: document.getElementById('frontIC').files[0].type,
-      backICType: document.getElementById('backIC').files[0].type
+      frontIC: await fileToBase64(frontICFile),
+      backIC: await fileToBase64(backICFile),
+      frontICType: frontICFile.type,
+      backICType: backICFile.type
     };
 
-    // Submit data
+    // Step 4: Server submission
     const response = await fetch(CONFIG.GAS_URL, {
       method: 'POST',
       headers: {
@@ -512,20 +527,21 @@ document.getElementById('registrationForm').addEventListener('submit', async (e)
       body: `data=${encodeURIComponent(JSON.stringify(formData))}`
     });
 
-    // Handle response
+    // Handle server response
     if (!response.ok) {
-      throw new Error('Server responded with status: ' + response.status);
+      throw new Error(`Server error: ${response.status}`);
     }
 
-    // Show success state
+    // Step 5: Success handling
     spinner.style.display = 'none';
     successMsg.style.display = 'block';
     backButton.classList.add('visible');
-    
+
     // Reset form after delay
     setTimeout(() => {
       form.reset();
       form.classList.remove('hidden');
+      resetValidationStates();
     }, 2000);
 
   } catch (error) {
@@ -542,6 +558,19 @@ document.getElementById('registrationForm').addEventListener('submit', async (e)
   }
 });
 
+// Helper function to reset validation states
+function resetValidationStates() {
+  phoneValidationState = {
+    isValidFormat: false,
+    isUnique: false,
+    isChecking: false
+  };
+  
+  document.querySelectorAll('.validation-message').forEach(el => {
+    el.textContent = '';
+    el.className = 'validation-message';
+  });
+}
         // File to Base64 Converter
         function fileToBase64(file) {
             return new Promise((resolve, reject) => {
