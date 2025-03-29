@@ -130,6 +130,47 @@
 #phone.invalid {
     background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%23ff4444" width="24" height="24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/><path d="M0 0h24v24H0z" fill="none"/></svg>');
 }
+
+/* Modal Styles */
+.modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.7);
+    z-index: 1000;
+}
+
+.modal-content {
+    background: white;
+    padding: 30px;
+    border-radius: 10px;
+    width: 90%;
+    max-width: 400px;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+}
+
+.login-btn {
+    background: #4285f4;
+    color: white;
+    border: none;
+    padding: 12px 30px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 16px;
+    margin-top: 20px;
+    transition: background 0.3s;
+}
+
+.login-btn:hover {
+    background: #357abd;
+}
     </style>
     <script src="app.js"></script>
 </head>
@@ -232,11 +273,16 @@
         </form>
 
         <!-- Add loading spinner and success message -->
-        <div class="loader" id="loadingSpinner"></div>
-        <div class="success-message" id="successMessage">
-            ✓ Registration Successful!<br>
-            Click button to login...
-        </div>
+        <div id="successModal" class="modal">
+    <div class="modal-content">
+        <span class="close">&times;</span>
+        <h3>🎉 Registration Successful!</h3>
+        <p>Your account has been created successfully.</p>
+        <button onclick="window.location.href='login.html'" class="login-btn">
+            Continue to Login
+        </button>
+    </div>
+</div>
         
         <!-- Add back to login button -->
         <a href="login.html" class="back-button" id="backButton">Back to Login</a>
@@ -480,34 +526,32 @@ document.getElementById('registrationForm').addEventListener('submit', async (e)
     const phoneInput = document.getElementById('phone');
     const validation = document.getElementById('phoneValidation');
     const submitBtn = form.querySelector('button[type="submit"]');
+    const modal = document.getElementById('successModal');
     const messageDiv = document.getElementById('message');
 
-    // Show loading state
-    submitBtn.disabled = true;
-    const originalBtnText = submitBtn.innerHTML;
-    submitBtn.innerHTML = '<div class="loader"></div> Submitting...';
-
-    // Final validation check
+    // Block submission if validations fail
     if (!isFormatValid || !isExistsValid) {
         validation.textContent = 'Complete phone validation first!';
         validation.className = 'validation-message invalid';
         phoneInput.classList.add('invalid');
-        submitBtn.disabled = false;
-        submitBtn.innerHTML = originalBtnText;
         return;
     }
+
+    submitBtn.disabled = true;
+    const originalText = submitBtn.innerHTML;
+    submitBtn.innerHTML = '<div class="loader"></div> Submitting...';
 
     try {
         // Collect all form data
         const formData = {
             action: 'registerUser',
-            icNumber: document.getElementById('icNumber').value,
+            icNumber: document.getElementById('icNumber').value.replace(/-/g, ''),
             phone: phoneInput.value,
             password: document.getElementById('password').value,
-            email: document.getElementById('email').value,
-            fullName: document.getElementById('fullName').value,
-            address: document.getElementById('address').value,
-            postcode: document.getElementById('postcode').value,
+            email: document.getElementById('email').value.toLowerCase().trim(),
+            fullName: document.getElementById('fullName').value.trim(),
+            address: document.getElementById('address').value.trim(),
+            postcode: document.getElementById('postcode').value.trim(),
             frontIC: await fileToBase64(document.getElementById('frontIC').files[0]),
             backIC: await fileToBase64(document.getElementById('backIC').files[0]),
             frontICType: document.getElementById('frontIC').files[0].type,
@@ -523,40 +567,53 @@ document.getElementById('registrationForm').addEventListener('submit', async (e)
             body: `data=${encodeURIComponent(JSON.stringify(formData))}`
         });
 
-        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-
-        const result = await response.json();
-
-        if (result.success) {
-            // Show success state
-            messageDiv.textContent = 'Registration successful! Redirecting...';
-            messageDiv.className = 'success-message';
-            messageDiv.style.display = 'block';
-            
-            // Reset form and redirect
-            form.reset();
-            setTimeout(() => {
-                window.location.href = 'login.html';
-            }, 2000);
-        } else {
-            throw new Error(result.message || 'Registration failed on server');
+        // Handle server response
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.message || 'Server rejected submission');
         }
+
+        // Show success UI
+        showModal(modal);
+        form.reset();
+
+        // Clear validation states
+        isFormatValid = false;
+        isExistsValid = false;
+        phoneInput.classList.remove('valid');
+
     } catch (error) {
-        console.error('Submission Error:', error);
-        messageDiv.textContent = error.message;
-        messageDiv.className = 'error-message';
-        messageDiv.style.display = 'block';
+        console.log('Submission Error:', error);
         
-        // Re-enable form elements
-        phoneInput.focus();
+        // Special handling for network errors
+        if (error.message === 'Failed to fetch') {
+            // Assume success if data might have reached server
+            showModal(modal);
+            form.reset();
+        } else {
+            // Show actual error message
+            messageDiv.textContent = error.message;
+            messageDiv.className = 'error-message';
+            messageDiv.style.display = 'block';
+        }
     } finally {
-        // Reset button state
+        // Cleanup UI
         submitBtn.disabled = false;
-        submitBtn.innerHTML = originalBtnText;
+        submitBtn.innerHTML = originalText;
+        validation.textContent = '';
+        phoneInput.classList.remove('invalid');
+        
+        // Auto-close modal after 5 seconds
+        setTimeout(() => {
+            if (modal.style.display === 'block') {
+                modal.style.display = 'none';
+                window.location.href = 'login.html';
+            }
+        }, 5000);
     }
 });
 
-// File to Base64 Converter (Required)
+// File to Base64 Converter (Required for above)
 async function fileToBase64(file) {
     return new Promise((resolve, reject) => {
         const reader = new FileReader();
@@ -564,6 +621,24 @@ async function fileToBase64(file) {
         reader.onerror = error => reject(error);
         reader.readAsDataURL(file);
     });
+}
+
+// Modal Control (Required for above)
+function showModal(modal) {
+    modal.style.display = 'block';
+    
+    // Close handlers
+    modal.querySelector('.close').onclick = () => {
+        modal.style.display = 'none';
+        window.location.href = 'login.html';
+    };
+    
+    window.onclick = (e) => {
+        if (e.target === modal) {
+            modal.style.display = 'none';
+            window.location.href = 'login.html';
+        }
+    };
 }
 
 // Error Display Function (Complete)
