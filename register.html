@@ -248,96 +248,108 @@ const CONFIG = window.CONFIG || {
 
 // ================= PHONE DUPLICATE CHECK =================
 document.getElementById('phone').addEventListener('input', function(e) {
-    const phone = e.target.value.trim();
+    const input = e.target;
+    const validation = document.getElementById('phoneValidation');
+    let phone = input.value.replace(/\D/g, ''); // Remove non-digits
+    
+    // Auto-format phone number
+    if (phone.startsWith('673')) {
+        phone = phone.slice(0, 11); // Brunei: 673 + 7 digits
+        if (phone.length > 3) {
+            phone = phone.replace(/(\d{3})(\d{0,4})(\d{0,4})/, '$1 $2 $3');
+        }
+    } else if (phone.startsWith('60')) {
+        phone = phone.slice(0, 12); // Malaysia: 60 + 9-10 digits
+        if (phone.length > 2) {
+            phone = phone.replace(/(\d{2})(\d{0,4})(\d{0,4})(\d{0,4})/, '$1 $2 $3 $4');
+        }
+    }
+    
+    input.value = phone.trim();
+    validatePhoneNumber(input);
+});
+
+let isFormatValid = false;
+let isExistsValid = false;
+
+function validatePhoneNumber(input) {
+    const phone = input.value.replace(/\D/g, '');
     const validation = document.getElementById('phoneValidation');
     
-    // Clear previous state
-    clearTimeout(this.validationTimer);
+    // Reset states
+    isFormatValid = false;
+    isExistsValid = false;
     validation.textContent = '';
-    validation.className = 'validation-message';
+    input.classList.remove('valid', 'invalid');
 
-    // Basic format validation first
-    if (!/^(673|60)\d+$/.test(phone)) return;
+    // Format validation
+    const bruneiRegex = /^673\d{7}$/;
+    const malaysiaRegex = /^60\d{9,10}$/;
+    
+    if (!bruneiRegex.test(phone) && !malaysiaRegex.test(phone)) {
+        validation.textContent = 'Invalid format: Brunei (673 1234 5678) or Malaysia (60 12 3456 7890)';
+        validation.className = 'validation-message invalid';
+        input.classList.add('invalid');
+        isFormatValid = false;
+        return;
+    }
+    
+    // Format is valid
+    validation.textContent = '✓ Valid format';
+    validation.className = 'validation-message valid';
+    input.classList.add('valid');
+    isFormatValid = true;
 
-    // Debounce server check
-    this.validationTimer = setTimeout(() => {
-        // Clean up previous callbacks
-        const previousCallbacks = Object.keys(window)
-            .filter(key => key.startsWith('phoneCheck_'));
-        previousCallbacks.forEach(key => delete window[key]);
+    // Check existence only if format is valid
+    checkPhoneExistence(phone);
+}
 
-        // Create new JSONP callback
+function checkPhoneExistence(phone) {
+    const validation = document.getElementById('phoneValidation');
+    const input = document.getElementById('phone');
+    
+    clearTimeout(window.phoneCheckTimer);
+    
+    window.phoneCheckTimer = setTimeout(() => {
         const callbackName = `phoneCheck_${Date.now()}`;
         const script = document.createElement('script');
         
-        // Encode parameters
-        const params = new URLSearchParams({
-            action: 'checkPhoneExists',
-            phone: phone,
-            callback: callbackName
-        });
-
-        // Configure script tag
-        script.src = `${CONFIG.GAS_URL}?${params}`;
+        script.src = `${CONFIG.GAS_URL}?action=checkPhoneExists&phone=${encodeURIComponent(phone)}&callback=${callbackName}`;
+        
         script.onerror = () => {
-            validation.textContent = 'Validation service unavailable';
+            validation.textContent += ' - Service unavailable';
             validation.className = 'validation-message invalid';
-            document.body.removeChild(script);
-            delete window[callbackName];
+            input.classList.add('invalid');
+            isExistsValid = false;
         };
 
-        // Handle response
         window[callbackName] = (response) => {
-            // Error handling
-            if (response.success !== undefined && !response.success) {
+            if (response.success === false) {
                 validation.textContent = 'System error: ' + (response.message || '');
                 validation.className = 'validation-message invalid';
-            } 
-            // Successful response
-            else {
+                input.classList.add('invalid');
+                isExistsValid = false;
+            } else {
                 if (response.exists) {
-                    validation.textContent = 'Phone number already exists in system';
+                    validation.textContent = 'Phone number already exists';
                     validation.className = 'validation-message invalid';
-                    // Add visual feedback
-                    e.target.classList.add('invalid-input');
-                    e.target.classList.remove('valid-input');
+                    input.classList.add('invalid');
+                    isExistsValid = false;
                 } else {
                     validation.textContent = '✓ Available phone number';
                     validation.className = 'validation-message valid';
-                    // Add visual feedback
-                    e.target.classList.add('valid-input');
-                    e.target.classList.remove('invalid-input');
+                    input.classList.add('valid');
+                    isExistsValid = true;
                 }
             }
-            
-            // Cleanup
             delete window[callbackName];
             document.body.removeChild(script);
         };
 
-        // Inject script
         document.body.appendChild(script);
-    }, 500); // 500ms debounce
-});
-        
-        // Validation Functions
-function validatePhoneNumber() {
-    const phone = document.getElementById('phone');
-    const validation = document.getElementById('phoneValidation');
-    const pattern = /^(673\d{7}|60\d{9,})$/;
-    
-    // Reset validation state
-    validation.textContent = '';
-    validation.className = 'validation-message';
-
-    if (!pattern.test(phone.value)) {
-        validation.textContent = "Format: 673XXXXXXX (Brunei) or 60XXXXXXXXXX (Malaysia)";
-        validation.className = 'validation-message invalid';
-        return false;
-    }
-    return true; // Only returns format validity
+    }, 500);
 }
-
+        
         function validatePassword() {
             const password = document.getElementById('password');
             const validation = document.getElementById('passwordValidation');
@@ -455,96 +467,150 @@ function validatePhoneNumber() {
 
         // Form Submission Handler
         // In the form submission handler
+// Form submission handler - Complete Version
 document.getElementById('registrationForm').addEventListener('submit', async (e) => {
     e.preventDefault();
     const form = e.target;
-    const message = document.getElementById('message');
-    const spinner = document.getElementById('loadingSpinner');
-    const successMsg = document.getElementById('successMessage');
-    const backButton = document.getElementById('backButton');
+    const phoneInput = document.getElementById('phone');
+    const validation = document.getElementById('phoneValidation');
+    const submitBtn = form.querySelector('button[type="submit"]');
+    const originalBtnText = submitBtn.innerHTML;
+    const messageDiv = document.getElementById('message');
 
-    // Clear previous messages
-    message.textContent = '';
-    
-    // Validate all fields first
-    if (!validateForm()) {
-        showError('Please fix validation errors');
+    // Show loading state
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<div class="loader-small"></div> Processing...';
+
+    // Final validation checks
+    if (!isFormatValid || !isExistsValid) {
+        validation.textContent = 'Please complete phone validation first!';
+        validation.className = 'validation-message invalid';
+        phoneInput.classList.add('invalid');
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = originalBtnText;
         return;
     }
 
-    // Additional duplicate check
-    const phoneValidation = document.getElementById('phoneValidation');
-    if (phoneValidation.classList.contains('invalid')) {
-        showError('Phone number already registered');
+    // Validate all other form fields
+    const password = document.getElementById('password').value;
+    const confirmPassword = document.getElementById('confirmPassword').value;
+    const email = document.getElementById('email').value;
+    const confirmEmail = document.getElementById('confirmEmail').value;
+    
+    // Password validation
+    if (password !== confirmPassword) {
+        showError('Passwords do not match!', 'confirmPasswordValidation');
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = originalBtnText;
+        return;
+    }
+
+    // Email validation
+    if (email !== confirmEmail) {
+        showError('Emails do not match!', 'emailValidation');
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = originalBtnText;
+        return;
+    }
+
+    // File validation
+    const frontIC = document.getElementById('frontIC').files[0];
+    const backIC = document.getElementById('backIC').files[0];
+    if (!frontIC || !backIC) {
+        showError('Both IC documents are required!', 'fileValidation');
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = originalBtnText;
         return;
     }
 
     try {
-        // Existing processing code
-        form.classList.add('hidden');
-        successMsg.style.display = 'none';
-        backButton.classList.remove('visible');
-        spinner.style.display = 'block';
-
-        // Prepare form data (keep existing code)
+        // Prepare all form data
         const formData = {
             action: 'registerUser',
             icNumber: document.getElementById('icNumber').value,
-            phone: document.getElementById('phone').value,
-            password: document.getElementById('password').value,
-            email: document.getElementById('email').value,
+            phone: phoneInput.value.replace(/\D/g, ''),
+            password: password,
+            email: email,
             fullName: document.getElementById('fullName').value,
             address: document.getElementById('address').value,
             postcode: document.getElementById('postcode').value,
-            frontIC: await fileToBase64(document.getElementById('frontIC').files[0]),
-            backIC: await fileToBase64(document.getElementById('backIC').files[0]),
-            frontICType: document.getElementById('frontIC').files[0].type,
-            backICType: document.getElementById('backIC').files[0].type
+            frontIC: await fileToBase64(frontIC),
+            backIC: await fileToBase64(backIC),
+            frontICType: frontIC.type,
+            backICType: backIC.type
         };
 
-        // Submit data (keep existing code)
+        // Submit to Google Apps Script
         const response = await fetch(CONFIG.GAS_URL, {
             method: 'POST',
-            headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
             body: `data=${encodeURIComponent(JSON.stringify(formData))}`
         });
 
-        // Handle response (keep existing code)
-        if (!response.ok) throw new Error('Server error');
-        
-        setTimeout(() => {
-            spinner.style.display = 'none';
-            successMsg.style.display = 'block';
-            backButton.classList.add('visible');
-        }, 2000);
+        if (!response.ok) throw new Error('Server responded with status: ' + response.status);
 
+        const result = await response.json();
+
+        if (result.success) {
+            // Show success state
+            form.reset();
+            messageDiv.textContent = 'Registration successful! Redirecting...';
+            messageDiv.className = 'success-message';
+            messageDiv.style.display = 'block';
+            
+            // Update UI elements
+            document.getElementById('loadingSpinner').style.display = 'none';
+            document.getElementById('backButton').classList.add('visible');
+            
+            // Redirect after delay
+            setTimeout(() => {
+                window.location.href = 'login.html';
+            }, 2000);
+        } else {
+            throw new Error(result.message || 'Registration failed');
+        }
     } catch (error) {
-        // Error handling (keep existing code)
-        spinner.style.display = 'none';
-        successMsg.style.display = 'block';
-        backButton.classList.add('visible');
-        showError(`Registration failed: ${error.message}`);
+        console.error('Submission Error:', error);
+        messageDiv.textContent = error.message;
+        messageDiv.className = 'error';
+        messageDiv.style.display = 'block';
+        
+        // Re-enable form elements
+        phoneInput.focus();
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = originalBtnText;
+    } finally {
+        // Cleanup loading state
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = originalBtnText;
     }
 });
 
-        // File to Base64 Converter
-        function fileToBase64(file) {
-            return new Promise((resolve, reject) => {
-                const reader = new FileReader();
-                reader.onloadend = () => {
-                    if (reader.readyState === FileReader.DONE) {
-                        resolve(reader.result.split(',')[1]);
-                    }
-                };
-                reader.onerror = error => reject(error);
-                reader.readAsDataURL(file);
-            });
-        }
+// File to Base64 Converter (Complete)
+async function fileToBase64(file) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+            if (reader.readyState === FileReader.DONE) {
+                resolve(reader.result.split(',')[1]);
+            }
+        };
+        reader.onerror = error => reject(error);
+        reader.readAsDataURL(file);
+    });
+}
 
-        // Show Error Messages
-        function showError(text) {
-            document.getElementById('message').textContent = text;
-        }
+// Error Display Function (Complete)
+function showError(text, targetId = 'message') {
+    const errorElement = document.getElementById(targetId);
+    if (errorElement) {
+        errorElement.textContent = text;
+        errorElement.className = 'validation-message invalid';
+        errorElement.style.display = 'block';
+    }
+}
         
     </script>
 </body>
