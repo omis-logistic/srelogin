@@ -224,11 +224,11 @@
 
     <script>
 // ====== PHONE VALIDATION STATE ======
-const phoneValidation = {
+const phoneState = {
+  value: '',
   isValidFormat: false,
-  isUnique: false,
-  isChecking: false,
-  lastValue: ''
+  isUnique: null, // null=not checked, true=unique, false=duplicate
+  isChecking: false
 };
         
 const CONFIG = window.CONFIG || {
@@ -254,64 +254,65 @@ const CONFIG = window.CONFIG || {
             e.target.value = value;
         });
 
-// ====== REAL-TIME DUPLICATE CHECK ======
-// ====== REAL-TIME DUPLICATE CHECK ======
+// ====== REAL-TIME VALIDATION HANDLER ======
 document.getElementById('phone').addEventListener('input', function(e) {
   const phone = e.target.value.trim();
   const validation = document.getElementById('phoneValidation');
   
   clearTimeout(this.validationTimer);
   validation.textContent = '';
-  phoneValidation.isValidFormat = false;
-  phoneValidation.isUnique = false;
-  phoneValidation.isChecking = false;
+  phoneState.value = phone;
+  phoneState.isValidFormat = false;
+  phoneState.isUnique = null;
+  phoneState.isChecking = false;
 
   // Immediate format validation
-  if (!validatePhoneNumber()) {
+  if (!validatePhoneFormat(phone)) {
     validation.textContent = "Invalid phone format";
     validation.className = 'validation-message invalid';
     return;
   }
-  
-  // Debounced duplicate check
-  phoneValidation.isChecking = true;
-  phoneValidation.lastValue = phone;
+
+  // Start duplicate check
+  phoneState.isChecking = true;
   validation.textContent = 'Checking availability...';
   validation.className = 'validation-message';
 
   this.validationTimer = setTimeout(async () => {
     try {
-      const response = await fetch(`${CONFIG.GAS_URL}?action=checkPhoneExists&phone=${encodeURIComponent(phone)}`);
+      const response = await fetch(
+        `${CONFIG.GAS_URL}?action=checkPhoneExists&phone=${encodeURIComponent(phone)}`
+      );
       const data = await response.json();
       
-      phoneValidation.isChecking = false;
-      if (phone !== phoneValidation.lastValue) return;
+      // Ensure we're still validating the same value
+      if (phone !== phoneState.value) return;
 
-      if (data.exists) {
-        validation.textContent = 'Number already registered';
-        validation.className = 'validation-message invalid';
-        phoneValidation.isUnique = false;
-      } else {
-        validation.textContent = '✓ Available';
-        validation.className = 'validation-message valid';
-        phoneValidation.isUnique = true;
-      }
-      phoneValidation.isValidFormat = true;
+      phoneState.isChecking = false;
+      phoneState.isUnique = !data.exists;
+      
+      validation.textContent = data.exists 
+        ? 'Number already registered' 
+        : '✓ Available';
+      validation.className = data.exists 
+        ? 'validation-message invalid' 
+        : 'validation-message valid';
 
     } catch (error) {
-      validation.textContent = 'Verification failed';
+      validation.textContent = 'Verification failed - try again';
       validation.className = 'validation-message invalid';
-      phoneValidation.isValidFormat = false;
-      phoneValidation.isUnique = false;
+      phoneState.isUnique = null;
+    } finally {
+      phoneState.isChecking = false;
     }
   }, 800);
 });
 
 // ====== FORMAT VALIDATION ======
-function validatePhoneNumber() {
-  const phone = document.getElementById('phone').value;
+function validatePhoneFormat(phone) {
   const pattern = /^(673\d{7}|60\d{9,})$/;
-  return pattern.test(phone);
+  phoneState.isValidFormat = pattern.test(phone);
+  return phoneState.isValidFormat;
 }
 
         function validatePassword() {
@@ -392,11 +393,11 @@ function validatePhoneNumber() {
             return true;
         }
 
-        // Main Validation Function
+// ====== MAIN VALIDATION CHECK ======
 function validateForm() {
   // Validate all fields
   const validations = [
-    validatePhoneNumber(), // Format check
+    validatePhoneFormat(document.getElementById('phone').value),
     validatePassword(),
     validateConfirmPassword(),
     validateEmail(),
@@ -404,10 +405,21 @@ function validateForm() {
     validateFiles()
   ].every(v => v);
 
-  // Additional duplicate check
-  if (!phoneValidation.isUnique) {
-    document.getElementById('phoneValidation').textContent = 
-      phoneValidation.isChecking ? 'Checking availability...' : 'Phone validation required';
+  // Check phone uniqueness
+  const validation = document.getElementById('phoneValidation');
+  
+  if (phoneState.isChecking) {
+    validation.textContent = 'Final verification...';
+    return false;
+  }
+  
+  if (phoneState.isUnique === false) {
+    validation.textContent = 'Number already registered';
+    return false;
+  }
+  
+  if (phoneState.isUnique === null) {
+    validation.textContent = 'Complete phone validation';
     return false;
   }
 
@@ -443,66 +455,56 @@ document.getElementById('registrationForm').addEventListener('submit', async (e)
   e.preventDefault();
   const form = e.target;
   const submitBtn = form.querySelector('button[type="submit"]');
+  const validation = document.getElementById('phoneValidation');
   const message = document.getElementById('message');
   const spinner = document.getElementById('loadingSpinner');
   const successMsg = document.getElementById('successMessage');
   const backButton = document.getElementById('backButton');
-
-  // Initial state reset
+  
+  // Initial state setup
   submitBtn.disabled = true;
   submitBtn.innerHTML = '<div class="loader"></div> Validating...';
   message.textContent = '';
   successMsg.style.display = 'none';
   backButton.classList.remove('visible');
 
-  // Step 1: Client-side validation
+  // 1. Validate all fields
   if (!validateForm()) {
-    showError('Please fix validation errors');
     submitBtn.disabled = false;
     submitBtn.innerHTML = 'Register Now';
     return;
   }
 
-  // Step 2: Final phone validation
-  const phoneValidation = document.getElementById('phoneValidation');
-  try {
-    // Wait for ongoing duplicate check
-    if (phoneValidationState.isChecking) {
-      phoneValidation.textContent = 'Final verification...';
-      await new Promise(resolve => {
-        const checkInterval = setInterval(() => {
-          if (!phoneValidationState.isChecking) {
-            clearInterval(checkInterval);
-            resolve();
-          }
-        }, 100);
-      });
-    }
+  // 2. Final phone validation check
+  if (phoneState.isChecking) {
+    validation.textContent = 'Final verification...';
+    await new Promise(resolve => {
+      const checkInterval = setInterval(() => {
+        if (!phoneState.isChecking) {
+          clearInterval(checkInterval);
+          resolve();
+        }
+      }, 100);
+    });
+  }
 
-    // Verify final state
-    if (!phoneValidationState.isUnique) {
-      showError('Phone number validation failed');
-      submitBtn.disabled = false;
-      submitBtn.innerHTML = 'Register Now';
-      return;
-    }
-  } catch (error) {
-    showError('Validation service unavailable');
+  // 3. Final validation after potential async check
+  if (!phoneState.isUnique) {
+    validation.textContent = phoneState.isUnique === false 
+      ? 'Phone number already registered' 
+      : 'Complete phone validation';
     submitBtn.disabled = false;
     submitBtn.innerHTML = 'Register Now';
     return;
   }
 
-  // Step 3: Prepare submission data
+  // 4. Proceed with submission
   try {
     // Show loading state
     form.classList.add('hidden');
     spinner.style.display = 'block';
 
-    // Process files
-    const frontICFile = document.getElementById('frontIC').files[0];
-    const backICFile = document.getElementById('backIC').files[0];
-
+    // Prepare form data
     const formData = {
       action: 'registerUser',
       icNumber: document.getElementById('icNumber').value,
@@ -512,13 +514,13 @@ document.getElementById('registrationForm').addEventListener('submit', async (e)
       fullName: document.getElementById('fullName').value,
       address: document.getElementById('address').value,
       postcode: document.getElementById('postcode').value,
-      frontIC: await fileToBase64(frontICFile),
-      backIC: await fileToBase64(backICFile),
-      frontICType: frontICFile.type,
-      backICType: backICFile.type
+      frontIC: await fileToBase64(document.getElementById('frontIC').files[0]),
+      backIC: await fileToBase64(document.getElementById('backIC').files[0]),
+      frontICType: document.getElementById('frontIC').files[0].type,
+      backICType: document.getElementById('backIC').files[0].type
     };
 
-    // Step 4: Server submission
+    // Submit data
     const response = await fetch(CONFIG.GAS_URL, {
       method: 'POST',
       headers: {
@@ -527,21 +529,25 @@ document.getElementById('registrationForm').addEventListener('submit', async (e)
       body: `data=${encodeURIComponent(JSON.stringify(formData))}`
     });
 
-    // Handle server response
+    // Handle non-OK responses
     if (!response.ok) {
       throw new Error(`Server error: ${response.status}`);
     }
 
-    // Step 5: Success handling
+    // Show success state
     spinner.style.display = 'none';
     successMsg.style.display = 'block';
     backButton.classList.add('visible');
-
+    
     // Reset form after delay
     setTimeout(() => {
       form.reset();
       form.classList.remove('hidden');
-      resetValidationStates();
+      // Reset phone validation state
+      phoneState.value = '';
+      phoneState.isValidFormat = false;
+      phoneState.isUnique = null;
+      phoneState.isChecking = false;
     }, 2000);
 
   } catch (error) {
