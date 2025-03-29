@@ -665,26 +665,60 @@ async function handleLogin() {
   }
 }
 
+// ================= REGISTRATION HANDLER ================= 
 async function handleRegistration() {
-  if (!validateRegistrationForm()) return;
-
-  const formData = {
-    phone: document.getElementById('regPhone').value.trim(),
-    password: document.getElementById('regPassword').value,
-    email: document.getElementById('regEmail').value.trim()
-  };
-
   try {
-    const result = await callAPI('createAccount', formData);
-    
+    const btn = document.querySelector('button[type="submit"]');
+    const originalText = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<div class="loader"></div> Processing...';
+
+    // === NEW VALIDATION CHECK ===
+    const phoneValidation = document.getElementById('phoneValidation');
+    if (phoneValidation.classList.contains('invalid')) {
+      showError('Phone number already exists in system');
+      btn.disabled = false;
+      btn.innerHTML = originalText;
+      return;
+    }
+    // === END NEW CODE ===
+
+    // Your existing registration logic
+    const formData = {
+      action: 'registerUser',
+      icNumber: document.getElementById('icNumber').value,
+      phone: document.getElementById('phone').value,
+      password: document.getElementById('password').value,
+      email: document.getElementById('email').value,
+      fullName: document.getElementById('fullName').value,
+      address: document.getElementById('address').value,
+      postcode: document.getElementById('postcode').value
+    };
+
+    // Process files and submit (existing code)
+    const frontIC = document.getElementById('frontIC').files[0];
+    const backIC = document.getElementById('backIC').files[0];
+
+    const result = await callAPI('registerUser', {
+      data: formData,
+      files: [
+        await processFile(frontIC),
+        await processFile(backIC)
+      ]
+    });
+
     if (result.success) {
-      alert('Registration successful! Please login.');
-      safeRedirect('login.html');
+      showSuccessMessage();
+      setTimeout(() => safeRedirect('login.html'), 2000);
     } else {
-      showError(result.message || 'Registration failed');
+      showError(result.message);
     }
   } catch (error) {
-    showError('Registration failed - please try again');
+    showError('Registration failed: ' + error.message);
+  } finally {
+    const btn = document.querySelector('button[type="submit"]');
+    btn.disabled = false;
+    btn.innerHTML = 'Register Now';
   }
 }
 
