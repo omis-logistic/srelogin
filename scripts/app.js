@@ -241,7 +241,7 @@ async function handleParcelSubmission(e) {
     const payload = {
       trackingNumber: formData.get('trackingNumber').trim().toUpperCase(),
       nameOnParcel: formData.get('nameOnParcel').trim(),
-      phoneNumber: document.getElementById('phone').value, 
+      phone: document.getElementById('phone').value, 
       itemDescription: formData.get('itemDescription').trim(),
       quantity: formData.get('quantity'),
       price: formData.get('price'),
