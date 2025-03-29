@@ -223,8 +223,6 @@
     </div>
 
     <script>
-let isPhoneValid = false;
-let isCheckingPhone = false;
         
 const CONFIG = window.CONFIG || {
   GAS_URL: 'https://script.google.com/macros/s/AKfycbwUTEVO5qxGm0PYaslruxDkylJDhmk0Bamjy9RNUvz3kbOqnV2S7LKjjuFMANnMopEqTA/exec'
@@ -292,6 +290,9 @@ document.getElementById('phone').addEventListener('input', function(e) {
 });
         
 // ====== PHONE VALIDATION ======
+let isPhoneValid = false;
+let isCheckingPhone = false;
+        
 function validatePhoneNumber() {
     const phone = document.getElementById('phone');
     const validation = document.getElementById('phoneValidation');
