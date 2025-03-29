@@ -474,38 +474,32 @@ function checkPhoneExistence(phone) {
         }
 
 // Complete Form Submission Handler
-document.getElementById('registrationForm').addEventListener('submit', async function(e) {
+document.getElementById('registrationForm').addEventListener('submit', async (e) => {
     e.preventDefault();
     const form = e.target;
     const phoneInput = document.getElementById('phone');
     const validation = document.getElementById('phoneValidation');
+    const submitBtn = form.querySelector('button[type="submit"]');
     const messageDiv = document.getElementById('message');
+
+    // Show loading state
+    submitBtn.disabled = true;
+    const originalBtnText = submitBtn.innerHTML;
+    submitBtn.innerHTML = '<div class="loader"></div> Submitting...';
 
     // Final validation check
     if (!isFormatValid || !isExistsValid) {
         validation.textContent = 'Complete phone validation first!';
         validation.className = 'validation-message invalid';
         phoneInput.classList.add('invalid');
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = originalBtnText;
         return;
     }
 
     try {
-        // Prepare files
-        const frontICFile = document.getElementById('frontIC').files[0];
-        const backICFile = document.getElementById('backIC').files[0];
-        
-        if (!frontICFile || !backICFile) {
-            throw new Error('Both IC documents are required');
-        }
-
-        // Process files asynchronously
-        const [frontIC, backIC] = await Promise.all([
-            fileToBase64(frontICFile),
-            fileToBase64(backICFile)
-        ]);
-
-        // Build URL parameters
-        const params = new URLSearchParams({
+        // Collect all form data
+        const formData = {
             action: 'registerUser',
             icNumber: document.getElementById('icNumber').value,
             phone: phoneInput.value,
@@ -514,56 +508,55 @@ document.getElementById('registrationForm').addEventListener('submit', async fun
             fullName: document.getElementById('fullName').value,
             address: document.getElementById('address').value,
             postcode: document.getElementById('postcode').value,
-            frontIC: frontIC,
-            backIC: backIC,
-            frontICType: frontICFile.type,
-            backICType: backICFile.type,
-            callback: `submitCallback_${Date.now()}`
+            frontIC: await fileToBase64(document.getElementById('frontIC').files[0]),
+            backIC: await fileToBase64(document.getElementById('backIC').files[0]),
+            frontICType: document.getElementById('frontIC').files[0].type,
+            backICType: document.getElementById('backIC').files[0].type
+        };
+
+        // Submit to backend
+        const response = await fetch(CONFIG.GAS_URL, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: `data=${encodeURIComponent(JSON.stringify(formData))}`
         });
 
-        // Create JSONP script
-        const script = document.createElement('script');
-        script.src = `${CONFIG.GAS_URL}?${params}`;
+        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
 
-        // Handle response
-        window[params.get('callback')] = (response) => {
-            if (response.success) {
-                messageDiv.textContent = 'Registration successful!';
-                messageDiv.className = 'success-message';
-                form.reset();
-                setTimeout(() => {
-                    window.location.href = 'login.html';
-                }, 2000);
-            } else {
-                messageDiv.textContent = response.message || 'Registration failed';
-                messageDiv.className = 'error-message';
-            }
-            cleanupScript(script, params.get('callback'));
-        };
+        const result = await response.json();
 
-        // Handle errors
-        script.onerror = () => {
-            messageDiv.textContent = 'Submission failed - please try again';
-            messageDiv.className = 'error-message';
-            cleanupScript(script, params.get('callback'));
-        };
-
-        document.body.appendChild(script);
-
+        if (result.success) {
+            // Show success state
+            messageDiv.textContent = 'Registration successful! Redirecting...';
+            messageDiv.className = 'success-message';
+            messageDiv.style.display = 'block';
+            
+            // Reset form and redirect
+            form.reset();
+            setTimeout(() => {
+                window.location.href = 'login.html';
+            }, 2000);
+        } else {
+            throw new Error(result.message || 'Registration failed on server');
+        }
     } catch (error) {
-        console.error('Submission error:', error);
+        console.error('Submission Error:', error);
         messageDiv.textContent = error.message;
         messageDiv.className = 'error-message';
+        messageDiv.style.display = 'block';
+        
+        // Re-enable form elements
+        phoneInput.focus();
+    } finally {
+        // Reset button state
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = originalBtnText;
     }
 });
 
-// Cleanup function
-function cleanupScript(script, callbackName) {
-    document.body.removeChild(script);
-    delete window[callbackName];
-}
-
-// File to Base64 (required)
+// File to Base64 Converter (Required)
 async function fileToBase64(file) {
     return new Promise((resolve, reject) => {
         const reader = new FileReader();
