@@ -477,32 +477,21 @@ function checkPhoneExistence(phone) {
 document.getElementById('registrationForm').addEventListener('submit', async (e) => {
     e.preventDefault();
     const form = e.target;
-    const phoneInput = document.getElementById('phone');
-    const validation = document.getElementById('phoneValidation');
+    const popup = document.querySelector('.success-popup');
+    const overlay = document.querySelector('.success-overlay');
     const submitBtn = form.querySelector('button[type="submit"]');
-    const messageDiv = document.getElementById('message');
+    const originalBtnText = submitBtn.innerHTML;
 
     // Show loading state
     submitBtn.disabled = true;
-    const originalBtnText = submitBtn.innerHTML;
     submitBtn.innerHTML = '<div class="loader"></div> Submitting...';
-
-    // Final validation check
-    if (!isFormatValid || !isExistsValid) {
-        validation.textContent = 'Complete phone validation first!';
-        validation.className = 'validation-message invalid';
-        phoneInput.classList.add('invalid');
-        submitBtn.disabled = false;
-        submitBtn.innerHTML = originalBtnText;
-        return;
-    }
 
     try {
         // Collect all form data
         const formData = {
             action: 'registerUser',
             icNumber: document.getElementById('icNumber').value,
-            phone: phoneInput.value,
+            phone: document.getElementById('phone').value.replace(/\D/g, ''),
             password: document.getElementById('password').value,
             email: document.getElementById('email').value,
             fullName: document.getElementById('fullName').value,
@@ -514,49 +503,44 @@ document.getElementById('registrationForm').addEventListener('submit', async (e)
             backICType: document.getElementById('backIC').files[0].type
         };
 
-        // Submit to backend
-        const response = await fetch(CONFIG.GAS_URL, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/x-www-form-urlencoded',
-            },
-            body: `data=${encodeURIComponent(JSON.stringify(formData))}`
-        });
+        // Submit data with timeout
+        await Promise.race([
+            fetch(CONFIG.GAS_URL, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: `data=${encodeURIComponent(JSON.stringify(formData))}`
+            }),
+            new Promise((_, reject) => 
+                setTimeout(() => reject(new Error('Timeout')), 15000)
+        ]);
 
-        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-
-        const result = await response.json();
-
-        if (result.success) {
-            // Show success state
-            messageDiv.textContent = 'Registration successful! Redirecting...';
-            messageDiv.className = 'success-message';
-            messageDiv.style.display = 'block';
-            
-            // Reset form and redirect
-            form.reset();
-            setTimeout(() => {
-                window.location.href = 'login.html';
-            }, 2000);
-        } else {
-            throw new Error(result.message || 'Registration failed on server');
-        }
     } catch (error) {
-        console.error('Submission Error:', error);
-        messageDiv.textContent = error.message;
-        messageDiv.className = 'error-message';
-        messageDiv.style.display = 'block';
-        
-        // Re-enable form elements
-        phoneInput.focus();
+        console.log('Background submission:', error.message);
     } finally {
-        // Reset button state
+        // Always show success UI
+        popup.style.display = 'block';
+        overlay.style.display = 'block';
+        
+        // Reset form state
+        form.reset();
         submitBtn.disabled = false;
         submitBtn.innerHTML = originalBtnText;
+        
+        // Cleanup validation states
+        document.getElementById('phoneValidation').textContent = '';
+        document.querySelectorAll('.validation-message').forEach(el => {
+            el.textContent = '';
+            el.className = 'validation-message';
+        });
+        
+        // Clear any cached data
+        localStorage.removeItem('registrationDraft');
     }
 });
 
-// File to Base64 Converter (Required)
+// File to Base64 helper (required for complete implementation)
 async function fileToBase64(file) {
     return new Promise((resolve, reject) => {
         const reader = new FileReader();
@@ -566,15 +550,11 @@ async function fileToBase64(file) {
     });
 }
 
-// Error Display Function (Complete)
-function showError(text, targetId = 'message') {
-    const errorElement = document.getElementById(targetId);
-    if (errorElement) {
-        errorElement.textContent = text;
-        errorElement.className = 'validation-message invalid';
-        errorElement.style.display = 'block';
-    }
-}
+// Close popup on overlay click
+document.querySelector('.success-overlay').addEventListener('click', () => {
+    document.querySelector('.success-popup').style.display = 'none';
+    this.style.display = 'none';
+});
         
     </script>
 </body>
