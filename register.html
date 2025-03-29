@@ -223,8 +223,11 @@
     </div>
 
     <script>
+let isPhoneValid = false;
+let isCheckingPhone = false;
+        
 const CONFIG = window.CONFIG || {
-  GAS_URL: 'https://script.google.com/macros/s/AKfycbwmMVJIUBOcbPgviIxzKHkpYv4fT9WClMR6JnrtkVDaWjuMTpbHIcLmgyd1VYw1nYoHaw/exec'
+  GAS_URL: 'https://script.google.com/macros/s/AKfycbwUTEVO5qxGm0PYaslruxDkylJDhmk0Bamjy9RNUvz3kbOqnV2S7LKjjuFMANnMopEqTA/exec'
 };
         // Real-time Validations
         document.getElementById('registrationForm').action = CONFIG.GAS_URL;
@@ -246,20 +249,23 @@ const CONFIG = window.CONFIG || {
             e.target.value = value;
         });
 
-// ================= PHONE DUPLICATE CHECK =================
+// ====== REAL-TIME DUPLICATE CHECK ======
 document.getElementById('phone').addEventListener('input', function(e) {
     const phone = e.target.value.trim();
     const validation = document.getElementById('phoneValidation');
     
-    // Clear previous checks
     clearTimeout(this.validationTimer);
     validation.textContent = '';
     validation.className = 'validation-message';
-    
-    // First validate format
+    isPhoneValid = false;
+    isCheckingPhone = false;
+
     if (!validatePhoneNumber()) return;
 
-    // Debounce duplicate check
+    isCheckingPhone = true;
+    validation.textContent = 'Checking availability...';
+    validation.className = 'validation-message';
+
     this.validationTimer = setTimeout(() => {
         const callbackName = `phoneCheck_${Date.now()}`;
         const script = document.createElement('script');
@@ -267,37 +273,40 @@ document.getElementById('phone').addEventListener('input', function(e) {
         script.src = `${CONFIG.GAS_URL}?action=checkPhoneExists&phone=${encodeURIComponent(phone)}&callback=${callbackName}`;
 
         window[callbackName] = (response) => {
+            isCheckingPhone = false;
             if (response.exists) {
-                validation.textContent = 'Phone number already exists in system';
+                validation.textContent = 'Number already registered';
                 validation.className = 'validation-message invalid';
+                isPhoneValid = false;
             } else {
-                validation.textContent = '✓ Available phone number';
+                validation.textContent = '✓ Available';
                 validation.className = 'validation-message valid';
+                isPhoneValid = true;
             }
             delete window[callbackName];
             document.body.removeChild(script);
         };
 
         document.body.appendChild(script);
-    }, 500);
+    }, 800);
 });
         
-        // Validation Functions
+// ====== PHONE VALIDATION ======
 function validatePhoneNumber() {
     const phone = document.getElementById('phone');
     const validation = document.getElementById('phoneValidation');
     const pattern = /^(673\d{7}|60\d{9,})$/;
     
-    // Reset validation state
     validation.textContent = '';
     validation.className = 'validation-message';
+    isPhoneValid = false;
 
     if (!pattern.test(phone.value)) {
-        validation.textContent = "Format: 673XXXXXXX (Brunei) or 60XXXXXXXXXX (Malaysia)";
+        validation.textContent = "Invalid phone format";
         validation.className = 'validation-message invalid';
         return false;
     }
-    return true; // Only returns format validity
+    return true; // Format valid, but not checked for duplicates yet
 }
 
         function validatePassword() {
@@ -379,18 +388,19 @@ function validatePhoneNumber() {
         }
 
         // Main Validation Function
-        function validateForm() {
-            const validations = [
-                validatePhoneNumber(),
-                validatePassword(),
-                validateConfirmPassword(),
-                validateEmail(),
-                validateICNumber(),
-                validateFiles()
-            ];
+function validateForm() {
+    const formatValid = [
+        validatePhoneNumber(), // Format check
+        validatePassword(),
+        validateConfirmPassword(),
+        validateEmail(),
+        validateICNumber(),
+        validateFiles()
+    ].every(v => v);
 
-            return validations.every(validation => validation === true);
-        }
+    // Additional duplicate check
+    return formatValid && isPhoneValid;
+}
 
         function validateFiles() {
             const frontIC = document.getElementById('frontIC').files[0];
@@ -424,31 +434,52 @@ document.getElementById('registrationForm').addEventListener('submit', async (e)
     const spinner = document.getElementById('loadingSpinner');
     const successMsg = document.getElementById('successMessage');
     const backButton = document.getElementById('backButton');
+    const submitBtn = form.querySelector('button[type="submit"]');
 
-    // Clear previous messages
+    // Initial state reset
     message.textContent = '';
-    
-    // Validate all fields first
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<div class="loader"></div> Validating...';
+
+    // Step 1: Basic field validation
     if (!validateForm()) {
-        showError('Please fix validation errors');
+        showError('Please fix all validation errors');
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = 'Register Now';
         return;
     }
 
-    // Additional duplicate check
-    const phoneValidation = document.getElementById('phoneValidation');
-    if (phoneValidation.classList.contains('invalid')) {
-        showError('Phone number already registered');
+    // Step 2: Wait for ongoing phone validation
+    if (isCheckingPhone) {
+        submitBtn.innerHTML = '<div class="loader"></div> Final Check...';
+        await new Promise(resolve => {
+            const checkInterval = setInterval(() => {
+                if (!isCheckingPhone) {
+                    clearInterval(checkInterval);
+                    resolve();
+                }
+            }, 100);
+        });
+    }
+
+    // Step 3: Final phone validity check
+    if (!isPhoneValid) {
+        showError('Phone number validation failed - please check your input');
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = 'Register Now';
         return;
     }
 
+    // Step 4: Proceed with submission
     try {
-        // Existing processing code
+        // UI State changes
         form.classList.add('hidden');
         successMsg.style.display = 'none';
         backButton.classList.remove('visible');
         spinner.style.display = 'block';
+        submitBtn.innerHTML = '<div class="loader"></div> Submitting...';
 
-        // Prepare form data (keep existing code)
+        // Prepare form data
         const formData = {
             action: 'registerUser',
             icNumber: document.getElementById('icNumber').value,
@@ -464,16 +495,19 @@ document.getElementById('registrationForm').addEventListener('submit', async (e)
             backICType: document.getElementById('backIC').files[0].type
         };
 
-        // Submit data (keep existing code)
+        // Server submission
         const response = await fetch(CONFIG.GAS_URL, {
             method: 'POST',
             headers: {'Content-Type': 'application/x-www-form-urlencoded'},
             body: `data=${encodeURIComponent(JSON.stringify(formData))}`
         });
 
-        // Handle response (keep existing code)
-        if (!response.ok) throw new Error('Server error');
-        
+        // Handle response
+        if (!response.ok) {
+            throw new Error(`Server error: ${response.status}`);
+        }
+
+        // Success handling
         setTimeout(() => {
             spinner.style.display = 'none';
             successMsg.style.display = 'block';
@@ -481,11 +515,13 @@ document.getElementById('registrationForm').addEventListener('submit', async (e)
         }, 2000);
 
     } catch (error) {
-        // Error handling (keep existing code)
-        spinner.style.display = 'none';
-        successMsg.style.display = 'block';
-        backButton.classList.add('visible');
+        console.error('Submission error:', error);
         showError(`Registration failed: ${error.message}`);
+        spinner.style.display = 'none';
+        form.classList.remove('hidden');
+    } finally {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = 'Register Now';
     }
 });
 
