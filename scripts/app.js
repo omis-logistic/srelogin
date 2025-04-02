@@ -695,45 +695,69 @@ function initValidationListeners() {
 }
 
 // ================= AUTHENTICATION HANDLERS =================
-async function handleLogin() {
+function handleLogin() {
+  const btn = document.getElementById('loginBtn');
+  const originalHtml = btn.innerHTML;
+  
+  // Show loading state
+  btn.innerHTML = '<div class="button-loader"></div> Processing...';
+  btn.disabled = true;
+
   const phone = document.getElementById('phone').value.trim();
   const password = document.getElementById('password').value;
 
-  try {
-    const callbackName = `login_${Date.now()}`;
-    const script = document.createElement('script');
-    script.src = `${CONFIG.GAS_URL}?action=processLogin&phone=${encodeURIComponent(phone)}&password=${encodeURIComponent(password)}&callback=${callbackName}`;
-
-    window[callbackName] = (response) => {
-      console.log('Login response:', response); // Debug log
-      if (response.success) {
-        const userData = {
-          phone: response.phone,
-          email: response.email,
-          userId: response.userId,
-          tempPassword: response.tempPassword
-        };
-        console.log('Storing session:', userData); // Debug log
-        sessionStorage.setItem('userData', JSON.stringify(userData));
-        localStorage.setItem('lastActivity', Date.now());
-        
-        if (response.tempPassword) {
-          safeRedirect('password-reset.html');
-        } else {
-          safeRedirect('dashboard.html');
-        }
-      } else {
-        showError(response.message || 'Authentication failed');
-      }
-      document.body.removeChild(script);
-      delete window[callbackName];
-    };
-    
-    document.body.appendChild(script);
-  } catch (error) {
-    console.error('Login error:', error);
-    showError('Login failed - please try again');
+  // Mobile-friendly validation
+  if (!validatePhone(phone)) {
+    showError('Invalid phone number format');
+    btn.innerHTML = originalHtml;
+    btn.disabled = false;
+    return;
   }
+
+  // Mobile-compatible JSONP implementation
+  const callbackName = `jsonp_${Date.now()}`;
+  const script = document.createElement('script');
+  
+  // Add timeout for mobile connections
+  const timeout = setTimeout(() => {
+    showError('Connection timeout - please try again');
+    btn.innerHTML = originalHtml;
+    btn.disabled = false;
+    document.body.removeChild(script);
+    delete window[callbackName];
+  }, 15000);
+
+  window[callbackName] = (response) => {
+    clearTimeout(timeout);
+    btn.innerHTML = originalHtml;
+    btn.disabled = false;
+
+    if (response.success) {
+      // Mobile-friendly session handling
+      try {
+        sessionStorage.setItem('userData', JSON.stringify({
+          phone: response.phone,
+          tempPassword: response.tempPassword
+        }));
+        
+        // Force redirect for mobile browsers
+        window.location.href = response.tempPassword 
+          ? 'password-reset.html?force=true'
+          : 'dashboard.html?fresh=1';
+          
+      } catch (e) {
+        showError('Mobile browser error - please enable cookies');
+      }
+    } else {
+      document.getElementById('password').value = '';
+      showError(response.message || 'Authentication failed');
+    }
+    document.body.removeChild(script);
+    delete window[callbackName];
+  };
+  
+  script.src = `${CONFIG.GAS_URL}?action=processLogin&phone=${encodeURIComponent(phone)}&password=${encodeURIComponent(password)}&callback=${callbackName}`;
+  document.body.appendChild(script);
 }
 
 // ================= REGISTRATION HANDLER ================= 
@@ -1131,3 +1155,26 @@ function setupCategoryChangeListener() {
     categorySelect.addEventListener('change', checkCategoryRequirements);
   }
 }
+
+// Mobile touch support
+let lastTouch = 0;
+function handleTouchStart(e) {
+  const now = Date.now();
+  if (now - lastTouch <= 300) return;
+  lastTouch = now;
+  
+  const target = e.target.closest('.thumbnail');
+  if(target) {
+    target.classList.add('tapped');
+    setTimeout(() => target.classList.remove('tapped'), 200);
+    const clickEvent = new MouseEvent('click');
+    target.dispatchEvent(clickEvent);
+  }
+}
+
+// Mobile back button handling
+window.addEventListener('popstate', () => {
+  if(window.location.pathname.includes('dashboard.html')) {
+    window.location.reload();
+  }
+});
