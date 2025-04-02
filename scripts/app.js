@@ -222,14 +222,18 @@ function resetForm() {
 async function handleParcelSubmission(e) {
   e.preventDefault();
   const form = e.target;
-  showLoading(true);
-
+  const loader = document.getElementById('globalLoader');
+  
   try {
+    // Show global loader
+    loader.style.display = 'flex';
+    showLoading(true); // Show both global loader and existing loading overlay if needed
+
     const formData = new FormData(form);
     const itemCategory = formData.get('itemCategory');
-    const files = Array.from(formData.getAll('files[]')); // Changed to match input name
+    const files = Array.from(formData.getAll('files[]'));
 
-    // Process ALL files regardless of category
+    // Process files
     const processedFiles = await Promise.all(
       files.map(async file => ({
         name: file.name,
@@ -238,10 +242,11 @@ async function handleParcelSubmission(e) {
       }))
     );
 
+    // Build payload
     const payload = {
       trackingNumber: formData.get('trackingNumber').trim().toUpperCase(),
       nameOnParcel: formData.get('nameOnParcel').trim(),
-      phone: document.getElementById('phone').value, 
+      phone: document.getElementById('phone').value,
       itemDescription: formData.get('itemDescription').trim(),
       quantity: formData.get('quantity'),
       price: formData.get('price'),
@@ -251,20 +256,28 @@ async function handleParcelSubmission(e) {
       files: processedFiles
     };
 
-    console.log('Submission Payload:', payload); // Debug log
+    console.log('Submission Payload:', payload);
 
-    await fetch(CONFIG.PROXY_URL, {
+    // Submit to proxy
+    const response = await fetch(CONFIG.PROXY_URL, {
       method: 'POST',
       headers: {'Content-Type': 'application/x-www-form-urlencoded'},
       body: `payload=${encodeURIComponent(JSON.stringify(payload))}`
     });
 
-  } catch (error) {
-    console.error('Submission error:', error);
-  } finally {
-    showLoading(false);
+    if (!response.ok) throw new Error('Submission failed');
+    
+    // Handle success
     resetForm();
     showSuccessMessage();
+
+  } catch (error) {
+    console.error('Submission error:', error);
+    showError(`Submission failed: ${error.message}`);
+  } finally {
+    // Hide loaders
+    loader.style.display = 'none';
+    showLoading(false);
   }
 }
 
