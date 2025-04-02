@@ -184,7 +184,7 @@
   flex: 1;
 }
 
-  .thumbnail[onclick="showTrackParcel()"] {
+.thumbnail[onclick="showTrackParcel()"] {
     display: none !important;
     visibility: hidden;
     position: absolute;
@@ -192,6 +192,20 @@
     pointer-events: none;
     opacity: 0;
   }
+
+.shipping-details {
+  background: rgba(255,255,255,0.05);
+  padding: 15px;
+  border-radius: 5px;
+  white-space: pre-wrap;
+  font-family: monospace;
+  margin: 10px 0;
+}
+
+.shipping-details span {
+  color: var(--gold);
+  font-weight: bold;
+}
 </style>
 </head>
 <body>
@@ -218,71 +232,74 @@
     <button class="logout-btn" onclick="handleLogout()">Log Out</button>
   </div>
 
-  <!-- Welcome Modal -->
-  <div id="welcomeModal" class="welcome-modal" style="display: none;">
-    <div class="welcome-content">
-      <strong class="gold-text">MAKLUMAN PENTING. SILA BACA</strong>
+ <!-- Updated Welcome Modal -->
+<div id="welcomeModal" class="welcome-modal" style="display: none;">
+  <div class="welcome-content">
+    <strong class="gold-text">MAKLUMAN PENTING, SILA BACA.</strong>
+    
+    <div class="modal-section">
+      <p><strong class="gold-text">SAFHANARIZQI ENTERPRISE RUNNER PARCEL COLLECTOR</strong><br>
+      We're Trusted registered runner under JKED<br>
+      Runner code R1</p>
       
-      <div class="modal-section">
-        <p><strong class="gold-text">Tolong submit tracking details biskita seawalnya jika biskita ada mengunakan shipping address alamat kami di limbang. Tidak perlu menunggu kiriman dari pihak kami lagi.</strong></p>
-        
-        <p>Sila check sea shipping, jika parcel sudah sampai Malaysia, perubahan tracking akan berlaku, sila update/submit tracking terkini yang telah sampai di Limbang.</p>
-        
-        <p><strong class="gold-text">Please do not key in any Tracking details that is not yours and if you're not sure about it please do ask admin to ensure about it.</strong></p>
-        <p><strong class="gold-text">Parcel Items not key-in will be left at storage. Parcel staying at storage can have high chance of lost. If it is lost, it is not our responsibility anymore.</strong></p>
-      </div>
+      <p>To all registered users, please use provided shipping details format below:</p>
+      <pre class="shipping-details">
+<span id="user-id"></span><span id="user-name"></span>
+LOT 673
+KPG BAKOL
+LIMBANG
+98700
+SARAWAK
+<span id="user-phone"></span>
+      </pre>
+    </div>
 
-      <div class="modal-section">
-        <ul class="guidelines">
-          <li>Pastikan Details adalah betul.</li>
-          <li>Buat details nama yg mudah difahami sahaja, tidak perlu panjang.</li>
-          <li>Nombor telefon penerima di Brunei, pihak kami akan hubungi.</li>
-          <li>Jika parcel dalam satu tracking mempunyai banyak keterangan item, sila senaraikan "breakdown" satu persatu termasuk harga & kuantiti.</li>
-          <li>Harga termasuk postage.</li>
-          <li>Item yang memerlukan permit(under control), sila sediakan semua document yg diperlukan.</li>
-        </ul>
-      </div>
+    <!-- Terms & Conditions Section -->
+    <div class="modal-section">
+      <strong class="gold-text">Terms & Conditions:</strong>
+      <ul class="guidelines">
+        <li>Semua ahli yang berdaftar dimestikan menyatakan maklumat yang ternyata di I.C (untuk kegunaan deklarasi kastam)</li>
+        <li>Sila pastikan bungkusan parcel yang biskita adalah bukan barang KAWALAN dan bukan barang TEGAHAN agensi Kerajaan.</li>
+        <li>Adalah penting supaya biskita tidak membuat pesanan barangan Terkawal/Tegahan tanpa kebenaran Agensi Kerajaan *(Vape & accessories, Drugs , Senjata dan apa jua yg menyerupai , Drone , Walkie Talkie , Rokok , Baja , Racun , Archery , Tanaman dan sebagainya)* dalam urusan ini.</li>
+        <li>Untuk barangan permit seperti pemakanan ; pharmaceutical ; AITI ; KDN ; PDi , adalah di hadkan mengikut kuantity pemakaian sendiri sahaja iaitu 5 unit @ BND100 @ 5kg kebawah.</li>
+        <li>Sila submit ketarangan bungkusan parcel biskita dengan lengkap pada link yang sudah di sediakan untuk memudahkan pihak kami membuat deklarasi kastam bagi mengelakkan sebarang kelawatan.</li>
+        <li>Biskita akan menerima WhatsApp dari sistem kami, pastikan makluman nombor telefon biskita adalah betul.</li>
+      </ul>
+    </div>
 
-      <div class="modal-section">
-        <strong class="gold-text">Untuk Cosmetics, Supplements, Foods or Drinks:</strong>
-        <ul class="guidelines">
-          <li>Screenshot invoice adalah dimestikan.</li>
-          <li>Pastikan butiran nama penerima dan summary shipping dapat dilihat dengan jelas.</li>
-          <li>Gambar IC depan & belakang atau kirimkan nombor IC dan alamat kepada admin.</li>
-          <li>Untuk bungkusan cosmetic, pastikan barangan bukan untuk dijual, hanya personal use kegunaan sendiri sahaja, limit harga tidak boleh melebihi $200, berat maksimum 2KG kebawah <strong class="gold-text">*kecuali biskita ada DPS permit dibawah syarikat sendiri.</strong></li>
-        </ul>
-      </div>
+    <!-- Charges Section -->
+    <div class="modal-section">
+      <strong class="gold-text">1 ) CHARGES</strong>
+      <ul class="guidelines">
+        <li>$1.50 size S</li>
+        <li>$2-$3.50 size M</li>
+        <li>$3-$4.50 size L</li>
+        <li>$4-$5.50 size XL</li>
+        <li>$5-$15 size box type</li>
+        <li>$15-$45 size XXXXL</li>
+      </ul>
+    </div>
 
-      <div class="modal-section">
-        <strong class="gold-text">Untuk AITI:</strong>
-        <ul class="guidelines">
-          <li>Kesemua barangan yang mempunyai Bluetooth atau Wireless RC car yg mempunyai "remote control", Handphone & laptop hendak lah memohon permit di AITI dahulu, kuantiti tidak boleh melebihi 5 unit.</li>
-          <li>Invoice</li>
-          <li>Gambar IC depan belakang.</li>
-          <li>Copy link dari Shopee atau Lazada.</li>
-        </ul>
-      </div>
+    <!-- TATACARA Section -->
+    <div class="modal-section">
+      <strong class="gold-text">2 ) TATACARA PENGAMBILAN PARCEL</strong>
+      <ul class="guidelines">
+        <li><strong>Langkah 1 Listing</strong><br>
+        *Sila beri maklumat parcel yang ringkas seperti tracking number, maklumat barang dalam parcel, kuantiti barang, harga barang (sila sertakan screenshot resit belian bagi brg yg memerlukan Permit Agensi Kerajaan)*</li>
+        <li><strong>Langkah 2 Deklarasi kastam</strong></li>
+        <li><strong>Langkah 3 Sorting out parcel</strong><br>
+        (Sila tunggu 'update' dari kami sekiranya parcel boleh dikutip pada hari yang sama)</li>
+        <li><strong>Langkah 4 Pengagihan parcel</strong><br>
+        (apabila biskita menerima 'billing' dari pihak kami)<br>
+        *Pastikan parcel yang diterima adalah betul sebelum meninggalkan warehouse kami*</li>
+      </ul>
+    </div>
 
-      <div class="modal-section">
-        <strong class="gold-text">Untuk buku:</strong>
-        <ul class="guidelines">
-          <li>Sediakan invoice.</li>
-          <li>Gambar IC.</li>
-        </ul>
-      </div>
-
-      <div class="modal-section warning">
-        <p><strong class="gold-text">● SILA SEMAK SEBELUM SUBMIT.</strong></p>
-        <p><strong class="gold-text">● PASTIKAN SEMUA KETERANGAN ADALAH BETUL.</strong></p>
-        <p>Note: In completing this declaration, units and items for making an untrue or incorrect declaration will be taken risk by own consignee.</p>
-        <p>Undeclared parcel will be hold in Limbang for anyone that did not provide their detail on time. Kindly please cooperate, Thank you.😊</p>
-      </div>
-
-      <div class="modal-footer">
-        <button class="agree-btn" onclick="closeWelcomeModal()">Saya faham & setuju</button>
-      </div>
+    <div class="modal-footer">
+      <button class="agree-btn" onclick="closeWelcomeModal()">Saya faham & setuju</button>
     </div>
   </div>
+</div>
 
   <script src="scripts/app.js"></script>
   <script>
@@ -292,20 +309,46 @@
       document.body.style.overflow = 'auto';
     }
 
+function loadWelcomeModalData(phone) {
+  const userData = JSON.parse(sessionStorage.getItem('userData'));
+  
+  // Populate immediate available data
+  if(userData) {
+    document.getElementById('user-id').textContent = userData.userId;
+    document.getElementById('user-phone').textContent = userData.phone;
+  }
+
+  // Fetch full name from API
+  const callbackName = `userInfo_${Date.now()}`;
+  const script = document.createElement('script');
+  script.src = `${CONFIG.GAS_URL}?action=getUserInfo&phone=${encodeURIComponent(phone)}&callback=${callbackName}`;
+
+  window[callbackName] = (response) => {
+    if(response.success) {
+      document.getElementById('user-name').textContent = response.fullName || '';
+    }
+    document.body.removeChild(script);
+    delete window[callbackName];
+  };
+  document.body.appendChild(script);
+}
+    
 (function initDashboard() {
   const userData = JSON.parse(sessionStorage.getItem('userData'));
   if (!userData) return safeRedirect('login.html');
   if (userData.tempPassword) return safeRedirect('password-reset.html');
 
-  // New URL parameter check
   const urlParams = new URLSearchParams(window.location.search);
   if (urlParams.has('fresh')) {
-    // Show modal and clean URL
     document.getElementById('welcomeModal').style.display = 'block';
     window.history.replaceState({}, '', 'dashboard.html');
+    loadWelcomeModalData(userData.phone);
   }
 
   const modal = document.getElementById('welcomeModal');
+  window.onclick = (event) => {
+    if(event.target === modal) modal.style.display = 'none';
+  }
 
   // Dual verification check
   if (localStorage.getItem('freshLogin') === 'true' && 
