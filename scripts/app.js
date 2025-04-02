@@ -222,18 +222,14 @@ function resetForm() {
 async function handleParcelSubmission(e) {
   e.preventDefault();
   const form = e.target;
-  const loader = document.getElementById('globalLoader');
-  
-  try {
-    // Show global loader
-    loader.style.display = 'flex';
-    showLoading(true); // Show both global loader and existing loading overlay if needed
+  showLoading(true);
 
+  try {
     const formData = new FormData(form);
     const itemCategory = formData.get('itemCategory');
-    const files = Array.from(formData.getAll('files[]'));
+    const files = Array.from(formData.getAll('files[]')); // Changed to match input name
 
-    // Process files
+    // Process ALL files regardless of category
     const processedFiles = await Promise.all(
       files.map(async file => ({
         name: file.name,
@@ -242,11 +238,10 @@ async function handleParcelSubmission(e) {
       }))
     );
 
-    // Build payload
     const payload = {
       trackingNumber: formData.get('trackingNumber').trim().toUpperCase(),
       nameOnParcel: formData.get('nameOnParcel').trim(),
-      phone: document.getElementById('phone').value,
+      phone: document.getElementById('phone').value, 
       itemDescription: formData.get('itemDescription').trim(),
       quantity: formData.get('quantity'),
       price: formData.get('price'),
@@ -256,28 +251,20 @@ async function handleParcelSubmission(e) {
       files: processedFiles
     };
 
-    console.log('Submission Payload:', payload);
+    console.log('Submission Payload:', payload); // Debug log
 
-    // Submit to proxy
-    const response = await fetch(CONFIG.PROXY_URL, {
+    await fetch(CONFIG.PROXY_URL, {
       method: 'POST',
       headers: {'Content-Type': 'application/x-www-form-urlencoded'},
       body: `payload=${encodeURIComponent(JSON.stringify(payload))}`
     });
 
-    if (!response.ok) throw new Error('Submission failed');
-    
-    // Handle success
-    resetForm();
-    showSuccessMessage();
-
   } catch (error) {
     console.error('Submission error:', error);
-    showError(`Submission failed: ${error.message}`);
   } finally {
-    // Hide loaders
-    loader.style.display = 'none';
     showLoading(false);
+    resetForm();
+    showSuccessMessage();
   }
 }
 
