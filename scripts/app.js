@@ -376,15 +376,9 @@ function validateCategory(selectElement) {
 
 function validateInvoiceFiles() {
   const mandatoryCategories = [
-    'CHAPTER 17 SUGAR CONFECTIONERY **',
-    'CHAPTER 18 COCOA PREPARATION **',
-    'CHAPTER 21 SUPPLEMENT MISCELLANEOUS **',
-    'CHAPTER 30 PHARMACEUTICAL PRODUCT **',
-    'CHAPTER 44 WOOD ARTICLES **',
-    'CHAPTER 49 PRINTED BOOK ; PICTURE **',
-    'CHAPTER 85.17 TELEPHONE SET ; WIRELESS NETWORK ; OTHERS **',
-    'CHAPTER 85.18.30 HEADPHONE ; EARPHONE **',
-    'CHAPTER 95.04 PLAYING CARD ;GAMING ; VIDEO GAMES **'
+    '* Books', '* Cosmetics/Skincare/Bodycare',
+    '* Food Beverage/Drinks', '* Gadgets',
+    '* Oil Ointment', '* Supplement'
   ];
   
   const category = document.getElementById('itemCategory')?.value || '';
