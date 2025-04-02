@@ -212,9 +212,44 @@
   color: var(--gold);
   font-weight: bold;
 }
+
+.loading-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0,0,0,0.9);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 9999;
+  transition: opacity 0.3s ease;
+}
+
+.loading-spinner {
+  width: 50px;
+  height: 50px;
+  border: 4px solid #f3f3f3;
+  border-top: 4px solid var(--gold);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Add this to keep modal hidden initially */
+#welcomeModal { display: none; }
 </style>
 </head>
 <body>
+  <div id="globalLoader" class="loading-overlay">
+  <div class="loading-spinner"></div>
+</div>
+  
   <div class="container dashboard-page">
     <h1>User Dashboard</h1>
     
@@ -307,7 +342,12 @@ SARAWAK
 
   <script src="scripts/app.js"></script>
   <script>
-    function closeWelcomeModal() {
+
+function showGlobalLoader(show = true) {
+  document.getElementById('globalLoader').style.display = show ? 'flex' : 'none';
+}
+    
+function closeWelcomeModal() {
       const modal = document.getElementById('welcomeModal');
       modal.style.display = 'none';
       document.body.style.overflow = 'auto';
@@ -316,23 +356,25 @@ SARAWAK
 function loadWelcomeModalData(phone) {
   const userData = JSON.parse(sessionStorage.getItem('userData'));
   
-  // Immediately show phone number from session data
+  // Immediate population from session storage
   document.getElementById('user-phone').textContent = userData.phone;
 
-  // Fetch detailed user info from API
   const callbackName = `userInfo_${Date.now()}`;
   const script = document.createElement('script');
   script.src = `${CONFIG.GAS_URL}?action=getUserInfo&phone=${encodeURIComponent(phone)}&callback=${callbackName}`;
 
   window[callbackName] = (response) => {
-  if(response.success) {
-    const userInfo = `${response.userId} ${response.fullName}`;
-    document.getElementById('user-info').textContent = userInfo;
-    document.getElementById('user-phone').textContent = userData.phone;
-  }
+    showGlobalLoader(false);
+    if(response.success) {
+      const userInfo = `${response.userId} ${response.fullName}`;
+      document.getElementById('user-info').textContent = userInfo;
+      document.getElementById('welcomeModal').style.display = 'block';
+      document.body.style.overflow = 'hidden';
+    }
     document.body.removeChild(script);
     delete window[callbackName];
   };
+  
   document.body.appendChild(script);
 }
     
@@ -341,41 +383,35 @@ function loadWelcomeModalData(phone) {
   if (!userData) return safeRedirect('login.html');
   if (userData.tempPassword) return safeRedirect('password-reset.html');
 
-  const urlParams = new URLSearchParams(window.location.search);
-  if (urlParams.has('fresh')) {
-    document.getElementById('welcomeModal').style.display = 'block';
-    window.history.replaceState({}, '', 'dashboard.html');
-    loadWelcomeModalData(userData.phone);
-  }
-
-  const modal = document.getElementById('welcomeModal');
-  window.onclick = (event) => {
-    if(event.target === modal) modal.style.display = 'none';
-  }
-
-  // Dual verification check
-  if (localStorage.getItem('freshLogin') === 'true' && 
-      sessionStorage.getItem('modalShown') === 'false') {
-    document.body.style.overflow = 'hidden';
-    modal.style.display = 'block';
-    sessionStorage.setItem('modalShown', 'true');
-    localStorage.removeItem('freshLogin');
-  }
-
-  window.onclick = (event) => {
-    if(event.target === document.getElementById('welcomeModal')) {
-      document.getElementById('welcomeModal').style.display = 'none';
-    }
-  }
-
-  window.showMyInfo = () => safeRedirect('my-info.html');
-  window.showParcelDeclaration = () => safeRedirect('parcel-declaration.html');
-  window.showTrackParcel = () => safeRedirect('track-parcel.html');
+  // Always show loader initially
+  showGlobalLoader(true);
   
-  window.handleLogout = () => {
-    sessionStorage.clear();
-    safeRedirect('login.html');
-  }
+  const urlParams = new URLSearchParams(window.location.search);
+  
+  // Modified initialization flow
+  setTimeout(() => {
+    if (urlParams.has('fresh')) {
+      window.history.replaceState({}, '', 'dashboard.html');
+      loadWelcomeModalData(userData.phone);
+    } else {
+      showGlobalLoader(false);
+    }
+
+    // Existing code
+    const modal = document.getElementById('welcomeModal');
+    window.onclick = (event) => {
+      if(event.target === modal) modal.style.display = 'none';
+    }
+
+    window.showMyInfo = () => safeRedirect('my-info.html');
+    window.showParcelDeclaration = () => safeRedirect('parcel-declaration.html');
+    window.showTrackParcel = () => safeRedirect('track-parcel.html');
+    
+    window.handleLogout = () => {
+      sessionStorage.clear();
+      safeRedirect('login.html');
+    }
+  }, 500); // Small delay for loader visibility
 })();
   </script>
   <div class="footer-text">
