@@ -540,3 +540,29 @@ select {
 #loginBtn.loading .btn-text {
   visibility: hidden;
 }
+
+@media (max-width: 768px) {
+  /* Login form specific fixes */
+  .login-container input {
+    font-size: 16px !important; /* Prevent iOS zoom */
+    min-height: 48px; /* Better touch target */
+  }
+  
+  #loginBtn {
+    padding: 16px;
+    min-height: 52px;
+  }
+  
+  /* Prevent form overflow */
+  .login-page {
+    padding: 10px;
+    min-width: 100vw;
+    overflow-x: hidden;
+  }
+}
+
+/* Ensure clickable elements are touch-friendly */
+button, a, input[type="submit"] {
+  min-width: 48px;
+  min-height: 48px;
+}
