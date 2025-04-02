@@ -195,6 +195,7 @@
 
 .shipping-details {
   white-space: pre;
+  line-height: 1.4;
 }
 
 #user-info {
@@ -202,6 +203,11 @@
   margin-bottom: 5px;
 }
 
+#user-info::after {
+  content: "\A";
+  white-space: pre;
+}
+    
 .shipping-details span {
   color: var(--gold);
   font-weight: bold;
@@ -243,8 +249,7 @@
       Runner code R1</p>
       
       <p>To all registered users, please use provided shipping details format below:</p>
-      <pre class="shipping-details">
-<span id="user-info"></span><span id="user-name"></span>
+      <pre class="shipping-details"><span id="user-info"></span><span id="user-name"></span>
 LOT 673
 KPG BAKOL
 LIMBANG
@@ -321,11 +326,11 @@ function loadWelcomeModalData(phone) {
   script.src = `${CONFIG.GAS_URL}?action=getUserInfo&phone=${encodeURIComponent(phone)}&callback=${callbackName}`;
 
   window[callbackName] = (response) => {
-    if(response.success) {
-      // Combine user ID and name in one line
-      const userInfo = `${response.userId} ${response.fullName}`;
-      document.getElementById('user-info').textContent = userInfo;
-    }
+  if(response.success) {
+    const userInfo = `${response.userId} ${response.fullName}`;
+    document.getElementById('user-info').textContent = userInfo;
+    document.getElementById('user-phone').textContent = userData.phone;
+  }
     document.body.removeChild(script);
     delete window[callbackName];
   };
