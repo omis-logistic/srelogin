@@ -917,75 +917,23 @@ function initParcelDeclarationPage(userData) {
 
 // ================= INITIALIZATION =================
 document.addEventListener('DOMContentLoaded', () => {
-  // Existing initialization
+  // Core Initialization
   detectViewMode();
   initValidationListeners();
   createLoaderElement();
   checkCategoryRequirements();
 
-  // Session management
+  // Show loader immediately for parcel declaration page
+  if (window.location.pathname.includes('parcel-declaration.html')) {
+    showLoading(true);
+  }
+
+  // Session Management
   const publicPages = ['login.html', 'register.html', 'forgot-password.html'];
   const isPublicPage = publicPages.some(page => 
     window.location.pathname.includes(page)
   );
 
-  // Parcel declaration page specific code
-  if (window.location.pathname.includes('parcel-declaration.html')) {
-    const userData = checkSession();
-    if (userData) {
-      // Auto-populate phone (existing working code)
-      const phoneField = document.getElementById('phone');
-      if (phoneField) {
-        phoneField.value = userData.phone || '';
-        phoneField.readOnly = true;
-      }
-
-      // NEW: Auto-populate UserID
-      const userIdField = document.getElementById('userId');
-      if (userIdField) {
-        // First try session data
-        if (userData.userId) {
-          userIdField.value = userData.userId;
-        } else {
-          // Fallback to direct lookup
-          const callbackName = `uid_${Date.now()}`;
-          const script = document.createElement('script');
-          script.src = `${CONFIG.GAS_URL}?action=getCurrentUserID&phone=${encodeURIComponent(userData.phone)}&callback=${callbackName}`;
-
-          window[callbackName] = (response) => {
-            if (response.success) {
-              userIdField.value = response.userId;
-              // Update session for future use
-              sessionStorage.setItem('userData', JSON.stringify({
-                ...userData,
-                userId: response.userId
-              }));
-            } else {
-              console.error('User ID lookup failed:', response);
-              userIdField.value = 'N/A';
-            }
-            document.body.removeChild(script);
-            delete window[callbackName];
-          };
-          document.body.appendChild(script);
-        }
-      }
-    }
-
-    // Existing form setup
-    const parcelForm = document.getElementById('declarationForm');
-    if (parcelForm) {
-      parcelForm.addEventListener('submit', handleParcelSubmission);
-      
-      // Existing category handler
-      const categorySelect = document.getElementById('itemCategory');
-      if (categorySelect) {
-        categorySelect.addEventListener('change', checkCategoryRequirements);
-      }
-    }
-  }
-
-  // Existing session validation
   if (!isPublicPage) {
     const userData = checkSession();
     if (!userData) {
@@ -998,13 +946,70 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  // Existing UI cleanup
+  // Parcel Declaration Page Specific Code
+  if (window.location.pathname.includes('parcel-declaration.html')) {
+    const userData = checkSession();
+    if (!userData) {
+      handleLogout();
+      return;
+    }
+
+    // Phone Field Population
+    const phoneField = document.getElementById('phone');
+    if (phoneField) {
+      phoneField.value = userData.phone || '';
+      phoneField.readOnly = true;
+    }
+
+    // User ID Handling
+    const userIdField = document.getElementById('userId');
+    if (userIdField) {
+      if (userData.userId) {
+        userIdField.value = userData.userId;
+        showLoading(false); // Hide loader if user ID exists
+      } else {
+        const callbackName = `uid_${Date.now()}`;
+        const script = document.createElement('script');
+        script.src = `${CONFIG.GAS_URL}?action=getCurrentUserID&phone=${encodeURIComponent(userData.phone)}&callback=${callbackName}`;
+
+        window[callbackName] = (response) => {
+          if (response.success) {
+            userIdField.value = response.userId;
+            sessionStorage.setItem('userData', JSON.stringify({
+              ...userData,
+              userId: response.userId
+            }));
+          } else {
+            console.error('User ID lookup failed:', response);
+            userIdField.value = 'N/A';
+          }
+          showLoading(false); // Hide loader after user ID fetch
+          document.body.removeChild(script);
+          delete window[callbackName];
+        };
+        document.body.appendChild(script);
+      }
+    }
+
+    // Form Setup
+    const parcelForm = document.getElementById('declarationForm');
+    if (parcelForm) {
+      parcelForm.addEventListener('submit', handleParcelSubmission);
+      
+      const categorySelect = document.getElementById('itemCategory');
+      if (categorySelect) {
+        categorySelect.addEventListener('change', checkCategoryRequirements);
+      }
+    }
+  }
+
+  // UI Cleanup
   window.addEventListener('beforeunload', () => {
     const errorElement = document.getElementById('error-message');
     if (errorElement) errorElement.style.display = 'none';
   });
 
-  // Existing focus management
+  // Focus Management
   const firstInput = document.querySelector('input:not([type="hidden"])');
   if (firstInput) firstInput.focus();
 });
