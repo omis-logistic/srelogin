@@ -194,12 +194,12 @@
   }
 
 .shipping-details {
-  background: rgba(255,255,255,0.05);
-  padding: 15px;
-  border-radius: 5px;
-  white-space: pre-wrap;
-  font-family: monospace;
-  margin: 10px 0;
+  white-space: pre;
+}
+
+#user-info {
+  display: block;
+  margin-bottom: 5px;
 }
 
 .shipping-details span {
@@ -244,7 +244,7 @@
       
       <p>To all registered users, please use provided shipping details format below:</p>
       <pre class="shipping-details">
-<span id="user-id"></span><span id="user-name"></span>
+<span id="user-info"></span><span id="user-name"></span>
 LOT 673
 KPG BAKOL
 LIMBANG
@@ -312,20 +312,19 @@ SARAWAK
 function loadWelcomeModalData(phone) {
   const userData = JSON.parse(sessionStorage.getItem('userData'));
   
-  // Populate immediate available data
-  if(userData) {
-    document.getElementById('user-id').textContent = userData.userId;
-    document.getElementById('user-phone').textContent = userData.phone;
-  }
+  // Immediately show phone number from session data
+  document.getElementById('user-phone').textContent = userData.phone;
 
-  // Fetch full name from API
+  // Fetch detailed user info from API
   const callbackName = `userInfo_${Date.now()}`;
   const script = document.createElement('script');
   script.src = `${CONFIG.GAS_URL}?action=getUserInfo&phone=${encodeURIComponent(phone)}&callback=${callbackName}`;
 
   window[callbackName] = (response) => {
     if(response.success) {
-      document.getElementById('user-name').textContent = response.fullName || '';
+      // Combine user ID and name in one line
+      const userInfo = `${response.userId} ${response.fullName}`;
+      document.getElementById('user-info').textContent = userInfo;
     }
     document.body.removeChild(script);
     delete window[callbackName];
