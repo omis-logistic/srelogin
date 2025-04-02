@@ -404,7 +404,12 @@ function loadWelcomeModalData(phone) {
     }
 
     window.showMyInfo = () => safeRedirect('my-info.html');
-    window.showParcelDeclaration = () => safeRedirect('parcel-declaration.html');
+    window.showParcelDeclaration = () => {
+  showGlobalLoader(true);
+  setTimeout(() => {
+    safeRedirect('parcel-declaration.html');
+  }, 50);
+}
     window.showTrackParcel = () => safeRedirect('track-parcel.html');
     
     window.handleLogout = () => {
