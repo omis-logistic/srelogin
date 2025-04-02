@@ -5,158 +5,176 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="theme-color" content="#FF69B4">
     <title>Registration Portal</title>
-<style>
-    .container { 
-        max-width: 600px; 
-        margin: 20px auto; 
-        padding: 2rem;
-        background: var(--background-light);
-        border-radius: 15px;
-        box-shadow: 0 8px 32px rgba(255, 105, 180, 0.1);
-        border: 1px solid var(--border-color);
-    }
-
-    .form-group { 
-        margin-bottom: 1.5rem; 
-    }
-
-    label { 
-        display: block; 
-        margin-bottom: 0.5rem; 
-        font-weight: 500; 
-        color: var(--primary-color);
-    }
-
-    input, button { 
-        width: 100%; 
-        padding: 0.8rem;
-        margin: 0.5rem 0;
-        border: 2px solid var(--border-color);
-        border-radius: 8px;
-        transition: all 0.3s ease;
-        background: var(--input-bg);
-        color: var(--text-dark);
-        font-size: 0.95rem;
-    }
-
-    button { 
-        background: var(--primary-color);
-        color: var(--text-light);
-        font-weight: 600;
-        border: none;
-        padding: 14px 28px;
-        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    }
-
-    button:hover { 
-        background: var(--gradient-end);
-        transform: translateY(-2px);
-        box-shadow: 0 4px 12px rgba(255, 105, 180, 0.3);
-    }
-
-    .error { 
-        color: var(--error-red);
-        font-size: 0.9em;
-        margin-top: 0.3rem;
-    }
-
-    .validation-message {
-        font-size: 0.85em;
-        margin-top: 0.3rem;
-    }
-
-    .valid { color: var(--success-green); }
-    .invalid { color: var(--error-red); }
-    
-    input:invalid { border-color: var(--error-red); }
-    input:valid { border-color: var(--success-green); }
-
-    .ic-input {
-        font-family: monospace;
-        letter-spacing: 0.1em;
-    }
-
-    .loader {
-        border: 4px solid #f3f3f3;
-        border-top: 4px solid var(--primary-color);
-        border-radius: 50%;
-        width: 30px;
-        height: 30px;
-        animation: spin 1s linear infinite;
-        margin: 20px auto;
-    }
-
-    @keyframes spin {
-        0% { transform: rotate(0deg); }
-        100% { transform: rotate(360deg); }
-    }
-
-    .success-message {
-        color: var(--success-green);
-        background: rgba(119, 221, 119, 0.1);
-        border: 1px solid var(--success-green);
-        padding: 12px;
-        border-radius: 4px;
-        margin: 1.5rem 0;
-    }
-
-    /* Phone validation icons */
-    #phone.valid {
-        background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2377DD77'%3e%3cpath d='M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z'/%3e%3c/svg%3e");
-    }
-    
-    #phone.invalid {
-        background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23FF6B6B'%3e%3cpath d='M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z'/%3e%3c/svg%3e");
-    }
-
-    /* Modal Styles */
-    .modal {
-        background: rgba(255, 182, 193, 0.95);
-        backdrop-filter: blur(8px);
-    }
-
-    .modal-content {
-        background: var(--background-light);
-        border: 2px solid var(--primary-color);
-        border-radius: 15px;
-        box-shadow: 0 8px 32px rgba(255, 105, 180, 0.15);
-    }
-
-    .login-btn {
-        background: var(--primary-color);
-        color: var(--text-light);
-        padding: 14px 40px;
-        border-radius: 8px;
-        transition: all 0.3s ease;
-    }
-
-    .login-btn:hover {
-        background: var(--gradient-end);
-        transform: translateY(-2px);
-    }
-
-    .back-button {
-        background: var(--primary-color);
-        color: var(--text-light);
-        transition: all 0.3s ease;
-    }
-
-    .back-button:hover {
-        background: var(--gradient-end);
-        opacity: 0.9;
-    }
-
-    @media (max-width: 768px) {
-        .container {
-            padding: 1.5rem;
-            margin: 0.5rem auto;
+    <style>
+        .container { 
+            max-width: 600px; 
+            margin: 20px auto; 
+            padding: 20px; 
+            box-shadow: 0 0 10px rgba(0,0,0,0.1); 
+            font-family: Arial, sans-serif;
         }
-        
-        input, button {
-            padding: 1rem;
+        .form-group { 
+            margin-bottom: 20px; 
         }
-    }
-</style>
+        label { 
+            display: block; 
+            margin-bottom: 5px; 
+            font-weight: bold; 
+            color: #333;
+        }
+        input, button { 
+            width: 100%; 
+            padding: 12px; 
+            margin-top: 5px; 
+            border: 2px solid #ddd; 
+            border-radius: 5px; 
+            box-sizing: border-box;
+        }
+        button { 
+            background: #4285f4; 
+            color: white; 
+            border: none; 
+            cursor: pointer; 
+            font-size: 16px;
+            transition: background 0.3s;
+        }
+        button:hover { 
+            background: #357abd; 
+        }
+        .error { 
+            color: #ff4444; 
+            margin-top: 10px; 
+            font-size: 0.9em;
+        }
+        .file-input { 
+            padding: 3px; 
+        }
+        .validation-message {
+            font-size: 0.85em;
+            margin-top: 5px;
+            display: block;
+        }
+        .valid { color: #00C851; }
+        .invalid { color: #ff4444; }
+        input:invalid { border-color: #ff4444; }
+        input:valid { border-color: #00C851; }
+        .ic-input {
+            font-family: monospace;
+            letter-spacing: 0.1em;
+        }
+        .loader {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #4285f4;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            display: none;
+            margin: 20px auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .success-message {
+            display: none;
+            color: #00C851;
+            text-align: center;
+            font-size: 1.2em;
+            margin: 20px 0;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        .back-button {
+    display: block; /* Changed from display: none */
+    width: 200px;
+    margin: 20px auto;
+    padding: 10px;
+    background: #4285f4;
+    color: white;
+    text-align: center;
+    text-decoration: none;
+    border-radius: 5px;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s ease, visibility 0.3s ease;
+}
+
+.back-button.visible {
+    opacity: 1;
+    visibility: visible;
+}
+
+.hidden {
+    display: none !important;
+}
+
+.valid { border-color: #00C851 !important; }
+.invalid { border-color: #ff4444 !important; }
+.validation-message.valid { color: #00C851; }
+.validation-message.invalid { color: #ff4444; }
+
+/* Add check/cross indicators */
+#phone {
+    background-image: none;
+    padding-right: 30px;
+    background-position: right 10px center;
+    background-repeat: no-repeat;
+    background-size: 20px;
+}
+#phone.valid {
+    background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%2300C851" width="24" height="24"><path d="M0 0h24v24H0z" fill="none"/><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>');
+}
+#phone.invalid {
+    background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%23ff4444" width="24" height="24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/><path d="M0 0h24v24H0z" fill="none"/></svg>');
+}
+
+/* Modal Styles */
+.modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.7);
+    z-index: 1000;
+}
+
+.modal-content {
+    background: white;
+    padding: 30px;
+    border-radius: 10px;
+    width: 90%;
+    max-width: 400px;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+}
+
+.login-btn {
+    background: #4285f4;
+    color: white;
+    border: none;
+    padding: 12px 30px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 16px;
+    margin-top: 20px;
+    transition: background 0.3s;
+}
+
+.login-btn:hover {
+    background: #357abd;
+}
+    </style>
     <script src="app.js"></script>
 </head>
 <body>
