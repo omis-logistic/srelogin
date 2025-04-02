@@ -312,18 +312,70 @@ function validateTrackingNumber(value) {
 
 function validateItemCategory(category) {
   const validCategories = [
-    'Accessories/Jewellery', 'Baby Appliances', 'Bag', 'Car Parts/Accessories',
-    'Carpets/Mat', 'Clothing', 'Computer Accessories', 'Cordless', 'Decorations',
-    'Disposable Pad/Mask', 'Electrical Appliances', 'Fabric', 'Fashion Accessories',
-    'Fishing kits/Accessories', 'Footware Shoes/Slippers', 'Game/Console/Board',
-    'Hand Tools', 'Handphone Casing', 'Headgear', 'Home Fitting/Furniture',
-    'Kitchenware', 'LED/Lamp', 'Matters/Bedding', 'Mix Item', 'Motor Part/Accessories',
-    'Others', 'Perfume', 'Phone Accessories', 'Plastic Article', 'RC Parts/Accessories',
-    'Rubber', 'Seluar', 'Socks', 'Sport Equipment', 'Stationery', 'Stickers',
-    'Storage', 'Telkong', 'Toys', 'Tudong', 'Tumbler', 'Underwear',
-    'Watch & Accessories', 'Wire, Adapter & Plug',
-    '*Books', '*Cosmetics/Skincare/Bodycare', '*Food Beverage/Drinks',
-    '*Gadgets', '*Oil Ointment', '*Supplement'
+    'CHAPTER 73 ARTICLES OF IRON OR STEEL',
+    'CHAPTER 68 ARTICLES OF STONE',
+    'CHAPTER 67.02.10 ARTIFICAL FLOWER',
+    'CHAPTER 87 AUTOPARTS ; CAR ACCESSORIES',
+    'CHAPTER 62.09 BAJU BABY ; AND ACCESSORIES',
+    'CHAPTER 62.06 BAJU ; PAKAIAN  ; SET SUIT',
+    'CHAPTER 94.04 BEDDING SET ; CUSHION ; PILLOW',
+    'CHAPTER 63 BLANKET',
+    'CHAPTER 62.12 BRA ; BENGKUNG ; CORSET',
+    'CHAPTER 96.03 BROOM ; BRUSH ;FLOOR MOPS SWEEPERS',
+    'CHAPTER 69 CERAMIC PRODUCTS',
+    'CHAPTER 96.15 COMBS ; HAIR PIN ; AND PARTS',
+    'CHAPTER 90.01.30 CONTACT LENS',
+    '*CHAPTER 18 COCOA PREPARATION',
+    'CHAPTER 63.03 CURTAIN ; BLINDS',
+    'CHAPTER 85.16 ELETRICAL',
+    'CHAPTER 58 SPECIAL WOVEN FABRIC ; LACE ; TAPESTRIES ; EMBROIDERY',
+    'CHAPTER 95.06.91 EXERCISE EQUIPMENT',
+    'CHAPTER 67.04.19 EYELASHES',
+    'CHAPTER 50 FABRIC SILK ; KAIN ; SAMPIN',
+    'CHAPTER 95.07 FISHING ACCESSORIES',
+    'CHAPTER 64 FOOTWEAR ARTICLES ; KASUT SLIPPER',
+    'CHAPTER 94.03 FURNITURE',
+    'CHAPTER 70 GLASS AND GLASSWARE',
+    'CHAPTER 42 LEATHER ; HANDBAG ; WALLET',
+    'CHAPTER 42.02 HANDPHONE CASING',
+    'CHAPTER 65 HEADGEAR ; PARTS ; TOPI ; SONGKOK ; CAP ; INNER TUDUNG',
+    '*CHAPTER 85.18.30 HEADPHONE ; EARPHONE',
+    'CHAPTER 71 IMITATION JEWELLERY ; PIN ; BROOCH',
+    'CHAPTER 32 PAINTS , INK',
+    'CHAPTER 48 PAPER AND PAPERBOARD ARTICLES',
+    'CHAPTER 96.09 PENCIL',
+    'CHAPTER 96.08 PEN',
+    '*CHAPTER 30 PHARMACEUTICAL PRODUCT',
+    'CHAPTER 39 PLASTIC ARTICLES',
+    '*CHAPTER 95.04 PLAYING CARD ;GAMING ; VIDEO GAMES',
+    '*CHAPTER 49 PRINTED BOOK ; PICTURE',
+    'CHAPTER 40 RUBBER ARTICLES',
+    'CHAPTER 96.19 SANITARY TOWELS ; DIAPERS ; NAPKIN LINER',
+    'CHAPTER 62.04.69 SELUAR',
+    'CHAPTER 62.04.52 SKIRT',
+    'CHAPTER 34 SOAP , DETERGENT , WASHING PREPARATION',
+    'CHAPTER 61.15 SOCKS',
+    'CHAPTER 94.05.50 SOLAR LIGHT',
+    'CHAPTER 39.19 STICKER',
+    '*CHAPTER 17 SUGAR CONFECTIONERY',
+    'CHAPTER 90.04 SUNGLASSES',
+    '*CHAPTER 21 SUPPLEMENT MISCELLANEOUS',
+    'CHAPTER 62.11 TELEKUNG',
+    '*CHAPTER 85.17 TELEPHONE SET ; WIRELESS NETWORK ; OTHERS',
+    'CHAPTER 48.03 TISSUE ; NAPKIN',
+    'CHAPTER 82 TOOLS ; CUTLERY ; OF BASE METAL',
+    'CHAPTER 63.02 TOWELS',
+    'CHAPTER 95.03 TOYS',
+    'CHAPTER 96.20 TRIPODS',
+    'CHAPTER 61.17.10 TUDUNG ; SHAWL ; SCARVES',
+    'CHAPTER 62.14 TUDUNG ; SHAWL ; SCARVES',
+    'CHAPTER 96.17 TUMBLER VACUUM FLASK ; PARTS ACCESSORIES',
+    'CHAPTER 66 UMBRELLA',
+    'CHAPTER 61.08.21 UNDERWEAR ; PANTIES',
+    'CHAPTER 98.02.10 USED PERSONAL OR HOUSEHOLD EFFECT',
+    'CHAPTER 96.16 WALL MOUNT ; POWDER PUFFS SPONGE',
+    'CHAPTER 91 WATCHES AND PARTS THEREOF',
+    '*CHAPTER 44 WOOD ARTICLES'
   ];
   
   if (!validCategories.includes(category)) {
@@ -376,9 +428,15 @@ function validateCategory(selectElement) {
 
 function validateInvoiceFiles() {
   const mandatoryCategories = [
-    '* Books', '* Cosmetics/Skincare/Bodycare',
-    '* Food Beverage/Drinks', '* Gadgets',
-    '* Oil Ointment', '* Supplement'
+    '* CHAPTER 17 SUGAR CONFECTIONERY',
+    '* CHAPTER 18 COCOA PREPARATION',
+    '* CHAPTER 21 SUPPLEMENT MISCELLANEOUS',
+    '* CHAPTER 30 PHARMACEUTICAL PRODUCT',
+    '* CHAPTER 44 WOOD ARTICLES',
+    '* CHAPTER 49 PRINTED BOOK ; PICTURE',
+    '* CHAPTER 85.17 TELEPHONE SET ; WIRELESS NETWORK ; OTHERS',
+    '* CHAPTER 85.18.30 HEADPHONE ; EARPHONE',
+    '* CHAPTER 95.04 PLAYING CARD ;GAMING ; VIDEO GAMES'
   ];
   
   const category = document.getElementById('itemCategory')?.value || '';
@@ -427,8 +485,15 @@ function toBase64(file) {
 
 function validateFiles(category, files) {
   const starredCategories = [
-    '*Books', '*Cosmetics/Skincare/Bodycare', '*Food Beverage/Drinks',
-    '*Gadgets', '*Oil Ointment', '*Supplement'
+    '*CHAPTER 17 SUGAR CONFECTIONERY',
+    '*CHAPTER 18 COCOA PREPARATION',
+    '*CHAPTER 21 SUPPLEMENT MISCELLANEOUS',
+    '*CHAPTER 30 PHARMACEUTICAL PRODUCT',
+    '*CHAPTER 44 WOOD ARTICLES',
+    '*CHAPTER 49 PRINTED BOOK ; PICTURE',
+    '*CHAPTER 85.17 TELEPHONE SET ; WIRELESS NETWORK ; OTHERS',
+    '*CHAPTER 85.18.30 HEADPHONE ; EARPHONE',
+    '*CHAPTER 95.04 PLAYING CARD ;GAMING ; VIDEO GAMES'
   ];
 
   if (starredCategories.includes(category)) {
@@ -465,10 +530,16 @@ function handleFileSelection(input) {
 
     // Starred category validation
     const starredCategories = [
-      '*Books', '*Cosmetics/Skincare/Bodycare', 
-      '*Food Beverage/Drinks', '*Gadgets',
-      '*Oil Ointment', '*Supplement'
-    ];
+    '*CHAPTER 17 SUGAR CONFECTIONERY',
+    '*CHAPTER 18 COCOA PREPARATION',
+    '*CHAPTER 21 SUPPLEMENT MISCELLANEOUS',
+    '*CHAPTER 30 PHARMACEUTICAL PRODUCT',
+    '*CHAPTER 44 WOOD ARTICLES',
+    '*CHAPTER 49 PRINTED BOOK ; PICTURE',
+    '*CHAPTER 85.17 TELEPHONE SET ; WIRELESS NETWORK ; OTHERS',
+    '*CHAPTER 85.18.30 HEADPHONE ; EARPHONE',
+    '*CHAPTER 95.04 PLAYING CARD ;GAMING ; VIDEO GAMES'
+  ];
     
     if (starredCategories.includes(category)) {
       if (files.length < 1) throw new Error('At least 1 file required');
@@ -1032,9 +1103,15 @@ function checkCategoryRequirements() {
   const fileHelp = document.getElementById('fileHelp');
   
   const starredCategories = [
-    '*Books', '*Cosmetics/Skincare/Bodycare',
-    '*Food Beverage/Drinks', '*Gadgets',
-    '*Oil Ointment', '*Supplement'
+    '*CHAPTER 17 SUGAR CONFECTIONERY',
+    '*CHAPTER 18 COCOA PREPARATION',
+    '*CHAPTER 21 SUPPLEMENT MISCELLANEOUS',
+    '*CHAPTER 30 PHARMACEUTICAL PRODUCT',
+    '*CHAPTER 44 WOOD ARTICLES',
+    '*CHAPTER 49 PRINTED BOOK ; PICTURE',
+    '*CHAPTER 85.17 TELEPHONE SET ; WIRELESS NETWORK ; OTHERS',
+    '*CHAPTER 85.18.30 HEADPHONE ; EARPHONE',
+    '*CHAPTER 95.04 PLAYING CARD ;GAMING ; VIDEO GAMES'
   ];
 
   if (starredCategories.includes(category)) {
