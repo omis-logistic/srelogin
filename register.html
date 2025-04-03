@@ -2,7 +2,7 @@
 <html>
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="theme-color" content="#FF69B4">
     <title>Registration Portal</title>
     <style>
@@ -293,7 +293,7 @@
 
     <script>
 const CONFIG = window.CONFIG || {
-  GAS_URL: 'https://script.google.com/macros/s/AKfycbzV4GNmrU0qOO3ZbZebtwOwnAn7_0z-Rp1ZvOG7LJTbMwEAjabxn98B_F_G2dQRhzrbRg/exec'
+  GAS_URL: 'https://script.google.com/macros/s/AKfycbw6OlOhnmbxftndStGQDz5vkfEIV8CJjKrSP-QVdobbdPtWjjX0PNjZ1MrHSNpbgH565g/exec'
 };
         // Real-time Validations
         document.getElementById('registrationForm').action = CONFIG.GAS_URL;
@@ -361,85 +361,50 @@ function validatePhoneNumber(input) {
     checkPhoneExistence(phone);
 }
 
-// Track retry attempts globally
-let phoneCheckRetries = 0;
-
 function checkPhoneExistence(phone) {
     const validation = document.getElementById('phoneValidation');
     const input = document.getElementById('phone');
     
-    // Clear any existing timers
     clearTimeout(window.phoneCheckTimer);
     
-    // Set new timer with longer timeout
     window.phoneCheckTimer = setTimeout(() => {
-        // Retry limit check
-        if (phoneCheckRetries >= 2) {
-            validation.textContent = 'Service unavailable. Try again later.';
-            validation.className = 'validation-message invalid';
-            input.classList.add('invalid');
-            phoneCheckRetries = 0; // Reset for next attempt
-            return;
-        }
-
-        // Create unique callback name
         const callbackName = `phoneCheck_${Date.now()}`;
-        
-        // Create JSONP script element
         const script = document.createElement('script');
+        
         script.src = `${CONFIG.GAS_URL}?action=checkPhoneExists&phone=${phone}&callback=${callbackName}`;
         
-        // Error handling for script load
         script.onerror = () => {
-            // Cleanup
-            document.body.removeChild(script);
-            delete window[callbackName];
-            
-            // Update UI and retry
-            phoneCheckRetries++;
-            validation.textContent = `Checking... (${phoneCheckRetries}/3)`;
+            validation.textContent += ' - Service unavailable';
             validation.className = 'validation-message invalid';
             input.classList.add('invalid');
-            
-            // Retry recursively
-            checkPhoneExistence(phone);
+            isExistsValid = false;
         };
 
-        // Response handler
         window[callbackName] = (response) => {
-            // Cleanup first
-            document.body.removeChild(script);
-            delete window[callbackName];
-            
-            // Reset retries on successful response
-            phoneCheckRetries = 0;
-
-            // Handle server response
             if (response.success === false) {
-                // Server-side error
-                validation.textContent = 'System error: ' + (response.message || 'Unknown error');
+                validation.textContent = 'System error: ' + (response.message || '');
                 validation.className = 'validation-message invalid';
                 input.classList.add('invalid');
                 isExistsValid = false;
             } else {
-                // Successful check
                 if (response.exists) {
-                    validation.textContent = 'Phone number already registered';
+                    validation.textContent = 'Phone number already exists';
                     validation.className = 'validation-message invalid';
                     input.classList.add('invalid');
                     isExistsValid = false;
                 } else {
-                    validation.textContent = '✓ Available for registration';
+                    validation.textContent = '✓ Valid number (not in system)';
                     validation.className = 'validation-message valid';
                     input.classList.add('valid');
-                    isExistsValid = true;
+                    isExistsValid = true; // THIS IS CRUCIAL
                 }
             }
+            delete window[callbackName];
+            document.body.removeChild(script);
         };
 
-        // Inject script into DOM
         document.body.appendChild(script);
-    }, 2000); // Wait 2 seconds before checking
+    }, 500);
 }
         
         function validatePassword() {
