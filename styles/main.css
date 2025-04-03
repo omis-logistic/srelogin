@@ -393,30 +393,24 @@ select {
 .status-hold { background: #6B3A7F; }
 
 /* ======== MOBILE STYLES ======== */
-@media (max-width: 768px) {
-    .container {
-        width: 95% !important;
-        padding: 1rem !important;
-    }
-
-    input, button, select {
-        min-height: 44px; /* Minimum touch target size */
-        font-size: 16px !important; /* Prevent zooming */
-    }
-
-    .login-button {
-        padding: 15px;
-        font-size: 18px;
-    }
-}
-
-/* Prevent input zoom on iOS */
-@media screen and (max-width: 767px) {
-    input, select, textarea {
-        font-size: 16px !important;
-    }
-}
-
+@media screen and (max-width: 768px) {
+  body {
+    padding: 0.5rem !important;
+  }
+  
+  .container {
+    width: 95% !important;
+    padding: 1.5rem !important;
+    margin: 0.5rem auto !important;
+    border-radius: 12px;
+  }
+  
+  input, button, select {
+    font-size: 16px !important;
+    padding: 1rem !important;
+    min-height: 44px;
+  }
+  
   .thumbnail-container {
     grid-template-columns: 1fr;
   }
