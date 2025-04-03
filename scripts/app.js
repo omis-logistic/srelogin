@@ -10,17 +10,15 @@ const CONFIG = {
 };
 
 // ================= VIEWPORT MANAGEMENT =================
-// Update detectViewMode in app.js
 function detectViewMode() {
-  const touchSupported = 'ontouchstart' in window;
-  const smallViewport = window.matchMedia('(max-width: 768px)').matches;
-  const isMobile = touchSupported || smallViewport;
+  const isMobile = (
+    /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
+    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
+  );
   
-  document.body.classList.toggle('mobile-view', isMobile);
-  document.body.classList.toggle('desktop-view', !isMobile);
-
-  const viewport = document.querySelector('meta[name="viewport"]') || 
-                   document.createElement('meta');
+  document.body.classList.add(isMobile ? 'mobile-view' : 'desktop-view');
+  
+  const viewport = document.querySelector('meta[name="viewport"]') || document.createElement('meta');
   viewport.name = 'viewport';
   viewport.content = isMobile 
     ? 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no'
@@ -314,70 +312,18 @@ function validateTrackingNumber(value) {
 
 function validateItemCategory(category) {
   const validCategories = [
-    'CHAPTER 73 ARTICLES OF IRON OR STEEL',
-    'CHAPTER 68 ARTICLES OF STONE',
-    'CHAPTER 67.02.10 ARTIFICAL FLOWER',
-    'CHAPTER 87 AUTOPARTS ; CAR ACCESSORIES',
-    'CHAPTER 62.09 BAJU BABY ; AND ACCESSORIES',
-    'CHAPTER 62.06 BAJU ; PAKAIAN  ; SET SUIT',
-    'CHAPTER 94.04 BEDDING SET ; CUSHION ; PILLOW',
-    'CHAPTER 63 BLANKET',
-    'CHAPTER 62.12 BRA ; BENGKUNG ; CORSET',
-    'CHAPTER 96.03 BROOM ; BRUSH ;FLOOR MOPS SWEEPERS',
-    'CHAPTER 69 CERAMIC PRODUCTS',
-    'CHAPTER 96.15 COMBS ; HAIR PIN ; AND PARTS',
-    'CHAPTER 90.01.30 CONTACT LENS',
-    '*CHAPTER 18 COCOA PREPARATION',
-    'CHAPTER 63.03 CURTAIN ; BLINDS',
-    'CHAPTER 85.16 ELETRICAL',
-    'CHAPTER 58 SPECIAL WOVEN FABRIC ; LACE ; TAPESTRIES ; EMBROIDERY',
-    'CHAPTER 95.06.91 EXERCISE EQUIPMENT',
-    'CHAPTER 67.04.19 EYELASHES',
-    'CHAPTER 50 FABRIC SILK ; KAIN ; SAMPIN',
-    'CHAPTER 95.07 FISHING ACCESSORIES',
-    'CHAPTER 64 FOOTWEAR ARTICLES ; KASUT SLIPPER',
-    'CHAPTER 94.03 FURNITURE',
-    'CHAPTER 70 GLASS AND GLASSWARE',
-    'CHAPTER 42 LEATHER ; HANDBAG ; WALLET',
-    'CHAPTER 42.02 HANDPHONE CASING',
-    'CHAPTER 65 HEADGEAR ; PARTS ; TOPI ; SONGKOK ; CAP ; INNER TUDUNG',
-    '*CHAPTER 85.18.30 HEADPHONE ; EARPHONE',
-    'CHAPTER 71 IMITATION JEWELLERY ; PIN ; BROOCH',
-    'CHAPTER 32 PAINTS , INK',
-    'CHAPTER 48 PAPER AND PAPERBOARD ARTICLES',
-    'CHAPTER 96.09 PENCIL',
-    'CHAPTER 96.08 PEN',
-    '*CHAPTER 30 PHARMACEUTICAL PRODUCT',
-    'CHAPTER 39 PLASTIC ARTICLES',
-    '*CHAPTER 95.04 PLAYING CARD ;GAMING ; VIDEO GAMES',
-    '*CHAPTER 49 PRINTED BOOK ; PICTURE',
-    'CHAPTER 40 RUBBER ARTICLES',
-    'CHAPTER 96.19 SANITARY TOWELS ; DIAPERS ; NAPKIN LINER',
-    'CHAPTER 62.04.69 SELUAR',
-    'CHAPTER 62.04.52 SKIRT',
-    'CHAPTER 34 SOAP , DETERGENT , WASHING PREPARATION',
-    'CHAPTER 61.15 SOCKS',
-    'CHAPTER 94.05.50 SOLAR LIGHT',
-    'CHAPTER 39.19 STICKER',
-    '*CHAPTER 17 SUGAR CONFECTIONERY',
-    'CHAPTER 90.04 SUNGLASSES',
-    '*CHAPTER 21 SUPPLEMENT MISCELLANEOUS',
-    'CHAPTER 62.11 TELEKUNG',
-    '*CHAPTER 85.17 TELEPHONE SET ; WIRELESS NETWORK ; OTHERS',
-    'CHAPTER 48.03 TISSUE ; NAPKIN',
-    'CHAPTER 82 TOOLS ; CUTLERY ; OF BASE METAL',
-    'CHAPTER 63.02 TOWELS',
-    'CHAPTER 95.03 TOYS',
-    'CHAPTER 96.20 TRIPODS',
-    'CHAPTER 61.17.10 TUDUNG ; SHAWL ; SCARVES',
-    'CHAPTER 62.14 TUDUNG ; SHAWL ; SCARVES',
-    'CHAPTER 96.17 TUMBLER VACUUM FLASK ; PARTS ACCESSORIES',
-    'CHAPTER 66 UMBRELLA',
-    'CHAPTER 61.08.21 UNDERWEAR ; PANTIES',
-    'CHAPTER 98.02.10 USED PERSONAL OR HOUSEHOLD EFFECT',
-    'CHAPTER 96.16 WALL MOUNT ; POWDER PUFFS SPONGE',
-    'CHAPTER 91 WATCHES AND PARTS THEREOF',
-    '*CHAPTER 44 WOOD ARTICLES'
+    'Accessories/Jewellery', 'Baby Appliances', 'Bag', 'Car Parts/Accessories',
+    'Carpets/Mat', 'Clothing', 'Computer Accessories', 'Cordless', 'Decorations',
+    'Disposable Pad/Mask', 'Electrical Appliances', 'Fabric', 'Fashion Accessories',
+    'Fishing kits/Accessories', 'Footware Shoes/Slippers', 'Game/Console/Board',
+    'Hand Tools', 'Handphone Casing', 'Headgear', 'Home Fitting/Furniture',
+    'Kitchenware', 'LED/Lamp', 'Matters/Bedding', 'Mix Item', 'Motor Part/Accessories',
+    'Others', 'Perfume', 'Phone Accessories', 'Plastic Article', 'RC Parts/Accessories',
+    'Rubber', 'Seluar', 'Socks', 'Sport Equipment', 'Stationery', 'Stickers',
+    'Storage', 'Telkong', 'Toys', 'Tudong', 'Tumbler', 'Underwear',
+    'Watch & Accessories', 'Wire, Adapter & Plug',
+    '*Books', '*Cosmetics/Skincare/Bodycare', '*Food Beverage/Drinks',
+    '*Gadgets', '*Oil Ointment', '*Supplement'
   ];
   
   if (!validCategories.includes(category)) {
@@ -430,15 +376,9 @@ function validateCategory(selectElement) {
 
 function validateInvoiceFiles() {
   const mandatoryCategories = [
-    '* CHAPTER 17 SUGAR CONFECTIONERY',
-    '* CHAPTER 18 COCOA PREPARATION',
-    '* CHAPTER 21 SUPPLEMENT MISCELLANEOUS',
-    '* CHAPTER 30 PHARMACEUTICAL PRODUCT',
-    '* CHAPTER 44 WOOD ARTICLES',
-    '* CHAPTER 49 PRINTED BOOK ; PICTURE',
-    '* CHAPTER 85.17 TELEPHONE SET ; WIRELESS NETWORK ; OTHERS',
-    '* CHAPTER 85.18.30 HEADPHONE ; EARPHONE',
-    '* CHAPTER 95.04 PLAYING CARD ;GAMING ; VIDEO GAMES'
+    '* Books', '* Cosmetics/Skincare/Bodycare',
+    '* Food Beverage/Drinks', '* Gadgets',
+    '* Oil Ointment', '* Supplement'
   ];
   
   const category = document.getElementById('itemCategory')?.value || '';
@@ -487,15 +427,8 @@ function toBase64(file) {
 
 function validateFiles(category, files) {
   const starredCategories = [
-    '*CHAPTER 17 SUGAR CONFECTIONERY',
-    '*CHAPTER 18 COCOA PREPARATION',
-    '*CHAPTER 21 SUPPLEMENT MISCELLANEOUS',
-    '*CHAPTER 30 PHARMACEUTICAL PRODUCT',
-    '*CHAPTER 44 WOOD ARTICLES',
-    '*CHAPTER 49 PRINTED BOOK ; PICTURE',
-    '*CHAPTER 85.17 TELEPHONE SET ; WIRELESS NETWORK ; OTHERS',
-    '*CHAPTER 85.18.30 HEADPHONE ; EARPHONE',
-    '*CHAPTER 95.04 PLAYING CARD ;GAMING ; VIDEO GAMES'
+    '*Books', '*Cosmetics/Skincare/Bodycare', '*Food Beverage/Drinks',
+    '*Gadgets', '*Oil Ointment', '*Supplement'
   ];
 
   if (starredCategories.includes(category)) {
@@ -532,16 +465,10 @@ function handleFileSelection(input) {
 
     // Starred category validation
     const starredCategories = [
-    '*CHAPTER 17 SUGAR CONFECTIONERY',
-    '*CHAPTER 18 COCOA PREPARATION',
-    '*CHAPTER 21 SUPPLEMENT MISCELLANEOUS',
-    '*CHAPTER 30 PHARMACEUTICAL PRODUCT',
-    '*CHAPTER 44 WOOD ARTICLES',
-    '*CHAPTER 49 PRINTED BOOK ; PICTURE',
-    '*CHAPTER 85.17 TELEPHONE SET ; WIRELESS NETWORK ; OTHERS',
-    '*CHAPTER 85.18.30 HEADPHONE ; EARPHONE',
-    '*CHAPTER 95.04 PLAYING CARD ;GAMING ; VIDEO GAMES'
-  ];
+      '*Books', '*Cosmetics/Skincare/Bodycare', 
+      '*Food Beverage/Drinks', '*Gadgets',
+      '*Oil Ointment', '*Supplement'
+    ];
     
     if (starredCategories.includes(category)) {
       if (files.length < 1) throw new Error('At least 1 file required');
@@ -989,14 +916,7 @@ function initParcelDeclarationPage(userData) {
 }
 
 // ================= INITIALIZATION =================
-document.addEventListener('DOMdocument.addEventListener('DOMContentLoaded', () => {
-  initTouchHandling();
-  
-  // Enable hover effects only on desktop
-  if(!document.body.classList.contains('mobile-view')) {
-    document.documentElement.classList.add('hover-enabled');
-  }
-});ContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', () => {
   // Existing initialization
   detectViewMode();
   initValidationListeners();
@@ -1011,32 +931,23 @@ document.addEventListener('DOMdocument.addEventListener('DOMContentLoaded', () =
 
   // Parcel declaration page specific code
   if (window.location.pathname.includes('parcel-declaration.html')) {
-    const pageLoader = document.getElementById('pageLoadingOverlay');
-    
-    // Show page load spinner immediately
-    if(pageLoader) pageLoader.style.display = 'flex';
-    
-    try {
-      const userData = checkSession();
-      if (!userData) {
-        handleLogout();
-        return;
-      }
-
-      // Phone field handling
+    const userData = checkSession();
+    if (userData) {
+      // Auto-populate phone (existing working code)
       const phoneField = document.getElementById('phone');
       if (phoneField) {
         phoneField.value = userData.phone || '';
         phoneField.readOnly = true;
       }
 
-      // User ID population
+      // NEW: Auto-populate UserID
       const userIdField = document.getElementById('userId');
       if (userIdField) {
+        // First try session data
         if (userData.userId) {
           userIdField.value = userData.userId;
-          if(pageLoader) pageLoader.style.display = 'none';
         } else {
+          // Fallback to direct lookup
           const callbackName = `uid_${Date.now()}`;
           const script = document.createElement('script');
           script.src = `${CONFIG.GAS_URL}?action=getCurrentUserID&phone=${encodeURIComponent(userData.phone)}&callback=${callbackName}`;
@@ -1044,7 +955,7 @@ document.addEventListener('DOMdocument.addEventListener('DOMContentLoaded', () =
           window[callbackName] = (response) => {
             if (response.success) {
               userIdField.value = response.userId;
-              // Update session storage
+              // Update session for future use
               sessionStorage.setItem('userData', JSON.stringify({
                 ...userData,
                 userId: response.userId
@@ -1053,35 +964,28 @@ document.addEventListener('DOMdocument.addEventListener('DOMContentLoaded', () =
               console.error('User ID lookup failed:', response);
               userIdField.value = 'N/A';
             }
-            if(pageLoader) pageLoader.style.display = 'none';
             document.body.removeChild(script);
             delete window[callbackName];
           };
           document.body.appendChild(script);
         }
       }
+    }
 
-      // Form setup
-      const parcelForm = document.getElementById('declarationForm');
-      if (parcelForm) {
-        parcelForm.addEventListener('submit', handleParcelSubmission);
-        
-        // Existing category handler
-        const categorySelect = document.getElementById('itemCategory');
-        if (categorySelect) {
-          categorySelect.addEventListener('change', checkCategoryRequirements);
-        }
+    // Existing form setup
+    const parcelForm = document.getElementById('declarationForm');
+    if (parcelForm) {
+      parcelForm.addEventListener('submit', handleParcelSubmission);
+      
+      // Existing category handler
+      const categorySelect = document.getElementById('itemCategory');
+      if (categorySelect) {
+        categorySelect.addEventListener('change', checkCategoryRequirements);
       }
-
-    } catch (error) {
-      console.error('Parcel page init error:', error);
-      if(pageLoader) pageLoader.style.display = 'none';
-      showError('Failed to initialize declaration form');
-      safeRedirect('dashboard.html');
     }
   }
 
-  // Existing session validation (for non-public pages)
+  // Existing session validation
   if (!isPublicPage) {
     const userData = checkSession();
     if (!userData) {
@@ -1112,15 +1016,9 @@ function checkCategoryRequirements() {
   const fileHelp = document.getElementById('fileHelp');
   
   const starredCategories = [
-    '*CHAPTER 17 SUGAR CONFECTIONERY',
-    '*CHAPTER 18 COCOA PREPARATION',
-    '*CHAPTER 21 SUPPLEMENT MISCELLANEOUS',
-    '*CHAPTER 30 PHARMACEUTICAL PRODUCT',
-    '*CHAPTER 44 WOOD ARTICLES',
-    '*CHAPTER 49 PRINTED BOOK ; PICTURE',
-    '*CHAPTER 85.17 TELEPHONE SET ; WIRELESS NETWORK ; OTHERS',
-    '*CHAPTER 85.18.30 HEADPHONE ; EARPHONE',
-    '*CHAPTER 95.04 PLAYING CARD ;GAMING ; VIDEO GAMES'
+    '*Books', '*Cosmetics/Skincare/Bodycare',
+    '*Food Beverage/Drinks', '*Gadgets',
+    '*Oil Ointment', '*Supplement'
   ];
 
   if (starredCategories.includes(category)) {
@@ -1140,81 +1038,3 @@ function setupCategoryChangeListener() {
     categorySelect.addEventListener('change', checkCategoryRequirements);
   }
 }
-
-// Initialize touch interaction system
-function initTouchHandling() {
-  const touchElements = document.querySelectorAll('.tracking-item, button, .clickable');
-  
-  touchElements.forEach(element => {
-    // Add touch event listeners
-    element.addEventListener('touchstart', handleTouchStart, { passive: true });
-    element.addEventListener('touchend', handleTouchEnd, { passive: true });
-    element.addEventListener('touchcancel', handleTouchEnd, { passive: true });
-    
-    // Add mouse compatibility
-    element.addEventListener('mousedown', handleTouchStart);
-    element.addEventListener('mouseup', handleTouchEnd);
-    element.addEventListener('mouseleave', handleTouchEnd);
-  });
-}
-
-function handleTouchStart(e) {
-  // Prevent ghost click on iOS
-  e.preventDefault();
-  const element = e.currentTarget;
-  
-  // Add visual feedback
-  element.classList.add('touch-active');
-  
-  // Add ripple effect
-  const ripple = document.createElement('div');
-  ripple.className = 'touch-ripple';
-  element.appendChild(ripple);
-  
-  // Position ripple
-  const rect = element.getBoundingClientRect();
-  const size = Math.max(rect.width, rect.height);
-  ripple.style.cssText = `
-    width: ${size}px;
-    height: ${size}px;
-    left: ${e.clientX - rect.left - size/2}px;
-    top: ${e.clientY - rect.top - size/2}px;
-  `;
-}
-
-function handleTouchEnd(e) {
-  const element = e.currentTarget;
-  
-  // Remove visual feedback
-  element.classList.remove('touch-active');
-  
-  // Cleanup ripple effects
-  const ripples = element.getElementsByClassName('touch-ripple');
-  while(ripples[0]) {
-    ripples[0].parentNode.removeChild(ripples[0]);
-  }
-}
-
-// Ripple animation styles
-const rippleStyles = `
-.touch-ripple {
-  position: absolute;
-  background: rgba(255, 255, 255, 0.3);
-  border-radius: 50%;
-  transform: scale(0);
-  animation: ripple 0.6s linear;
-  pointer-events: none;
-}
-
-@keyframes ripple {
-  to {
-    transform: scale(2);
-    opacity: 0;
-  }
-}
-`;
-
-// Inject ripple styles
-const styleSheet = document.createElement('style');
-styleSheet.innerHTML = rippleStyles;
-document.head.appendChild(styleSheet);
