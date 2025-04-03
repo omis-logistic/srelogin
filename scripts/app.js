@@ -11,22 +11,19 @@ const CONFIG = {
 
 // ================= VIEWPORT MANAGEMENT =================
 function detectViewMode() {
-  // 1. Device Detection
-  const isMobile = window.matchMedia("(max-width: 768px)").matches || 
-                 /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-
-  // 2. Class Handling
-  document.body.classList.toggle('mobile-view', isMobile);
-  document.body.classList.toggle('desktop-view', !isMobile);
-
-  // 3. Viewport Meta Control
-  const viewport = document.querySelector('meta[name="viewport"]') || 
-                  document.createElement('meta');
+  const isMobile = (
+    /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
+    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
+  );
+  
+  document.body.classList.add(isMobile ? 'mobile-view' : 'desktop-view');
+  
+  const viewport = document.querySelector('meta[name="viewport"]') || document.createElement('meta');
   viewport.name = 'viewport';
   viewport.content = isMobile 
     ? 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no'
     : 'width=1200';
-
+  
   if (!document.querySelector('meta[name="viewport"]')) {
     document.head.prepend(viewport);
   }
