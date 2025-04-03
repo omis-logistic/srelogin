@@ -10,15 +10,17 @@ const CONFIG = {
 };
 
 // ================= VIEWPORT MANAGEMENT =================
+// Update detectViewMode in app.js
 function detectViewMode() {
-  const isMobile = (
-    /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
-    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
-  );
+  const touchSupported = 'ontouchstart' in window;
+  const smallViewport = window.matchMedia('(max-width: 768px)').matches;
+  const isMobile = touchSupported || smallViewport;
   
-  document.body.classList.add(isMobile ? 'mobile-view' : 'desktop-view');
-  
-  const viewport = document.querySelector('meta[name="viewport"]') || document.createElement('meta');
+  document.body.classList.toggle('mobile-view', isMobile);
+  document.body.classList.toggle('desktop-view', !isMobile);
+
+  const viewport = document.querySelector('meta[name="viewport"]') || 
+                   document.createElement('meta');
   viewport.name = 'viewport';
   viewport.content = isMobile 
     ? 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no'
@@ -987,7 +989,14 @@ function initParcelDeclarationPage(userData) {
 }
 
 // ================= INITIALIZATION =================
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMdocument.addEventListener('DOMContentLoaded', () => {
+  initTouchHandling();
+  
+  // Enable hover effects only on desktop
+  if(!document.body.classList.contains('mobile-view')) {
+    document.documentElement.classList.add('hover-enabled');
+  }
+});ContentLoaded', () => {
   // Existing initialization
   detectViewMode();
   initValidationListeners();
@@ -1131,3 +1140,81 @@ function setupCategoryChangeListener() {
     categorySelect.addEventListener('change', checkCategoryRequirements);
   }
 }
+
+// Initialize touch interaction system
+function initTouchHandling() {
+  const touchElements = document.querySelectorAll('.tracking-item, button, .clickable');
+  
+  touchElements.forEach(element => {
+    // Add touch event listeners
+    element.addEventListener('touchstart', handleTouchStart, { passive: true });
+    element.addEventListener('touchend', handleTouchEnd, { passive: true });
+    element.addEventListener('touchcancel', handleTouchEnd, { passive: true });
+    
+    // Add mouse compatibility
+    element.addEventListener('mousedown', handleTouchStart);
+    element.addEventListener('mouseup', handleTouchEnd);
+    element.addEventListener('mouseleave', handleTouchEnd);
+  });
+}
+
+function handleTouchStart(e) {
+  // Prevent ghost click on iOS
+  e.preventDefault();
+  const element = e.currentTarget;
+  
+  // Add visual feedback
+  element.classList.add('touch-active');
+  
+  // Add ripple effect
+  const ripple = document.createElement('div');
+  ripple.className = 'touch-ripple';
+  element.appendChild(ripple);
+  
+  // Position ripple
+  const rect = element.getBoundingClientRect();
+  const size = Math.max(rect.width, rect.height);
+  ripple.style.cssText = `
+    width: ${size}px;
+    height: ${size}px;
+    left: ${e.clientX - rect.left - size/2}px;
+    top: ${e.clientY - rect.top - size/2}px;
+  `;
+}
+
+function handleTouchEnd(e) {
+  const element = e.currentTarget;
+  
+  // Remove visual feedback
+  element.classList.remove('touch-active');
+  
+  // Cleanup ripple effects
+  const ripples = element.getElementsByClassName('touch-ripple');
+  while(ripples[0]) {
+    ripples[0].parentNode.removeChild(ripples[0]);
+  }
+}
+
+// Ripple animation styles
+const rippleStyles = `
+.touch-ripple {
+  position: absolute;
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  transform: scale(0);
+  animation: ripple 0.6s linear;
+  pointer-events: none;
+}
+
+@keyframes ripple {
+  to {
+    transform: scale(2);
+    opacity: 0;
+  }
+}
+`;
+
+// Inject ripple styles
+const styleSheet = document.createElement('style');
+styleSheet.innerHTML = rippleStyles;
+document.head.appendChild(styleSheet);
