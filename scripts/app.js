@@ -11,19 +11,16 @@ const CONFIG = {
 
 // ================= VIEWPORT MANAGEMENT =================
 function detectViewMode() {
-  const isMobile = (
-    /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
-    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
-  );
+  const isMobile = window.matchMedia("(pointer: coarse)").matches;
+  document.body.classList.toggle('mobile-view', isMobile);
   
-  document.body.classList.add(isMobile ? 'mobile-view' : 'desktop-view');
-  
-  const viewport = document.querySelector('meta[name="viewport"]') || document.createElement('meta');
+  const viewport = document.querySelector('meta[name="viewport"]') || 
+    document.createElement('meta');
   viewport.name = 'viewport';
   viewport.content = isMobile 
-    ? 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no'
+    ? 'width=device-width, initial-scale=1.0'
     : 'width=1200';
-  
+    
   if (!document.querySelector('meta[name="viewport"]')) {
     document.head.prepend(viewport);
   }
@@ -32,8 +29,28 @@ function detectViewMode() {
 // ================= ERROR HANDLING =================
 function showError(message, targetId = 'error-message') {
   const errorElement = document.getElementById(targetId) || createErrorElement();
-  
-  // Special handling for success-like messages
+  const isMobile = document.body.classList.contains('mobile-view');
+
+  // Mobile-specific positioning
+  if (isMobile) {
+    errorElement.style.position = 'fixed';
+    errorElement.style.bottom = '20px';
+    errorElement.style.top = 'auto';
+    errorElement.style.left = '20px';
+    errorElement.style.right = '20px';
+    errorElement.style.transform = 'none';
+    errorElement.style.width = 'calc(100% - 40px)';
+  } else {
+    // Reset desktop styles
+    errorElement.style.position = 'fixed';
+    errorElement.style.top = '20px';
+    errorElement.style.left = '50%';
+    errorElement.style.transform = 'translateX(-50%)';
+    errorElement.style.width = 'auto';
+    errorElement.style.right = 'auto';
+  }
+
+  // Message type handling
   if (typeof message === 'string' && message.includes('success')) {
     errorElement.style.background = '#00C851dd';
     errorElement.textContent = message.replace('success', '').trim();
@@ -41,32 +58,50 @@ function showError(message, targetId = 'error-message') {
     errorElement.style.background = '#ff4444dd';
     errorElement.textContent = message;
   }
-  
-  errorElement.style.display = 'block';
-  
-  setTimeout(() => {
-    errorElement.style.display = 'none';
-  }, 5000);
-}
 
-function createErrorElement() {
-  const errorDiv = document.createElement('div');
-  errorDiv.id = 'error-message';
-  errorDiv.className = 'error-message';
-  errorDiv.style.cssText = `
-    position: fixed;
-    top: 20px;
-    left: 50%;
-    transform: translateX(-50%);
-    padding: 15px;
-    background: #ff4444dd;
-    color: white;
-    border-radius: 5px;
-    z-index: 1000;
-    display: none;
-  `;
-  document.body.prepend(errorDiv);
-  return errorDiv;
+  // Animation handling
+  errorElement.style.display = 'block';
+  errorElement.style.animation = 'slideIn 0.3s ease-out';
+
+  // Auto-hide functionality
+  setTimeout(() => {
+    errorElement.style.animation = 'fadeOut 0.5s ease forwards';
+    setTimeout(() => {
+      errorElement.style.display = 'none';
+    }, 500);
+  }, 5000);
+
+  // Create element if not exists
+  function createErrorElement() {
+    const errorDiv = document.createElement('div');
+    errorDiv.id = 'error-message';
+    errorDiv.className = 'error-message';
+    errorDiv.style.cssText = `
+      position: fixed;
+      padding: 15px;
+      color: white;
+      border-radius: 5px;
+      z-index: 1000;
+      display: none;
+      font-size: 0.9rem;
+      box-shadow: 0 3px 6px rgba(0,0,0,0.16);
+    `;
+    
+    // Mobile-specific default styles
+    if (isMobile) {
+      errorDiv.style.bottom = '20px';
+      errorDiv.style.left = '20px';
+      errorDiv.style.right = '20px';
+      errorDiv.style.width = 'calc(100% - 40px)';
+    } else {
+      errorDiv.style.top = '20px';
+      errorDiv.style.left = '50%';
+      errorDiv.style.transform = 'translateX(-50%)';
+    }
+
+    document.body.prepend(errorDiv);
+    return errorDiv;
+  }
 }
 
 // ================= SESSION MANAGEMENT =================
@@ -1131,3 +1166,9 @@ function setupCategoryChangeListener() {
     categorySelect.addEventListener('change', checkCategoryRequirements);
   }
 }
+
+document.querySelectorAll('input, select, textarea').forEach(input => {
+  input.addEventListener('touchstart', () => {
+    input.classList.add('mobile-active');
+  });
+});
