@@ -11,15 +11,17 @@ const CONFIG = {
 
 // ================= VIEWPORT MANAGEMENT =================
 function detectViewMode() {
-  const isMobile = window.matchMedia("(pointer: coarse)").matches || 
-    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  const isMobile = (
+    /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
+    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
+  );
   
   document.body.classList.add(isMobile ? 'mobile-view' : 'desktop-view');
   
   const viewport = document.querySelector('meta[name="viewport"]') || document.createElement('meta');
   viewport.name = 'viewport';
   viewport.content = isMobile 
-    ? 'width=device-width, initial-scale=1.0'
+    ? 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no'
     : 'width=1200';
   
   if (!document.querySelector('meta[name="viewport"]')) {
@@ -30,130 +32,42 @@ function detectViewMode() {
 // ================= ERROR HANDLING =================
 function showError(message, targetId = 'error-message') {
   const errorElement = document.getElementById(targetId) || createErrorElement();
-  const isMobile = document.body.classList.contains('mobile-view');
-
-  // Mobile positioning
-  if (isMobile) {
-    errorElement.style.position = 'fixed';
-    errorElement.style.bottom = '20px';
-    errorElement.style.top = 'auto';
-    errorElement.style.left = '50%';
-    errorElement.style.transform = 'translateX(-50%)';
-    errorElement.style.width = '90%';
-    errorElement.style.maxWidth = '400px';
-    errorElement.style.fontSize = '14px';
-    errorElement.style.padding = '12px 15px';
+  
+  // Special handling for success-like messages
+  if (typeof message === 'string' && message.includes('success')) {
+    errorElement.style.background = '#00C851dd';
+    errorElement.textContent = message.replace('success', '').trim();
   } else {
-    // Desktop positioning
-    errorElement.style.position = 'fixed';
-    errorElement.style.top = '20px';
-    errorElement.style.left = '50%';
-    errorElement.style.transform = 'translateX(-50%)';
-    errorElement.style.width = 'auto';
-    errorElement.style.maxWidth = '600px';
-    errorElement.style.fontSize = '16px';
-    errorElement.style.padding = '15px 25px';
+    errorElement.style.background = '#ff4444dd';
+    errorElement.textContent = message;
   }
-
-  // Message handling
-  if (typeof message === 'string') {
-    if (message.toLowerCase().includes('success')) {
-      errorElement.style.background = 'linear-gradient(135deg, #00C851, #007E33)';
-      errorElement.style.border = '1px solid #007E33';
-    } else if (message.toLowerCase().includes('warning')) {
-      errorElement.style.background = 'linear-gradient(135deg, #FFBB33, #FF8800)';
-      errorElement.style.border = '1px solid #FF8800';
-    } else {
-      errorElement.style.background = 'linear-gradient(135deg, #ff4444, #CC0000)';
-      errorElement.style.border = '1px solid #CC0000';
-    }
-    errorElement.textContent = message.replace(/(success|warning|error)/i, '').trim();
-  }
-
-  // Animations
+  
   errorElement.style.display = 'block';
-  errorElement.style.opacity = '0';
-  errorElement.style.animation = isMobile 
-    ? 'mobileErrorIn 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards'
-    : 'desktopErrorIn 0.3s ease-out forwards';
-
-  // Progress bar
-  const progressBar = document.createElement('div');
-  progressBar.style.cssText = `
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    height: 3px;
-    background: rgba(255,255,255,0.5);
-    width: 100%;
-    transform-origin: left;
-    animation: progress 5s linear forwards;
-  `;
-  errorElement.appendChild(progressBar);
-
-  // Auto-hide
+  
   setTimeout(() => {
-    errorElement.style.animation = isMobile 
-      ? 'mobileErrorOut 0.5s ease forwards'
-      : 'desktopErrorOut 0.5s ease forwards';
-    
-    setTimeout(() => {
-      errorElement.style.display = 'none';
-      errorElement.removeChild(progressBar);
-    }, 500);
+    errorElement.style.display = 'none';
   }, 5000);
-
-  function createErrorElement() {
-    const errorDiv = document.createElement('div');
-    errorDiv.id = targetId;
-    errorDiv.className = 'error-message';
-    errorDiv.style.cssText = `
-      position: fixed;
-      z-index: 10000;
-      color: #fff;
-      border-radius: ${isMobile ? '8px' : '4px'};
-      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-      display: none;
-      backdrop-filter: blur(4px);
-      text-align: center;
-      line-height: 1.4;
-    `;
-
-    if (isMobile) {
-      errorDiv.style.fontSize = '14px';
-      errorDiv.style.wordBreak = 'break-word';
-    }
-
-    document.body.prepend(errorDiv);
-    return errorDiv;
-  }
 }
 
-// Add animations
-const style = document.createElement('style');
-style.textContent = `
-  @keyframes mobileErrorIn {
-    0% { transform: translate(-50%, 100%); opacity: 0; }
-    100% { transform: translate(-50%, 0); opacity: 1; }
-  }
-  @keyframes mobileErrorOut {
-    0% { transform: translate(-50%, 0); opacity: 1; }
-    100% { transform: translate(-50%, 100%); opacity: 0; }
-  }
-  @keyframes desktopErrorIn {
-    0% { transform: translate(-50%, -20px); opacity: 0; }
-    100% { transform: translate(-50%, 0); opacity: 1; }
-  }
-  @keyframes desktopErrorOut {
-    0% { transform: translate(-50%, 0); opacity: 1; }
-    100% { transform: translate(-50%, -20px); opacity: 0; }
-  }
-  @keyframes progress {
-    0% { transform: scaleX(1); }
-    100% { transform: scaleX(0); }
-  }
-`;
-document.head.appendChild(style);
+function createErrorElement() {
+  const errorDiv = document.createElement('div');
+  errorDiv.id = 'error-message';
+  errorDiv.className = 'error-message';
+  errorDiv.style.cssText = `
+    position: fixed;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 15px;
+    background: #ff4444dd;
+    color: white;
+    border-radius: 5px;
+    z-index: 1000;
+    display: none;
+  `;
+  document.body.prepend(errorDiv);
+  return errorDiv;
+}
 
 // ================= SESSION MANAGEMENT =================
 const checkSession = () => {
@@ -182,7 +96,7 @@ const checkSession = () => {
 };
 
 function handleLogout() {
-  sessionStorage.clear();
+  sessionStorage.clear(); // This clears the freshLogin flag
   localStorage.removeItem('lastActivity');
   safeRedirect('login.html');
 }
@@ -216,7 +130,6 @@ async function callAPI(action, payload) {
   }
 }
 
-// ================= LOADING MANAGEMENT =================
 function showLoading(show = true) {
   const loader = document.getElementById('loadingOverlay') || createLoaderElement();
   loader.style.display = show ? 'flex' : 'none';
@@ -230,6 +143,7 @@ function createLoaderElement() {
     <div class="loading-text">Processing Submission...</div>
   `;
   
+  // Add styles directly for reliability
   overlay.style.cssText = `
     position: fixed;
     top: 0;
@@ -1217,9 +1131,3 @@ function setupCategoryChangeListener() {
     categorySelect.addEventListener('change', checkCategoryRequirements);
   }
 }
-
-document.querySelectorAll('input, select, textarea').forEach(input => {
-  input.addEventListener('touchstart', () => {
-    input.classList.add('mobile-active');
-  });
-});
