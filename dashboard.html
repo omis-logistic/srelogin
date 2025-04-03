@@ -332,6 +332,11 @@ function loadWelcomeModalData(phone) {
     }
   }, 500); // Small delay for loader visibility
 })();
+
+document.querySelectorAll('.thumbnail').forEach(item => {
+  item.addEventListener('touchstart', handleNavigation);
+  item.addEventListener('click', handleNavigation);
+});
   </script>
   <div class="footer-text">
   Built by Omis Logistics. For more info 👉 
