@@ -543,14 +543,28 @@ select {
 
 /* Add to main.css */
 @media (pointer: coarse) {
-  input, select, button, textarea {
-    min-height: 48px !important;
+  input, select, textarea {
     font-size: 16px !important;
+    min-height: 44px !important;
   }
+  
+  button {
+    min-width: 48px;
+    min-height: 48px;
+  }
+}
   
   .tracking-item {
     padding: 16px;
     margin: 12px 0;
+  }
+}
+
+@media (pointer: coarse) {
+  .loading-spinner {
+    width: 60px;
+    height: 60px;
+    border-width: 6px;
   }
 }
 
