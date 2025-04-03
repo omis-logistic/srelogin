@@ -361,50 +361,85 @@ function validatePhoneNumber(input) {
     checkPhoneExistence(phone);
 }
 
+// Track retry attempts globally
+let phoneCheckRetries = 0;
+
 function checkPhoneExistence(phone) {
     const validation = document.getElementById('phoneValidation');
     const input = document.getElementById('phone');
     
+    // Clear any existing timers
     clearTimeout(window.phoneCheckTimer);
     
+    // Set new timer with longer timeout
     window.phoneCheckTimer = setTimeout(() => {
-        const callbackName = `phoneCheck_${Date.now()}`;
-        const script = document.createElement('script');
-        
-        script.src = `${CONFIG.GAS_URL}?action=checkPhoneExists&phone=${phone}&callback=${callbackName}`;
-        
-        script.onerror = () => {
-            validation.textContent += ' - Service unavailable';
+        // Retry limit check
+        if (phoneCheckRetries >= 2) {
+            validation.textContent = 'Service unavailable. Try again later.';
             validation.className = 'validation-message invalid';
             input.classList.add('invalid');
-            isExistsValid = false;
+            phoneCheckRetries = 0; // Reset for next attempt
+            return;
+        }
+
+        // Create unique callback name
+        const callbackName = `phoneCheck_${Date.now()}`;
+        
+        // Create JSONP script element
+        const script = document.createElement('script');
+        script.src = `${CONFIG.GAS_URL}?action=checkPhoneExists&phone=${phone}&callback=${callbackName}`;
+        
+        // Error handling for script load
+        script.onerror = () => {
+            // Cleanup
+            document.body.removeChild(script);
+            delete window[callbackName];
+            
+            // Update UI and retry
+            phoneCheckRetries++;
+            validation.textContent = `Checking... (${phoneCheckRetries}/3)`;
+            validation.className = 'validation-message invalid';
+            input.classList.add('invalid');
+            
+            // Retry recursively
+            checkPhoneExistence(phone);
         };
 
+        // Response handler
         window[callbackName] = (response) => {
+            // Cleanup first
+            document.body.removeChild(script);
+            delete window[callbackName];
+            
+            // Reset retries on successful response
+            phoneCheckRetries = 0;
+
+            // Handle server response
             if (response.success === false) {
-                validation.textContent = 'System error: ' + (response.message || '');
+                // Server-side error
+                validation.textContent = 'System error: ' + (response.message || 'Unknown error');
                 validation.className = 'validation-message invalid';
                 input.classList.add('invalid');
                 isExistsValid = false;
             } else {
+                // Successful check
                 if (response.exists) {
-                    validation.textContent = 'Phone number already exists';
+                    validation.textContent = 'Phone number already registered';
                     validation.className = 'validation-message invalid';
                     input.classList.add('invalid');
                     isExistsValid = false;
                 } else {
-                    validation.textContent = '✓ Valid number (not in system)';
+                    validation.textContent = '✓ Available for registration';
                     validation.className = 'validation-message valid';
                     input.classList.add('valid');
-                    isExistsValid = true; // THIS IS CRUCIAL
+                    isExistsValid = true;
                 }
             }
-            delete window[callbackName];
-            document.body.removeChild(script);
         };
 
+        // Inject script into DOM
         document.body.appendChild(script);
-    }, 500);
+    }, 2000); // Wait 2 seconds before checking
 }
         
         function validatePassword() {
