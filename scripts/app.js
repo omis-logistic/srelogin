@@ -11,22 +11,55 @@ const CONFIG = {
 
 // ================= VIEWPORT MANAGEMENT =================
 function detectViewMode() {
+  // Original device detection logic
   const isMobile = (
     /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
     (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
   );
   
+  // Existing class handling
   document.body.classList.add(isMobile ? 'mobile-view' : 'desktop-view');
   
+  // New touch detection enhancements
+  const hasTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+  document.body.classList.toggle('touch-device', hasTouch);
+  
+  // Viewport meta tag handling
   const viewport = document.querySelector('meta[name="viewport"]') || document.createElement('meta');
   viewport.name = 'viewport';
-  viewport.content = isMobile 
-    ? 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no'
-    : 'width=1200';
   
+  if(isMobile) {
+    // Mobile viewport settings
+    viewport.content = 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no';
+    // Add additional mobile class
+    document.body.classList.add('mobile');
+    
+    // Remove desktop class if present
+    document.body.classList.remove('desktop-view');
+    
+    // Touch device specific adjustments
+    if(hasTouch) {
+      document.documentElement.style.setProperty('--min-tap-height', '44px');
+    }
+  } else {
+    // Desktop viewport settings
+    viewport.content = 'width=1200';
+    // Add additional desktop class
+    document.body.classList.add('desktop');
+    
+    // Remove mobile class if present
+    document.body.classList.remove('mobile-view');
+  }
+
+  // Ensure viewport tag exists in DOM
   if (!document.querySelector('meta[name="viewport"]')) {
     document.head.prepend(viewport);
   }
+  
+  // Add transition style after initial render
+  requestAnimationFrame(() => {
+    document.body.style.transition = 'all 0.3s ease';
+  });
 }
 
 // ================= ERROR HANDLING =================
@@ -222,49 +255,125 @@ function resetForm() {
 async function handleParcelSubmission(e) {
   e.preventDefault();
   const form = e.target;
+  
+  // Mobile-specific handling
+  if(window.innerWidth < 768) {
+    // Prevent keyboard from hiding important elements
+    const activeElement = document.activeElement;
+    if(activeElement && (activeElement.tagName === 'INPUT' || activeElement.tagName === 'TEXTAREA')) {
+      activeElement.blur();
+      
+      // Add slight delay for iOS smooth transition
+      await new Promise(resolve => setTimeout(resolve, 300));
+    }
+    
+    // Ensure form stays centered after keyboard dismissal
+    window.scrollTo(0, 0);
+  }
+
   showLoading(true);
 
   try {
     const formData = new FormData(form);
     const itemCategory = formData.get('itemCategory');
-    const files = Array.from(formData.getAll('files[]')); // Changed to match input name
+    const files = Array.from(formData.getAll('files[]'));
 
-    // Process ALL files regardless of category
+    // Process files with mobile-optimized handling
     const processedFiles = await Promise.all(
       files.map(async file => ({
         name: file.name,
         type: file.type,
-        data: await readFileAsBase64(file)
+        data: await readFileAsBase64(file),
+        size: file.size,
+        // Mobile-specific metadata
+        isMobilePhoto: window.innerWidth < 768 && file.type.startsWith('image/')
       }))
     );
 
+    // Construct payload with device metadata
     const payload = {
       trackingNumber: formData.get('trackingNumber').trim().toUpperCase(),
       nameOnParcel: formData.get('nameOnParcel').trim(),
-      phone: document.getElementById('phone').value, 
+      phone: document.getElementById('phone').value,
       itemDescription: formData.get('itemDescription').trim(),
       quantity: formData.get('quantity'),
       price: formData.get('price'),
       collectionPoint: formData.get('collectionPoint'),
       itemCategory: itemCategory,
       userId: document.getElementById('userId').value,
-      files: processedFiles
+      files: processedFiles,
+      deviceInfo: {
+        isMobile: window.innerWidth < 768,
+        userAgent: navigator.userAgent,
+        touchSupport: 'ontouchstart' in window
+      }
     };
 
-    console.log('Submission Payload:', payload); // Debug log
+    // Enhanced mobile logging
+    if(window.innerWidth < 768) {
+      console.log('Mobile submission payload:', JSON.parse(JSON.stringify(payload)));
+    }
 
-    await fetch(CONFIG.PROXY_URL, {
+    // Submit through proxy with mobile-optimized timeout
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), window.innerWidth < 768 ? 30000 : 15000);
+
+    const response = await fetch(CONFIG.PROXY_URL, {
       method: 'POST',
-      headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-      body: `payload=${encodeURIComponent(JSON.stringify(payload))}`
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'X-Device-Type': window.innerWidth < 768 ? 'mobile' : 'desktop'
+      },
+      body: `payload=${encodeURIComponent(JSON.stringify(payload))}`,
+      signal: controller.signal
     });
+
+    clearTimeout(timeoutId);
+
+    if(!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Submission failed');
+    }
+
+    // Mobile-specific success handling
+    if(window.innerWidth < 768) {
+      // Vibrate on success if supported
+      if(navigator.vibrate) navigator.vibrate(200);
+      
+      // Larger success message for mobile
+      showSuccessMessage('✓ Submission Successful!', { fontSize: '1.5rem', duration: 3000 });
+    } else {
+      showSuccessMessage();
+    }
 
   } catch (error) {
     console.error('Submission error:', error);
+    
+    // Enhanced mobile error handling
+    const errorMessage = window.innerWidth < 768 
+      ? `Error: ${error.message}. Please check connection.`
+      : error.message;
+
+    showError(errorMessage, window.innerWidth < 768 ? 'error-message' : 'status-message');
+
+    // Mobile-specific error recovery
+    if(window.innerWidth < 768 && error.name === 'AbortError') {
+      showError('Connection slow - trying again...');
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      handleParcelSubmission(e);
+    }
+
   } finally {
     showLoading(false);
-    resetForm();
-    showSuccessMessage();
+    
+    // Mobile-specific form reset
+    if(window.innerWidth < 768) {
+      resetForm();
+      // Focus first input after reset
+      form.elements[0].focus();
+    } else {
+      resetForm();
+    }
   }
 }
 
@@ -510,46 +619,89 @@ function validateFiles(category, files) {
 
 function handleFileSelection(input) {
   try {
-    const files = Array.from(input.files);
-    const category = document.getElementById('itemCategory').value;
-    
-    // Global file count validation
-    if (files.length > CONFIG.MAX_FILES) {
-      throw new Error(`Maximum ${CONFIG.MAX_FILES} files allowed`);
+    const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+    const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'application/pdf'];
+    let files = Array.from(input.files);
+    let isValid = true;
+    let errorMessage = '';
+
+    // Mobile-specific handling
+    if (window.innerWidth < 768) {
+      // Single file mode for mobile
+      input.removeAttribute('multiple');
+      
+      // Force camera capture for images
+      if (input.accept.startsWith('image')) {
+        input.setAttribute('capture', 'environment');
+      }
+      
+      // Reset files array for mobile consistency
+      files = files.slice(0, 1);
     }
 
-    // Validate file types and sizes
-    files.forEach(file => {
-      if (!CONFIG.ALLOWED_FILE_TYPES.includes(file.type)) {
-        throw new Error(`Invalid file type: ${file.type}`);
-      }
-      if (file.size > CONFIG.MAX_FILE_SIZE) {
-        throw new Error(`${file.name} exceeds 5MB`);
-      }
-    });
-
-    // Starred category validation
-    const starredCategories = [
-    '*CHAPTER 17 SUGAR CONFECTIONERY',
-    '*CHAPTER 18 COCOA PREPARATION',
-    '*CHAPTER 21 SUPPLEMENT MISCELLANEOUS',
-    '*CHAPTER 30 PHARMACEUTICAL PRODUCT',
-    '*CHAPTER 44 WOOD ARTICLES',
-    '*CHAPTER 49 PRINTED BOOK ; PICTURE',
-    '*CHAPTER 85.17 TELEPHONE SET ; WIRELESS NETWORK ; OTHERS',
-    '*CHAPTER 85.18.30 HEADPHONE ; EARPHONE',
-    '*CHAPTER 95.04 PLAYING CARD ;GAMING ; VIDEO GAMES'
-  ];
-    
-    if (starredCategories.includes(category)) {
-      if (files.length < 1) throw new Error('At least 1 file required');
+    // Validation checks
+    if (files.length === 0) {
+      isValid = false;
+      errorMessage = 'No files selected';
+    } else if (files.length > CONFIG.MAX_FILES) {
+      isValid = false;
+      errorMessage = `Maximum ${CONFIG.MAX_FILES} files allowed`;
+    } else {
+      files.forEach(file => {
+        if (!ALLOWED_TYPES.includes(file.type)) {
+          isValid = false;
+          errorMessage = `Invalid file type: ${file.type.split('/')[1].toUpperCase()}`;
+        }
+        if (file.size > MAX_FILE_SIZE) {
+          isValid = false;
+          errorMessage = `${file.name} exceeds ${MAX_FILE_SIZE/1024/1024}MB`;
+        }
+      });
     }
 
+    // Handle validation results
+    if (!isValid) {
+      input.value = '';
+      showError(errorMessage);
+      return false;
+    }
+
+    // File processing and UI feedback
+    const processedFiles = files.map(file => ({
+      name: file.name,
+      type: file.type,
+      size: file.size,
+      lastModified: file.lastModified,
+      isMobileUpload: window.innerWidth < 768
+    }));
+
+    // Update UI
     showError(`${files.length} valid files selected`, 'status-message success');
     
+    // Mobile-specific success handling
+    if (window.innerWidth < 768) {
+      // Vibrate on success if supported
+      if (navigator.vibrate) navigator.vibrate(100);
+      
+      // Auto-scroll to confirm selection
+      setTimeout(() => {
+        input.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }, 300);
+    }
+
+    return true;
+
   } catch (error) {
-    showError(error.message);
+    console.error('File handling error:', error);
+    showError('File selection failed - please try again');
     input.value = '';
+    return false;
+  } finally {
+    // Force UI refresh on mobile
+    if (window.innerWidth < 768) {
+      input.blur();
+      setTimeout(() => input.focus(), 100);
+    }
   }
 }
 
