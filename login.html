@@ -1,182 +1,199 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <base target="_top">
-  <title>Login - SAFHANARIZQI ENTERPRISE</title>
-  <link rel="stylesheet" href="styles/main.css">
-  <style>
-    /* Mobile-first styles */
-    .login-page {
-      width: 100%;
-      padding: 1rem;
-      animation: fadeIn 0.3s ease-in;
-    }
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#FF69B4">
+    <title>Login - SAFHANARIZQI ENTERPRISE</title>
+    <link rel="stylesheet" href="styles/main.css">
+    <style>
+        /* Login-specific mobile-first styles */
+        .login-page {
+            width: 100%;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            padding: 1rem;
+            animation: fadeIn 0.5s ease;
+        }
 
-    h1.login-header {
-      font-size: 2.5rem;
-      text-align: center;
-      text-transform: uppercase;
-      letter-spacing: 2px;
-      margin-bottom: 2rem;
-      color: var(--gold);
-      padding: 1rem;
-      border-bottom: 3px solid var(--gold);
-    }
+        .login-container {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 1.5rem;
+            border-radius: 15px;
+            box-shadow: 0 8px 32px rgba(255, 105, 180, 0.1);
+            backdrop-filter: blur(8px);
+            margin: 0 auto;
+            width: 100%;
+            max-width: 400px;
+        }
 
-    .login-container {
-      background: rgba(0, 0, 0, 0.7);
-      padding: 1.5rem;
-      border-radius: 10px;
-      width: 100%;
-      margin: 0 auto;
-      box-shadow: 0 0 15px rgba(197, 160, 71, 0.3);
-    }
+        .login-header {
+            font-size: 2.2rem;
+            text-align: center;
+            margin-bottom: 2rem;
+            background: linear-gradient(45deg, #FF69B4, #FF1493);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
 
-    /* Desktop overrides */
-    body.desktop-view .login-container {
-      max-width: 400px;
-      padding: 2rem;
-      margin: 2rem auto;
-    }
+        .auth-links {
+            margin-top: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.8rem;
+        }
 
-    input, button {
-      width: 100%;
-      padding: 0.8rem;
-      margin: 0.5rem 0;
-      border: 1px solid var(--gold);
-      border-radius: 5px;
-      transition: all 0.3s ease;
-      background-color: var(--input-bg);
-      color: var(--text-light);
-    }
+        .button-loader {
+            display: none;
+            width: 20px;
+            height: 20px;
+            border: 2px solid #fff;
+            border-top-color: transparent;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
 
-    button {
-      background-color: var(--gold);
-      color: var(--dark-bg);
-      font-weight: bold;
-      cursor: pointer;
-      border: none;
-    }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
 
-    .auth-links {
-      margin-top: 1.5rem;
-      display: flex;
-      flex-direction: column;
-      gap: 0.8rem;
-    }
-
-    .secondary-btn {
-      background: transparent !important;
-      border: 1px solid var(--gold) !important;
-      color: var(--gold) !important;
-    }
-
-    @media (max-width: 768px) {
-      h1.login-header {
-        font-size: 1.8rem;
-      }
-      
-      body.mobile-view .login-container {
-        padding: 1rem;
-      }
-    }
-  </style>
+        @media (max-width: 768px) {
+            .login-container {
+                padding: 1rem;
+                margin: 0.5rem;
+            }
+            
+            .login-header {
+                font-size: 1.8rem;
+            }
+            
+            input, button {
+                padding: 1rem !important;
+                font-size: 16px !important;
+            }
+        }
+    </style>
 </head>
 <body>
-  <div class="login-page">
-    <h1 class="login-header">SAFHANARIZQI ENTERPRISE</h1>
-    
-    <div class="login-container">
-      <div class="input-group">
-        <input type="tel" 
-               id="phone" 
-               placeholder="Phone Number"
-               pattern="^(673\d{7}|60\d{9,})$" 
-               required>
-      </div>
-      
-      <div class="input-group">
-        <input type="password" 
-               id="password" 
-               placeholder="Password" 
-               required>
-      </div>
-      <div id="loginError" class="inline-error" style="display: none;"></div>
-      <button onclick="handleLogin()" id="loginBtn">
-  <div class="button-loader"></div>
-  <span class="btn-text">LOGIN</span>
-</button>
-      
-      <div class="auth-links">
-        <button onclick="showRegistration()">CREATE ACCOUNT</button>
-        <button class="secondary-btn" onclick="showForgotPassword()">
-          FORGOT PASSWORD?
-        </button>
-      </div> <!-- Removed Parcel Declaration button from here -->
+    <div id="globalLoader" class="loading-overlay">
+        <div class="loading-spinner"></div>
     </div>
-  </div>
 
-  <script src="scripts/app.js"></script>
-  <script>
-  function handleLogin() {
-    const btn = document.getElementById('loginBtn');
-    const originalHtml = btn.innerHTML;
-    
-    // Show loading state
-    btn.innerHTML = '<div class="button-loader"></div> Processing...';
-    btn.disabled = true;
+    <div class="login-page">
+        <h1 class="login-header">SAFHANARIZQI ENTERPRISE</h1>
+        
+        <div class="login-container">
+            <div class="input-group">
+                <input type="tel" 
+                       id="phone" 
+                       placeholder="Phone Number"
+                       pattern="^(673\d{7}|60\d{9,})$" 
+                       required
+                       inputmode="numeric">
+            </div>
+            
+            <div class="input-group">
+                <input type="password" 
+                       id="password" 
+                       placeholder="Password" 
+                       required
+                       autocomplete="current-password">
+            </div>
+            
+            <div id="loginError" class="error-message" style="display: none;"></div>
+            
+            <button onclick="handleLogin()" id="loginBtn">
+                <div class="button-loader"></div>
+                <span class="btn-text">LOGIN</span>
+            </button>
+            
+            <div class="auth-links">
+                <button class="secondary-btn" onclick="safeRedirect('register.html')">
+                    CREATE ACCOUNT
+                </button>
+                <button class="text-btn" onclick="safeRedirect('forgot-password.html')">
+                    Forgot Password?
+                </button>
+            </div>
+        </div>
+    </div>
 
-    const phone = document.getElementById('phone').value.trim();
-    const password = document.getElementById('password').value;
+    <div class="footer-text">
+        Built by Omis Logistics. For more info 👉 
+        <a href="https://wa.me/6737187776" target="_blank" rel="noopener">Contact Us</a>
+    </div>
 
-    if (!validatePhone(phone)) {
-      showError('Invalid phone number format');
-      btn.innerHTML = originalHtml;
-      btn.disabled = false;
-      return;
-    }
+    <script src="scripts/app.js"></script>
+    <script>
+        // Enhanced mobile login handling
+        document.addEventListener('DOMContentLoaded', () => {
+            detectViewMode();
+            showGlobalLoader(false);
+            
+            // Mobile keyboard avoidance
+            if(document.body.classList.contains('mobile-view')) {
+                const inputs = document.querySelectorAll('input');
+                inputs.forEach(input => {
+                    input.addEventListener('focus', () => {
+                        window.scrollTo(0, 0);
+                        document.body.scrollTop = 0;
+                    });
+                });
+            }
+        });
 
-    const callbackName = `jsonp_${Date.now()}`;
-    const script = document.createElement('script');
-    script.src = `${CONFIG.GAS_URL}?action=processLogin&phone=${encodeURIComponent(phone)}&password=${encodeURIComponent(password)}&callback=${callbackName}`;
+        function handleLogin() {
+            const btn = document.getElementById('loginBtn');
+            const originalHtml = btn.innerHTML;
+            btn.innerHTML = '<div class="button-loader"></div> Processing...';
+            btn.disabled = true;
 
-    window[callbackName] = (response) => {
-      // Restore button state
-      btn.innerHTML = originalHtml;
-      btn.disabled = false;
+            const phone = document.getElementById('phone').value.trim();
+            const password = document.getElementById('password').value;
 
-      if (response.success) {
-        console.log('TempPassword flag:', response.tempPassword);
-        sessionStorage.setItem('userData', JSON.stringify({
-          phone: response.phone,
-          tempPassword: response.tempPassword
-        }));
-        window.location.href = response.tempPassword 
-          ? 'password-reset.html?force=true'
-          : 'dashboard.html?fresh=1';
-      } else {
-        document.getElementById('password').value = '';
-        showError(response.message || 'Authentication failed');
-      }
-      document.body.removeChild(script);
-    };
-    
-    document.body.appendChild(script);
-  }
+            if (!validatePhone(phone)) {
+                showError('Invalid phone number format');
+                btn.innerHTML = originalHtml;
+                btn.disabled = false;
+                return;
+            }
 
-    function showRegistration() {
-      safeRedirect('register.html');
-    }
+            const callbackName = `login_${Date.now()}`;
+            const script = document.createElement('script');
+            script.src = `${CONFIG.GAS_URL}?action=processLogin&phone=${encodeURIComponent(phone)}&password=${encodeURIComponent(password)}&callback=${callbackName}`;
 
-    function showForgotPassword() {
-      safeRedirect('forgot-password.html');
-    }
+            window[callbackName] = (response) => {
+                btn.innerHTML = originalHtml;
+                btn.disabled = false;
 
-  document.getElementById('password').addEventListener('keypress', function(e) {
-    if (e.key === 'Enter') {
-      handleLogin();
-    }
-  });
-  </script>
+                if (response.success) {
+                    sessionStorage.setItem('userData', JSON.stringify({
+                        phone: response.phone,
+                        tempPassword: response.tempPassword
+                    }));
+                    
+                    if(response.tempPassword) {
+                        safeRedirect('password-reset.html?force=true');
+                    } else {
+                        safeRedirect('dashboard.html?fresh=1');
+                    }
+                } else {
+                    document.getElementById('password').value = '';
+                    showError(response.message || 'Authentication failed');
+                }
+                document.body.removeChild(script);
+                delete window[callbackName];
+            };
+            
+            document.body.appendChild(script);
+        }
+
+        document.getElementById('password').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') handleLogin();
+        });
+    </script>
 </body>
 </html>
