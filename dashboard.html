@@ -1,190 +1,118 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
     <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="theme-color" content="#FF69B4">
-  <title>Dashboard - Safhanarizqi Enterprise</title>
-  <link rel="stylesheet" href="styles/main.css">
-  <style>
-    /* Dashboard-specific styles */
-    .dashboard-page {
-      max-width: 1200px;
-      margin: 20px auto;
-    }
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#FF69B4">
+    <title>Dashboard - Safhanarizqi Enterprise</title>
+    <link rel="stylesheet" href="styles/main.css">
+    <style>
+        /* Dashboard-specific mobile-first styles */
+        .dashboard-page {
+            max-width: 1200px;
+            margin: 20px auto;
+            min-height: calc(100vh - 100px);
+        }
 
-    .thumbnail-container {
-      display: grid;
-      gap: 20px;
-      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-    }
+        .thumbnail-container {
+            display: grid;
+            gap: 20px;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            padding: 1rem;
+        }
 
-    .thumbnail {
-      background: rgba(255, 255, 255, 0.1);
-      padding: 20px;
-      border-radius: 10px;
-      cursor: pointer;
-      transition: all 0.3s ease;
-      border: 1px solid var(--gold);
-    }
+        .thumbnail {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 1.5rem;
+            border-radius: 15px;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            border: 2px solid var(--border-color);
+            backdrop-filter: blur(8px);
+            text-align: center;
+        }
 
-    .thumbnail:hover {
-      transform: translateY(-5px);
-      box-shadow: 0 5px 15px rgba(197, 160, 71, 0.2);
-    }
+        .thumbnail h2 {
+            color: var(--primary-color);
+            margin-bottom: 0.8rem;
+            font-size: 1.4rem;
+        }
 
-    .thumbnail h2 {
-      color: var(--gold);
-      margin-bottom: 10px;
-      font-size: 1.4em;
-    }
+        .thumbnail p {
+            color: var(--text-dark);
+            font-size: 0.95rem;
+            opacity: 0.9;
+        }
 
-    .thumbnail p {
-      color: var(--text-light);
-      font-size: 0.95em;
-      opacity: 0.9;
-    }
+        .logout-btn {
+            display: block;
+            width: 200px;
+            margin: 2rem auto;
+            background: var(--error-red) !important;
+        }
 
-/* Welcome Modal Styles */
-.welcome-modal {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(255, 182, 193, 0.95); /* Soft pink overlay */
-  z-index: 1000;
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
-  padding: 20px 10px;
-  backdrop-filter: blur(8px);
-}
+        /* Welcome Modal Updates */
+        .welcome-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(255, 182, 193, 0.98);
+            z-index: 10000;
+            overflow-y: auto;
+            padding: 20px 10px;
+            backdrop-filter: blur(10px);
+        }
 
-.welcome-content {
-  background: var(--background-light);
-  border: 2px solid var(--primary-color);
-  border-radius: 15px;
-  max-width: 800px;
-  margin: 20px auto;
-  padding: 25px;
-  color: var(--text-dark);
-  max-height: 90vh;
-  overflow-y: auto;
-  box-shadow: 0 8px 32px rgba(255, 105, 180, 0.15);
-}
-
-.gold-text {
-  color: var(--primary-color) !important;
-  font-weight: 600;
-  letter-spacing: 0.5px;
-}
-
-.modal-section {
-  margin: 15px 0;
-  padding: 15px 20px;
-  background: var(--background-secondary);
-  border-radius: 10px;
-  border: 1px solid var(--border-color);
-}
-
-.guidelines {
-  padding-left: 15px;
-  margin: 10px 0;
-}
-
-.guidelines li {
-  margin: 8px 0;
-  line-height: 1.6;
-  color: var(--text-dark);
-}
-
-.agree-btn {
-  background: var(--primary-color);
-  color: var(--text-light);
-  padding: 14px 40px;
-  border: none;
-  border-radius: 8px;
-  font-weight: 600;
-  cursor: pointer;
-  display: block;
-  margin: 25px auto 15px;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.agree-btn:hover {
-  background: var(--gradient-end);
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(255, 105, 180, 0.25);
-}
-
-/* Update shipping details */
-.shipping-details span {
-  color: var(--primary-color);
-  font-weight: 600;
-}
-
-/* Loading spinner update */
-.loading-spinner {
-  border-top: 4px solid var(--primary-color);
-}
-
-/* Mobile Optimization Updates */
-@media (max-width: 768px) {
-  .welcome-content {
-    padding: 20px;
-    border-radius: 12px;
-  }
-  
-  .modal-section {
-    padding: 12px;
-  }
-  
-  .agree-btn {
-    width: 100%;
-    padding: 12px;
-  }
-}
-
-.thumbnail[onclick="showTrackParcel()"] {
-    display: none !important;
-    visibility: hidden;
-    position: absolute;
-    left: -9999px;
-    pointer-events: none;
-    opacity: 0;
-  }
-      
-/* Add this to keep modal hidden initially */
-#welcomeModal { display: none; }
-</style>
+        @media (max-width: 768px) {
+            .dashboard-page {
+                margin: 10px;
+                padding: 10px;
+            }
+            
+            .thumbnail {
+                padding: 1rem;
+            }
+            
+            .thumbnail h2 {
+                font-size: 1.2rem;
+            }
+            
+            .logout-btn {
+                width: 100%;
+                margin: 1rem auto;
+            }
+        }
+    </style>
 </head>
 <body>
-  <div id="globalLoader" class="loading-overlay">
-  <div class="loading-spinner"></div>
-</div>
-  
-  <div class="container dashboard-page">
-    <h1>User Dashboard</h1>
-    
-    <div class="thumbnail-container">
-      <div class="thumbnail" onclick="showMyInfo()">
-        <h2>📁 My Info</h2>
-        <p>View and update personal information</p>
-      </div>
-      
-      <div class="thumbnail" onclick="showParcelDeclaration()">
-        <h2>📦 Declare Parcel</h2>
-        <p>Submit parcel for customs clearance</p>
-      </div>
-      
-      <div class="thumbnail" onclick="showTrackParcel()">
-        <h2>🚚 Track Parcel</h2>
-        <p>Check your parcel status</p>
-      </div>
+    <div id="globalLoader" class="loading-overlay">
+        <div class="loading-spinner"></div>
     </div>
-    
-    <button class="logout-btn" onclick="handleLogout()">Log Out</button>
-  </div>
+
+    <div class="dashboard-page">
+        <h1>User Dashboard</h1>
+        
+        <div class="thumbnail-container">
+            <div class="thumbnail" onclick="showMyInfo()">
+                <h2>📁 My Information</h2>
+                <p>View and update your personal details</p>
+            </div>
+            
+            <div class="thumbnail" onclick="showParcelDeclaration()">
+                <h2>📦 New Declaration</h2>
+                <p>Submit customs declaration for parcels</p>
+            </div>
+            
+            <div class="thumbnail" onclick="showTrackParcel()">
+                <h2>🚚 Track Parcel</h2>
+                <p>Check your parcel clearance status</p>
+            </div>
+        </div>
+        
+        <button class="logout-btn" onclick="handleLogout()">Log Out</button>
+    </div>
 
  <!-- Updated Welcome Modal -->
 <div id="welcomeModal" class="welcome-modal" style="display: none;">
@@ -254,88 +182,71 @@ SARAWAK
   </div>
 </div>
 
-  <script src="scripts/app.js"></script>
-  <script>
+    <div class="footer-text">
+        Built by Omis Logistics. For support 👉 
+        <a href="https://wa.me/6737187776" target="_blank" rel="noopener">WhatsApp Support</a>
+    </div>
 
-function showGlobalLoader(show = true) {
-  document.getElementById('globalLoader').style.display = show ? 'flex' : 'none';
-}
-    
-function closeWelcomeModal() {
-      const modal = document.getElementById('welcomeModal');
-      modal.style.display = 'none';
-      document.body.style.overflow = 'auto';
-    }
+    <script src="scripts/app.js"></script>
+    <script>
+        // Dashboard initialization
+        function initDashboard() {
+            const userData = JSON.parse(sessionStorage.getItem('userData'));
+            if (!userData) safeRedirect('login.html');
+            
+            // Show welcome modal for first login
+            const urlParams = new URLSearchParams(window.location.search);
+            if(urlParams.has('fresh')) {
+                loadWelcomeModalData(userData.phone);
+                window.history.replaceState({}, '', 'dashboard.html');
+            }
 
-function loadWelcomeModalData(phone) {
-  const userData = JSON.parse(sessionStorage.getItem('userData'));
-  
-  // Immediate population from session storage
-  document.getElementById('user-phone').textContent = userData.phone;
+            // Initialize service worker
+            if('serviceWorker' in navigator) {
+                navigator.serviceWorker.register('/sw.js')
+                    .catch(err => console.error('Service Worker registration failed:', err));
+            }
+        }
 
-  const callbackName = `userInfo_${Date.now()}`;
-  const script = document.createElement('script');
-  script.src = `${CONFIG.GAS_URL}?action=getUserInfo&phone=${encodeURIComponent(phone)}&callback=${callbackName}`;
+        // Welcome modal functions
+        function loadWelcomeModalData(phone) {
+            document.getElementById('user-phone').textContent = phone;
+            document.getElementById('welcomeModal').style.display = 'block';
+            document.body.style.overflow = 'hidden';
+        }
 
-  window[callbackName] = (response) => {
-    showGlobalLoader(false);
-    if(response.success) {
-      const userInfo = `${response.userId} ${response.fullName}`;
-      document.getElementById('user-info').textContent = userInfo;
-      document.getElementById('welcomeModal').style.display = 'block';
-      document.body.style.overflow = 'hidden';
-    }
-    document.body.removeChild(script);
-    delete window[callbackName];
-  };
-  
-  document.body.appendChild(script);
-}
-    
-(function initDashboard() {
-  const userData = JSON.parse(sessionStorage.getItem('userData'));
-  if (!userData) return safeRedirect('login.html');
-  if (userData.tempPassword) return safeRedirect('password-reset.html');
+        function closeWelcomeModal() {
+            document.getElementById('welcomeModal').style.display = 'none';
+            document.body.style.overflow = 'auto';
+        }
 
-  // Always show loader initially
-  showGlobalLoader(true);
-  
-  const urlParams = new URLSearchParams(window.location.search);
-  
-  // Modified initialization flow
-  setTimeout(() => {
-    if (urlParams.has('fresh')) {
-      window.history.replaceState({}, '', 'dashboard.html');
-      loadWelcomeModalData(userData.phone);
-    } else {
-      showGlobalLoader(false);
-    }
+        // Navigation handlers
+        window.showMyInfo = () => {
+            showGlobalLoader(true);
+            setTimeout(() => safeRedirect('my-info.html'), 50);
+        }
 
-    // Existing code
-    const modal = document.getElementById('welcomeModal');
-    window.onclick = (event) => {
-      if(event.target === modal) modal.style.display = 'none';
-    }
+        window.showParcelDeclaration = () => {
+            showGlobalLoader(true);
+            setTimeout(() => safeRedirect('parcel-declaration.html'), 50);
+        }
 
-    window.showMyInfo = () => safeRedirect('my-info.html');
-    window.showParcelDeclaration = () => {
-  showGlobalLoader(true);
-  setTimeout(() => {
-    safeRedirect('parcel-declaration.html');
-  }, 50);
-}
-    window.showTrackParcel = () => safeRedirect('track-parcel.html');
-    
-    window.handleLogout = () => {
-      sessionStorage.clear();
-      safeRedirect('login.html');
-    }
-  }, 500); // Small delay for loader visibility
-})();
-  </script>
-  <div class="footer-text">
-  Built by Omis Logistics. For more info 👉 
-  <a href="https://wa.me/6737187776" target="_blank" rel="noopener">here</a>
-</div>
+        window.showTrackParcel = () => safeRedirect('track-parcel.html');
+
+        // Initialize dashboard
+        document.addEventListener('DOMContentLoaded', () => {
+            detectViewMode();
+            initDashboard();
+            showGlobalLoader(false);
+            
+            // Mobile view adjustments
+            if(document.body.classList.contains('mobile-view')) {
+                document.querySelectorAll('.thumbnail').forEach(item => {
+                    item.style.padding = '1rem';
+                    item.querySelector('h2').style.fontSize = '1.2rem';
+                });
+            }
+        });
+    </script>
 </body>
 </html>
