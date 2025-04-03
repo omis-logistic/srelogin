@@ -1,7 +1,7 @@
 //scripts/app.js
 // ================= CONFIGURATION =================
 const CONFIG = {
-  GAS_URL: 'https://script.google.com/macros/s/AKfycbzV4GNmrU0qOO3ZbZebtwOwnAn7_0z-Rp1ZvOG7LJTbMwEAjabxn98B_F_G2dQRhzrbRg/exec',
+  GAS_URL: 'https://script.google.com/macros/s/AKfycbw6OlOhnmbxftndStGQDz5vkfEIV8CJjKrSP-QVdobbdPtWjjX0PNjZ1MrHSNpbgH565g/exec',
   PROXY_URL: 'https://script.google.com/macros/s/AKfycbw3cdvA0BGdhQLVliVUzO5sdP4cGlNrY3jU4-URN0DJdQesji8sHaQ5d2MoOGgIXBrW/exec',
   SESSION_TIMEOUT: 3600,
   MAX_FILE_SIZE: 5 * 1024 * 1024,
@@ -1130,39 +1130,4 @@ function setupCategoryChangeListener() {
   if (categorySelect) {
     categorySelect.addEventListener('change', checkCategoryRequirements);
   }
-}
-
-// Add touch event listeners for mobile
-function initMobileControls() {
-    if ('ontouchstart' in window) {
-        document.querySelectorAll('button').forEach(btn => {
-            btn.addEventListener('touchstart', function(e) {
-                this.classList.add('active');
-                e.preventDefault();
-            });
-            btn.addEventListener('touchend', function() {
-                this.classList.remove('active');
-            });
-        });
-    }
-}
-
-// Call this on DOMContentLoaded
-document.addEventListener('DOMContentLoaded', initMobileControls);
-
-async function checkPhoneExists(phone) {
-    try {
-        // Try regular fetch first
-        const response = await fetch(`${CONFIG.GAS_URL}?action=checkPhoneExists&phone=${phone}`);
-        return await response.json();
-    } catch (error) {
-        // Fallback to JSONP
-        return new Promise((resolve) => {
-            const callbackName = `jsonpFallback_${Date.now()}`;
-            window[callbackName] = resolve;
-            const script = document.createElement('script');
-            script.src = `${CONFIG.GAS_URL}?action=checkPhoneExists&phone=${phone}&callback=${callbackName}`;
-            document.body.appendChild(script);
-        });
-    }
 }
