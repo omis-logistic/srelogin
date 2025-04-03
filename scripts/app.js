@@ -1131,3 +1131,38 @@ function setupCategoryChangeListener() {
     categorySelect.addEventListener('change', checkCategoryRequirements);
   }
 }
+
+// Add touch event listeners for mobile
+function initMobileControls() {
+    if ('ontouchstart' in window) {
+        document.querySelectorAll('button').forEach(btn => {
+            btn.addEventListener('touchstart', function(e) {
+                this.classList.add('active');
+                e.preventDefault();
+            });
+            btn.addEventListener('touchend', function() {
+                this.classList.remove('active');
+            });
+        });
+    }
+}
+
+// Call this on DOMContentLoaded
+document.addEventListener('DOMContentLoaded', initMobileControls);
+
+async function checkPhoneExists(phone) {
+    try {
+        // Try regular fetch first
+        const response = await fetch(`${CONFIG.GAS_URL}?action=checkPhoneExists&phone=${phone}`);
+        return await response.json();
+    } catch (error) {
+        // Fallback to JSONP
+        return new Promise((resolve) => {
+            const callbackName = `jsonpFallback_${Date.now()}`;
+            window[callbackName] = resolve;
+            const script = document.createElement('script');
+            script.src = `${CONFIG.GAS_URL}?action=checkPhoneExists&phone=${phone}&callback=${callbackName}`;
+            document.body.appendChild(script);
+        });
+    }
+}
