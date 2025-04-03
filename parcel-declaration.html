@@ -50,15 +50,18 @@
       </div>
 
       <!-- Quantity and Price -->
-      <div class="double-column" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1rem;">
-    <label for="quantity">Quantity:</label>
-    <input type="number" id="quantity" required>
-  </div>
-  <div style="flex: 1">
-    <label for="price">Price (MYR):</label>
-    <input type="number" id="price" required>
-  </div>
-</div>
+      <div class="input-group double-column">
+        <div>
+          <label for="quantity">Quantity:</label>
+          <input type="number" id="quantity" name="quantity" 
+                 min="1" step="1" required>
+        </div>
+        <div>
+          <label for="price">Price (MYR):</label>
+          <input type="number" id="price" name="price" 
+                 min="0" step="0.01" required>
+        </div>
+      </div>
 
       <!-- Collection Point -->
       <div class="input-group">
