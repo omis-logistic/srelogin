@@ -364,3 +364,31 @@ button, .tracking-item {
 button:active, .tracking-item:active {
   transform: scale(0.98);
 }
+
+.touch-active {
+  transform: scale(0.97) !important;
+  opacity: 0.9 !important;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Mobile hover suppression */
+body.mobile-view .tracking-item:hover,
+body.mobile-view button:hover {
+  transform: none !important;
+  background: inherit !important;
+}
+
+/* Touch target sizing */
+@media (max-width: 768px) {
+  button, .tracking-item {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  
+  /* Prevent text selection */
+  * {
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    user-select: none;
+  }
+}
