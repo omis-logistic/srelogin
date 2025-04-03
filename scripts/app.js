@@ -11,16 +11,17 @@ const CONFIG = {
 
 // ================= VIEWPORT MANAGEMENT =================
 function detectViewMode() {
-  const isMobile = window.matchMedia("(pointer: coarse)").matches;
-  document.body.classList.toggle('mobile-view', isMobile);
+  const isMobile = window.matchMedia("(pointer: coarse)").matches || 
+    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
   
-  const viewport = document.querySelector('meta[name="viewport"]') || 
-    document.createElement('meta');
+  document.body.classList.add(isMobile ? 'mobile-view' : 'desktop-view');
+  
+  const viewport = document.querySelector('meta[name="viewport"]') || document.createElement('meta');
   viewport.name = 'viewport';
   viewport.content = isMobile 
     ? 'width=device-width, initial-scale=1.0'
     : 'width=1200';
-    
+  
   if (!document.querySelector('meta[name="viewport"]')) {
     document.head.prepend(viewport);
   }
@@ -31,78 +32,128 @@ function showError(message, targetId = 'error-message') {
   const errorElement = document.getElementById(targetId) || createErrorElement();
   const isMobile = document.body.classList.contains('mobile-view');
 
-  // Mobile-specific positioning
+  // Mobile positioning
   if (isMobile) {
     errorElement.style.position = 'fixed';
     errorElement.style.bottom = '20px';
     errorElement.style.top = 'auto';
-    errorElement.style.left = '20px';
-    errorElement.style.right = '20px';
-    errorElement.style.transform = 'none';
-    errorElement.style.width = 'calc(100% - 40px)';
+    errorElement.style.left = '50%';
+    errorElement.style.transform = 'translateX(-50%)';
+    errorElement.style.width = '90%';
+    errorElement.style.maxWidth = '400px';
+    errorElement.style.fontSize = '14px';
+    errorElement.style.padding = '12px 15px';
   } else {
-    // Reset desktop styles
+    // Desktop positioning
     errorElement.style.position = 'fixed';
     errorElement.style.top = '20px';
     errorElement.style.left = '50%';
     errorElement.style.transform = 'translateX(-50%)';
     errorElement.style.width = 'auto';
-    errorElement.style.right = 'auto';
+    errorElement.style.maxWidth = '600px';
+    errorElement.style.fontSize = '16px';
+    errorElement.style.padding = '15px 25px';
   }
 
-  // Message type handling
-  if (typeof message === 'string' && message.includes('success')) {
-    errorElement.style.background = '#00C851dd';
-    errorElement.textContent = message.replace('success', '').trim();
-  } else {
-    errorElement.style.background = '#ff4444dd';
-    errorElement.textContent = message;
+  // Message handling
+  if (typeof message === 'string') {
+    if (message.toLowerCase().includes('success')) {
+      errorElement.style.background = 'linear-gradient(135deg, #00C851, #007E33)';
+      errorElement.style.border = '1px solid #007E33';
+    } else if (message.toLowerCase().includes('warning')) {
+      errorElement.style.background = 'linear-gradient(135deg, #FFBB33, #FF8800)';
+      errorElement.style.border = '1px solid #FF8800';
+    } else {
+      errorElement.style.background = 'linear-gradient(135deg, #ff4444, #CC0000)';
+      errorElement.style.border = '1px solid #CC0000';
+    }
+    errorElement.textContent = message.replace(/(success|warning|error)/i, '').trim();
   }
 
-  // Animation handling
+  // Animations
   errorElement.style.display = 'block';
-  errorElement.style.animation = 'slideIn 0.3s ease-out';
+  errorElement.style.opacity = '0';
+  errorElement.style.animation = isMobile 
+    ? 'mobileErrorIn 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards'
+    : 'desktopErrorIn 0.3s ease-out forwards';
 
-  // Auto-hide functionality
+  // Progress bar
+  const progressBar = document.createElement('div');
+  progressBar.style.cssText = `
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    height: 3px;
+    background: rgba(255,255,255,0.5);
+    width: 100%;
+    transform-origin: left;
+    animation: progress 5s linear forwards;
+  `;
+  errorElement.appendChild(progressBar);
+
+  // Auto-hide
   setTimeout(() => {
-    errorElement.style.animation = 'fadeOut 0.5s ease forwards';
+    errorElement.style.animation = isMobile 
+      ? 'mobileErrorOut 0.5s ease forwards'
+      : 'desktopErrorOut 0.5s ease forwards';
+    
     setTimeout(() => {
       errorElement.style.display = 'none';
+      errorElement.removeChild(progressBar);
     }, 500);
   }, 5000);
 
-  // Create element if not exists
   function createErrorElement() {
     const errorDiv = document.createElement('div');
-    errorDiv.id = 'error-message';
+    errorDiv.id = targetId;
     errorDiv.className = 'error-message';
     errorDiv.style.cssText = `
       position: fixed;
-      padding: 15px;
-      color: white;
-      border-radius: 5px;
-      z-index: 1000;
+      z-index: 10000;
+      color: #fff;
+      border-radius: ${isMobile ? '8px' : '4px'};
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
       display: none;
-      font-size: 0.9rem;
-      box-shadow: 0 3px 6px rgba(0,0,0,0.16);
+      backdrop-filter: blur(4px);
+      text-align: center;
+      line-height: 1.4;
     `;
-    
-    // Mobile-specific default styles
+
     if (isMobile) {
-      errorDiv.style.bottom = '20px';
-      errorDiv.style.left = '20px';
-      errorDiv.style.right = '20px';
-      errorDiv.style.width = 'calc(100% - 40px)';
-    } else {
-      errorDiv.style.top = '20px';
-      errorDiv.style.left = '50%';
-      errorDiv.style.transform = 'translateX(-50%)';
+      errorDiv.style.fontSize = '14px';
+      errorDiv.style.wordBreak = 'break-word';
     }
 
     document.body.prepend(errorDiv);
     return errorDiv;
   }
 }
+
+// Add animations
+const style = document.createElement('style');
+style.textContent = `
+  @keyframes mobileErrorIn {
+    0% { transform: translate(-50%, 100%); opacity: 0; }
+    100% { transform: translate(-50%, 0); opacity: 1; }
+  }
+  @keyframes mobileErrorOut {
+    0% { transform: translate(-50%, 0); opacity: 1; }
+    100% { transform: translate(-50%, 100%); opacity: 0; }
+  }
+  @keyframes desktopErrorIn {
+    0% { transform: translate(-50%, -20px); opacity: 0; }
+    100% { transform: translate(-50%, 0); opacity: 1; }
+  }
+  @keyframes desktopErrorOut {
+    0% { transform: translate(-50%, 0); opacity: 1; }
+    100% { transform: translate(-50%, -20px); opacity: 0; }
+  }
+  @keyframes progress {
+    0% { transform: scaleX(1); }
+    100% { transform: scaleX(0); }
+  }
+`;
+document.head.appendChild(style);
 
 // ================= SESSION MANAGEMENT =================
 const checkSession = () => {
@@ -131,7 +182,7 @@ const checkSession = () => {
 };
 
 function handleLogout() {
-  sessionStorage.clear(); // This clears the freshLogin flag
+  sessionStorage.clear();
   localStorage.removeItem('lastActivity');
   safeRedirect('login.html');
 }
@@ -165,6 +216,7 @@ async function callAPI(action, payload) {
   }
 }
 
+// ================= LOADING MANAGEMENT =================
 function showLoading(show = true) {
   const loader = document.getElementById('loadingOverlay') || createLoaderElement();
   loader.style.display = show ? 'flex' : 'none';
@@ -178,7 +230,6 @@ function createLoaderElement() {
     <div class="loading-text">Processing Submission...</div>
   `;
   
-  // Add styles directly for reliability
   overlay.style.cssText = `
     position: fixed;
     top: 0;
