@@ -809,6 +809,15 @@ async function handleRegistration(e) {
     }
 }
 
+async function checkIcExists(icNumber) {
+    try {
+        const response = await fetch(`${CONFIG.GAS_URL}?action=checkIcExists&ic=${encodeURIComponent(icNumber)}`);
+        return await response.json();
+    } catch (error) {
+        return { exists: false };
+    }
+}
+
 // Supporting functions
 function showSuccessModal(userId) {
     const modal = document.getElementById('successModal');
