@@ -293,7 +293,7 @@
 
     <script>
 const CONFIG = window.CONFIG || {
-  GAS_URL: 'https://script.google.com/macros/s/AKfycbzZZybLKshUkH87-fd27syBh50DRu3jSaX1HgBdi9xY-dNA8W0pXCOPVlTe09pIP2L_wA/exec'
+  GAS_URL: 'https://script.google.com/macros/s/AKfycbx1ZjXjt4NP070YAVVeGOCQ-mjUHDtqaZWZouy80_8Xz2wHP15yZ5UG6xNoWcrSViOiHw/exec'
 };
         // Real-time Validations
         document.getElementById('registrationForm').action = CONFIG.GAS_URL;
@@ -305,35 +305,15 @@ const CONFIG = window.CONFIG || {
         document.getElementById('icNumber').addEventListener('input', validateICNumber);
 
         // IC Number Auto-Formatting
-document.getElementById('icNumber').addEventListener('input', function(e) {
-    const icValue = e.target.value.trim();
-    const validationElement = document.getElementById('icValidation');
-    
-    if (!icValue) {
-        validationElement.textContent = '';
-        return;
-    }
-
-    // Use JSONP pattern like phone validation
-    const callbackName = `icCheck_${Date.now()}`;
-    const script = document.createElement('script');
-    
-    window[callbackName] = (response) => {
-        if (response.success) {
-            validationElement.textContent = response.exists 
-                ? `Existing User ID: ${response.userId}`
-                : 'New User ID will be generated';
-            validationElement.className = response.exists 
-                ? 'validation-message valid' 
-                : 'validation-message info';
-        }
-        document.body.removeChild(script);
-        delete window[callbackName];
-    };
-
-    script.src = `${CONFIG.GAS_URL}?action=checkIcExists&ic=${encodeURIComponent(icValue)}&callback=${callbackName}`;
-    document.body.appendChild(script);
-});
+        document.getElementById('icNumber').addEventListener('input', function(e) {
+            let value = e.target.value.replace(/-/g, '');
+            if (value.length > 2 && value.length <= 8) {
+                value = value.slice(0,2) + '-' + value.slice(2);
+            } else if (value.length > 8) {
+                value = value.slice(0,6) + '-' + value.slice(6,8) + '-' + value.slice(8,12);
+            }
+            e.target.value = value;
+        });
 
 // ================= PHONE DUPLICATE CHECK =================
 document.getElementById('phone').addEventListener('input', function(e) {
