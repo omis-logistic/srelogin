@@ -1,7 +1,7 @@
 //scripts/app.js
 // ================= CONFIGURATION =================
 const CONFIG = {
-  GAS_URL: 'https://script.google.com/macros/s/AKfycbxsWPs9QO-howr37UpYHRewTXyukjG9bgfO61VfStQayrmwVrG256pnbHjnDzdVDBXkKg/exec',
+  GAS_URL: 'https://script.google.com/macros/s/AKfycbzZZybLKshUkH87-fd27syBh50DRu3jSaX1HgBdi9xY-dNA8W0pXCOPVlTe09pIP2L_wA/exec',
   PROXY_URL: 'https://script.google.com/macros/s/AKfycbw3cdvA0BGdhQLVliVUzO5sdP4cGlNrY3jU4-URN0DJdQesji8sHaQ5d2MoOGgIXBrW/exec',
   SESSION_TIMEOUT: 3600,
   MAX_FILE_SIZE: 5 * 1024 * 1024,
@@ -744,25 +744,23 @@ async function handleRegistration(e) {
     const icValue = document.getElementById('icNumber').value.trim();
     const submitBtn = form.querySelector('button[type="submit"]');
     const originalBtnText = submitBtn.innerHTML;
-
+    
     try {
-        showLoading(true);
+        // Show loading state
         submitBtn.disabled = true;
         submitBtn.innerHTML = '<div class="spinner"></div> Validating...';
 
-        // 1. IC Number Validation
-        const icCheck = await checkIcExists(icValue);
-        if (icCheck.exists) {
-            const proceed = confirm(`This IC number is associated with User ID: ${icCheck.userId}\nContinue registration with this existing ID?`);
-            if (!proceed) {
-                showLoading(false);
-                submitBtn.disabled = false;
-                submitBtn.innerHTML = originalBtnText;
-                return;
-            }
+        // 1. Validate IC format first
+        if (!/^[0-9-]{8,20}$/.test(icValue)) {
+            throw new Error('Invalid IC format. Use numbers and hyphens only');
         }
 
-        // 2. Collect Form Data
+        // 2. Check IC existence (non-blocking)
+        const icCheck = await fetch(`${CONFIG.GAS_URL}?action=checkIcExists&ic=${encodeURIComponent(icValue)}`)
+            .then(res => res.json())
+            .catch(() => ({ exists: false }));
+
+        // 3. Collect all form data
         const formData = {
             action: 'registerUser',
             icNumber: icValue,
@@ -771,16 +769,18 @@ async function handleRegistration(e) {
             fullName: document.getElementById('fullName').value.trim(),
             address: document.getElementById('address').value.trim(),
             postcode: document.getElementById('postcode').value.trim(),
-            phone: document.getElementById('phone').value.replace(/\D/g, ''), // Clean phone number
+            phone: document.getElementById('phone').value.replace(/\D/g, ''),
             frontIC: await fileToBase64(document.getElementById('frontIC').files[0]),
             backIC: await fileToBase64(document.getElementById('backIC').files[0]),
             frontICType: document.getElementById('frontIC').files[0].type,
             backICType: document.getElementById('backIC').files[0].type
         };
 
-        // 3. Submit Registration
+        // 4. Show submission progress
         submitBtn.innerHTML = '<div class="spinner"></div> Registering...';
-        const response = await fetch(CONFIG.GAS_URL, {
+
+        // 5. Submit registration
+        const response = await fetch(CONFIG.PROXY_URL, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/x-www-form-urlencoded',
@@ -788,24 +788,27 @@ async function handleRegistration(e) {
             body: `data=${encodeURIComponent(JSON.stringify(formData))}`
         });
 
-        if (!response.ok) throw new Error('Registration failed');
+        if (!response.ok) throw new Error('Server response error');
         const result = await response.json();
 
-        // 4. Handle Response
+        // 6. Handle response
         if (result.success) {
-            showSuccessModal(result.userId);
+            showSuccessMessage(result.userId);
+            logRegistrationSuccess(icValue, result.userId);
             form.reset();
         } else {
-            throw new Error(result.message || 'Unknown error occurred');
+            throw new Error(result.message || 'Registration failed');
         }
 
     } catch (error) {
         console.error('Registration Error:', error);
-        showError(`Registration failed: ${error.message}`);
+        showError(error.message);
+        trackError(error);
     } finally {
-        showLoading(false);
+        // Reset UI state
         submitBtn.disabled = false;
         submitBtn.innerHTML = originalBtnText;
+        document.getElementById('icValidation').textContent = '';
     }
 }
 
@@ -819,20 +822,30 @@ async function checkIcExists(icNumber) {
 }
 
 // Supporting functions
-function showSuccessModal(userId) {
-    const modal = document.getElementById('successModal');
-    const userIdSpan = modal.querySelector('#registeredUserId');
-    userIdSpan.textContent = userId;
-    modal.style.display = 'block';
+function showSuccessMessage(userId) {
+    const message = `Registration successful!<br>Your User ID: <strong>${userId}</strong>`;
+    const successDiv = document.getElementById('successMessage');
+    successDiv.innerHTML = message;
+    successDiv.style.display = 'block';
+    setTimeout(() => successDiv.style.display = 'none', 5000);
 }
 
-async function fileToBase64(file) {
-    return new Promise((resolve, reject) => {
+function fileToBase64(file) {
+    return new Promise((resolve) => {
         const reader = new FileReader();
         reader.onload = () => resolve(reader.result.split(',')[1]);
-        reader.onerror = error => reject(error);
         reader.readAsDataURL(file);
     });
+}
+
+function logRegistrationSuccess(icNumber, userId) {
+    console.log(`New registration - IC: ${icNumber}, UserID: ${userId}`);
+    // Add analytics tracking here
+}
+
+function trackError(error) {
+    console.error('Error tracked:', error);
+    // Add error logging to backend
 }
 
 // ================= PASSWORD MANAGEMENT =================
