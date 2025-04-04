@@ -1,12 +1,13 @@
 //scripts/app.js
 // ================= CONFIGURATION =================
 const CONFIG = {
-  GAS_URL: 'https://script.google.com/macros/s/AKfycbwmrQO2kha0bG9BhhA08b4s0B2nx1pHcrjbVxe6vbk4Co1F9GTEDJY-_kV_ru9V19k_-Q/exec',
+  GAS_URL: 'https://script.google.com/macros/s/AKfycbxsWPs9QO-howr37UpYHRewTXyukjG9bgfO61VfStQayrmwVrG256pnbHjnDzdVDBXkKg/exec',
   PROXY_URL: 'https://script.google.com/macros/s/AKfycbw3cdvA0BGdhQLVliVUzO5sdP4cGlNrY3jU4-URN0DJdQesji8sHaQ5d2MoOGgIXBrW/exec',
   SESSION_TIMEOUT: 3600,
   MAX_FILE_SIZE: 5 * 1024 * 1024,
   ALLOWED_FILE_TYPES: ['image/jpeg', 'image/png', 'application/pdf'],
-  MAX_FILES: 3
+  MAX_FILES: 3,
+  IC_CHECK_DELAY: 500 // 0.5 second debounce
 };
 
 // ================= VIEWPORT MANAGEMENT =================
@@ -737,60 +738,92 @@ async function handleLogin() {
 }
 
 // ================= REGISTRATION HANDLER ================= 
-async function handleRegistration() {
-  try {
-    const btn = document.querySelector('button[type="submit"]');
-    const originalText = btn.innerHTML;
-    btn.disabled = true;
-    btn.innerHTML = '<div class="loader"></div> Processing...';
+async function handleRegistration(e) {
+    e.preventDefault();
+    const form = e.target;
+    const icValue = document.getElementById('icNumber').value.trim();
+    const submitBtn = form.querySelector('button[type="submit"]');
+    const originalBtnText = submitBtn.innerHTML;
 
-    // === NEW VALIDATION CHECK ===
-    const phoneValidation = document.getElementById('phoneValidation');
-    if (phoneValidation.classList.contains('invalid')) {
-      showError('Phone number already exists in system');
-      btn.disabled = false;
-      btn.innerHTML = originalText;
-      return;
+    try {
+        showLoading(true);
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<div class="spinner"></div> Validating...';
+
+        // 1. IC Number Validation
+        const icCheck = await checkIcExists(icValue);
+        if (icCheck.exists) {
+            const proceed = confirm(`This IC number is associated with User ID: ${icCheck.userId}\nContinue registration with this existing ID?`);
+            if (!proceed) {
+                showLoading(false);
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = originalBtnText;
+                return;
+            }
+        }
+
+        // 2. Collect Form Data
+        const formData = {
+            action: 'registerUser',
+            icNumber: icValue,
+            password: document.getElementById('password').value,
+            email: document.getElementById('email').value.toLowerCase().trim(),
+            fullName: document.getElementById('fullName').value.trim(),
+            address: document.getElementById('address').value.trim(),
+            postcode: document.getElementById('postcode').value.trim(),
+            phone: document.getElementById('phone').value.replace(/\D/g, ''), // Clean phone number
+            frontIC: await fileToBase64(document.getElementById('frontIC').files[0]),
+            backIC: await fileToBase64(document.getElementById('backIC').files[0]),
+            frontICType: document.getElementById('frontIC').files[0].type,
+            backICType: document.getElementById('backIC').files[0].type
+        };
+
+        // 3. Submit Registration
+        submitBtn.innerHTML = '<div class="spinner"></div> Registering...';
+        const response = await fetch(CONFIG.GAS_URL, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: `data=${encodeURIComponent(JSON.stringify(formData))}`
+        });
+
+        if (!response.ok) throw new Error('Registration failed');
+        const result = await response.json();
+
+        // 4. Handle Response
+        if (result.success) {
+            showSuccessModal(result.userId);
+            form.reset();
+        } else {
+            throw new Error(result.message || 'Unknown error occurred');
+        }
+
+    } catch (error) {
+        console.error('Registration Error:', error);
+        showError(`Registration failed: ${error.message}`);
+    } finally {
+        showLoading(false);
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = originalBtnText;
     }
-    // === END NEW CODE ===
+}
 
-    // Your existing registration logic
-    const formData = {
-      action: 'registerUser',
-      icNumber: document.getElementById('icNumber').value,
-      phone: document.getElementById('phone').value,
-      password: document.getElementById('password').value,
-      email: document.getElementById('email').value,
-      fullName: document.getElementById('fullName').value,
-      address: document.getElementById('address').value,
-      postcode: document.getElementById('postcode').value
-    };
+// Supporting functions
+function showSuccessModal(userId) {
+    const modal = document.getElementById('successModal');
+    const userIdSpan = modal.querySelector('#registeredUserId');
+    userIdSpan.textContent = userId;
+    modal.style.display = 'block';
+}
 
-    // Process files and submit (existing code)
-    const frontIC = document.getElementById('frontIC').files[0];
-    const backIC = document.getElementById('backIC').files[0];
-
-    const result = await callAPI('registerUser', {
-      data: formData,
-      files: [
-        await processFile(frontIC),
-        await processFile(backIC)
-      ]
+async function fileToBase64(file) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result.split(',')[1]);
+        reader.onerror = error => reject(error);
+        reader.readAsDataURL(file);
     });
-
-    if (result.success) {
-      showSuccessMessage();
-      setTimeout(() => safeRedirect('login.html'), 2000);
-    } else {
-      showError(result.message);
-    }
-  } catch (error) {
-    showError('Registration failed: ' + error.message);
-  } finally {
-    const btn = document.querySelector('button[type="submit"]');
-    btn.disabled = false;
-    btn.innerHTML = 'Register Now';
-  }
 }
 
 // ================= PASSWORD MANAGEMENT =================
