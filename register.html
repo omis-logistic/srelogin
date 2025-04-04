@@ -293,7 +293,7 @@
 
     <script>
 const CONFIG = window.CONFIG || {
-  GAS_URL: 'https://script.google.com/macros/s/AKfycbx1ZjXjt4NP070YAVVeGOCQ-mjUHDtqaZWZouy80_8Xz2wHP15yZ5UG6xNoWcrSViOiHw/exec'
+  GAS_URL: 'https://script.google.com/macros/s/AKfycbyhOrekY_i7WEuCXF9A_x7CugfuNZkMeWtad6VhPVSg5VztgofHQq7NfADck-Ww4-Ryjg/exec'
 };
         // Real-time Validations
         document.getElementById('registrationForm').action = CONFIG.GAS_URL;
@@ -653,35 +653,7 @@ function showError(text, targetId = 'message') {
         errorElement.style.display = 'block';
     }
 }
-
-document.addEventListener('DOMContentLoaded', () => {
-    const icInput = document.getElementById('icNumber');
-    const icValidation = document.getElementById('icValidation');
-
-    // Real-time IC validation
-    icInput.addEventListener('input', async (e) => {
-        const icNumber = e.target.value.trim();
-        icValidation.textContent = 'Checking IC...';
         
-        try {
-            const response = await fetch(`${CONFIG.GAS_URL}?action=checkIcExists&ic=${encodeURIComponent(icNumber)}&callback=checkIcCallback`);
-        } catch (error) {
-            icValidation.textContent = 'Validation service unavailable';
-        }
-    });
-});
-
-// Add global callback
-function checkIcCallback(response) {
-    const icValidation = document.getElementById('icValidation');
-    if (response.exists) {
-        icValidation.textContent = '✓ Existing user ID will be used';
-        icValidation.className = 'validation-message valid';
-    } else {
-        icValidation.textContent = 'New user ID will be generated';
-        icValidation.className = 'validation-message info';
-    }
-}
     </script>
 </body>
 </html>
