@@ -1,7 +1,7 @@
 //scripts/app.js
 // ================= CONFIGURATION =================
 const CONFIG = {
-  GAS_URL: 'https://script.google.com/macros/s/AKfycbxoiVLwxJPYqCIbca79wTk2fpm04c6ucwfCC8VoHRz4VjQgDR7wTAkvxWBbhJkgoZiFRg/exec',
+  GAS_URL: 'https://script.google.com/macros/s/AKfycbw27947UM7Bzo9XiH_tHt9NYCSNkTpv7nYaTfmGXJmCsqWqKyIDIhDxcyAjslMeTkdakg/exec',
   PROXY_URL: 'https://script.google.com/macros/s/AKfycbw3cdvA0BGdhQLVliVUzO5sdP4cGlNrY3jU4-URN0DJdQesji8sHaQ5d2MoOGgIXBrW/exec',
   SESSION_TIMEOUT: 3600,
   MAX_FILE_SIZE: 5 * 1024 * 1024,
@@ -737,59 +737,96 @@ async function handleLogin() {
 }
 
 // ================= REGISTRATION HANDLER ================= 
-async function handleRegistration() {
+async function handleRegistration(e) {
+  e.preventDefault();
+  const form = e.target;
+  showLoading(true);
+
   try {
-    const btn = document.querySelector('button[type="submit"]');
-    const originalText = btn.innerHTML;
-    btn.disabled = true;
-    btn.innerHTML = '<div class="loader"></div> Processing...';
-
-    // === NEW VALIDATION CHECK ===
-    const phoneValidation = document.getElementById('phoneValidation');
-    if (phoneValidation.classList.contains('invalid')) {
-      showError('Phone number already exists in system');
-      btn.disabled = false;
-      btn.innerHTML = originalText;
-      return;
-    }
-    // === END NEW CODE ===
-
-    // Your existing registration logic
+    // 1. Collect all form data
     const formData = {
-      action: 'registerUser',
-      icNumber: document.getElementById('icNumber').value,
-      phone: document.getElementById('phone').value,
+      icNumber: document.getElementById('icNumber').value.trim(),
+      phone: document.getElementById('phone').value.replace(/\D/g, ''),
       password: document.getElementById('password').value,
-      email: document.getElementById('email').value,
-      fullName: document.getElementById('fullName').value,
-      address: document.getElementById('address').value,
-      postcode: document.getElementById('postcode').value
+      email: document.getElementById('email').value.toLowerCase().trim(),
+      fullName: document.getElementById('fullName').value.trim(),
+      address: document.getElementById('address').value.trim(),
+      postcode: document.getElementById('postcode').value.trim(),
     };
 
-    // Process files and submit (existing code)
-    const frontIC = document.getElementById('frontIC').files[0];
-    const backIC = document.getElementById('backIC').files[0];
+    // 2. Validate all fields
+    if (!validateICNumber(document.getElementById('icNumber'))) {
+      throw new Error('Invalid IC number format');
+    }
+    if (!validatePhone(document.getElementById('phone'))) {
+      throw new Error('Invalid phone number format');
+    }
+    if (!validatePassword(document.getElementById('password'))) {
+      throw new Error('Password must contain 6+ characters with 1 uppercase and 1 number');
+    }
+    if (!validateEmail(document.getElementById('email'))) {
+      throw new Error('Invalid email address');
+    }
 
-    const result = await callAPI('registerUser', {
-      data: formData,
-      files: [
-        await processFile(frontIC),
-        await processFile(backIC)
-      ]
+    // 3. Process files with error handling
+    const frontICFile = document.getElementById('frontIC').files[0];
+    const backICFile = document.getElementById('backIC').files[0];
+    
+    if (!frontICFile || !backICFile) {
+      throw new Error('Both IC documents are required');
+    }
+
+    const [frontIC, backIC] = await Promise.all([
+      fileToBase64(frontICFile),
+      fileToBase64(backICFile)
+    ]);
+
+    // 4. Prepare multipart form data
+    const formPayload = new FormData();
+    formPayload.append('data', JSON.stringify({
+      action: 'registerUser',
+      ...formData
+    }));
+    formPayload.append('frontIC', new Blob([frontIC.data], { type: frontIC.type }), 'frontIC.jpg');
+    formPayload.append('backIC', new Blob([backIC.data], { type: backIC.type }), 'backIC.jpg');
+
+    // 5. Submit to backend
+    const response = await fetch(CONFIG.GAS_URL, {
+      method: 'POST',
+      body: formPayload,
+      headers: {
+        'X-Requested-With': 'XMLHttpRequest'
+      }
     });
 
-    if (result.success) {
-      showSuccessMessage();
-      setTimeout(() => safeRedirect('login.html'), 2000);
-    } else {
-      showError(result.message);
+    // 6. Handle response
+    const result = await response.json();
+    
+    if (!response.ok || !result.success) {
+      throw new Error(result.message || 'Registration failed');
     }
+
+    // 7. Show success and redirect
+    showSuccessMessage('Registration successful! Redirecting...');
+    setTimeout(() => {
+      window.location.href = 'login.html?newuser=true';
+    }, 2000);
+
   } catch (error) {
-    showError('Registration failed: ' + error.message);
+    // 8. Error handling
+    console.error('Registration Error:', error);
+    showError(error.message);
+    if (error.message.includes('IC already registered')) {
+      document.getElementById('icNumber').focus();
+    }
+    if (error.message.includes('Phone already registered')) {
+      document.getElementById('phone').focus();
+    }
   } finally {
-    const btn = document.querySelector('button[type="submit"]');
-    btn.disabled = false;
-    btn.innerHTML = 'Register Now';
+    // 9. Cleanup
+    showLoading(false);
+    form.reset();
+    document.getElementById('phone').dispatchEvent(new Event('input'));
   }
 }
 
@@ -900,6 +937,13 @@ function validateRegistrationForm() {
     isValid = false;
   }
 
+  return isValid;
+}
+
+function validateICNumber(input) {
+  const value = input.value.trim();
+  const isValid = /^(\d{2}-?\d{4}-?\d{4}|\d{6}-\d{2}-\d{4})$/.test(value);
+  showError(isValid ? '' : 'Invalid IC format (XX-XXXXXX or XXXXXX-XX-XXXX)', 'icError');
   return isValid;
 }
 
