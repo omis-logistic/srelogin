@@ -180,7 +180,7 @@
 <body>
     <div class="container">
         <h2>User Registration</h2>
-        <form id="registrationForm" method="POST" enctype="application/x-www-form-urlencoded">
+        <form id="registrationForm" onsubmit="handleRegistration(event)">
             
             <!-- Phone Number -->
             <div class="form-group">
@@ -240,16 +240,12 @@
 
             <!-- IC Number -->
             <div class="form-group">
-                <label for="icNumber">IC Number:</label>
-                <input type="text" 
-                       id="icNumber" 
-                       class="ic-input"
-                       placeholder="XX-XXXXXX or XXXXXX-XX-XXXX"
-                       pattern="\d{2}-\d{6}|\d{6}-\d{2}-\d{4}"
-                       title="Format: XX-XXXXXX or XXXXXX-XX-XXXX"
-                       required>
-                <span class="validation-message" id="icValidation"></span>
-            </div>
+  <label for="icNumber">IC Number:</label>
+  <input type="text" id="icNumber" required
+         pattern="\d{2}-?\d{4}-?\d{4}|\d{6}-\d{2}-\d{4}"
+         title="XX-XXXXXX or XXXXXX-XX-XXXX">
+  <span class="validation-message" id="icError"></span>
+</div>
 
             <!-- File Uploads -->
             <div class="form-group">
@@ -293,7 +289,7 @@
 
     <script>
 const CONFIG = window.CONFIG || {
-  GAS_URL: 'https://script.google.com/macros/s/AKfycbxoiVLwxJPYqCIbca79wTk2fpm04c6ucwfCC8VoHRz4VjQgDR7wTAkvxWBbhJkgoZiFRg/exec'
+  GAS_URL: 'https://script.google.com/macros/s/AKfycbw27947UM7Bzo9XiH_tHt9NYCSNkTpv7nYaTfmGXJmCsqWqKyIDIhDxcyAjslMeTkdakg/exec'
 };
         // Real-time Validations
         document.getElementById('registrationForm').action = CONFIG.GAS_URL;
