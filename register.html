@@ -242,8 +242,12 @@
             <div class="form-group">
   <label for="icNumber">IC Number:</label>
   <input type="text" id="icNumber" required
-         pattern="\d{2}-?\d{4}-?\d{4}|\d{6}-\d{2}-\d{4}"
-         title="XX-XXXXXX or XXXXXX-XX-XXXX">
+         pattern="(\d{2}-?\d{6})|(\d{6}-?\d{2}-?\d{4})|(\d{12})|(\d{2}-?\d{4}-?\d{4,6})"
+       title="Acceptable formats: 
+              • 00-123456 
+              • 001234-56-7890 
+              • 001234567890 
+              • 00-1234-567890">
   <span class="validation-message" id="icError"></span>
 </div>
 
@@ -289,7 +293,7 @@
 
     <script>
 const CONFIG = window.CONFIG || {
-  GAS_URL: 'https://script.google.com/macros/s/AKfycbw27947UM7Bzo9XiH_tHt9NYCSNkTpv7nYaTfmGXJmCsqWqKyIDIhDxcyAjslMeTkdakg/exec'
+  GAS_URL: 'https://script.google.com/macros/s/AKfycbwBepubPlOg1Vik2ueThnIaFpP6RO0WolZAHQy4Zlc4ysy7MUPC-ZenoHgF-ZVgZimeaw/exec'
 };
         // Real-time Validations
         document.getElementById('registrationForm').action = CONFIG.GAS_URL;
