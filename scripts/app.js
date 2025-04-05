@@ -1,7 +1,7 @@
 //scripts/app.js
 // ================= CONFIGURATION =================
 const CONFIG = {
-  GAS_URL: 'https://script.google.com/macros/s/AKfycbw27947UM7Bzo9XiH_tHt9NYCSNkTpv7nYaTfmGXJmCsqWqKyIDIhDxcyAjslMeTkdakg/exec',
+  GAS_URL: 'https://script.google.com/macros/s/AKfycbwBepubPlOg1Vik2ueThnIaFpP6RO0WolZAHQy4Zlc4ysy7MUPC-ZenoHgF-ZVgZimeaw/exec',
   PROXY_URL: 'https://script.google.com/macros/s/AKfycbw3cdvA0BGdhQLVliVUzO5sdP4cGlNrY3jU4-URN0DJdQesji8sHaQ5d2MoOGgIXBrW/exec',
   SESSION_TIMEOUT: 3600,
   MAX_FILE_SIZE: 5 * 1024 * 1024,
@@ -743,7 +743,19 @@ async function handleRegistration(e) {
   showLoading(true);
 
   try {
-    // 1. Collect all form data
+    // Reset previous errors
+    document.getElementById('icNumber').classList.remove('invalid-input');
+
+    // 1. IC Number Handling
+    const icInput = document.getElementById('icNumber');
+    const rawIC = icInput.value.trim().replace(/-+/g, '-'); // Normalize hyphens
+    const cleanIC = rawIC.replace(/-/g, ''); // Full normalization for validation
+
+    // Validate IC format
+    if (!/^\d{2}-?\d{6}$|^\d{6}-?\d{2}-?\d{4}$|^\d{12}$|^\d{2}-?\d{4}-?\d{4,6}$/.test(rawIC)) {
+      throw new Error('Invalid IC format. Valid examples: 00-123456, 001234-56-7890');
+    }
+    // 2. Prepare form data with normalized IC
     const formData = {
       icNumber: document.getElementById('icNumber').value.trim(),
       phone: document.getElementById('phone').value.replace(/\D/g, ''),
@@ -754,21 +766,7 @@ async function handleRegistration(e) {
       postcode: document.getElementById('postcode').value.trim(),
     };
 
-    // 2. Validate all fields
-    if (!validateICNumber(document.getElementById('icNumber'))) {
-      throw new Error('Invalid IC number format');
-    }
-    if (!validatePhone(document.getElementById('phone'))) {
-      throw new Error('Invalid phone number format');
-    }
-    if (!validatePassword(document.getElementById('password'))) {
-      throw new Error('Password must contain 6+ characters with 1 uppercase and 1 number');
-    }
-    if (!validateEmail(document.getElementById('email'))) {
-      throw new Error('Invalid email address');
-    }
-
-    // 3. Process files with error handling
+    // 3. File handling (existing code)
     const frontICFile = document.getElementById('frontIC').files[0];
     const backICFile = document.getElementById('backIC').files[0];
     
@@ -776,56 +774,50 @@ async function handleRegistration(e) {
       throw new Error('Both IC documents are required');
     }
 
+    // 4. Submit to backend (existing code)
     const [frontIC, backIC] = await Promise.all([
       fileToBase64(frontICFile),
       fileToBase64(backICFile)
     ]);
 
-    // 4. Prepare multipart form data
-    const formPayload = new FormData();
-    formPayload.append('data', JSON.stringify({
-      action: 'registerUser',
-      ...formData
-    }));
-    formPayload.append('frontIC', new Blob([frontIC.data], { type: frontIC.type }), 'frontIC.jpg');
-    formPayload.append('backIC', new Blob([backIC.data], { type: backIC.type }), 'backIC.jpg');
-
-    // 5. Submit to backend
     const response = await fetch(CONFIG.GAS_URL, {
       method: 'POST',
-      body: formPayload,
-      headers: {
-        'X-Requested-With': 'XMLHttpRequest'
-      }
+      body: new URLSearchParams({
+        data: JSON.stringify({
+          action: 'registerUser',
+          ...formData
+        }),
+        frontIC: frontIC.data,
+        frontICType: frontIC.type,
+        backIC: backIC.data,
+        backICType: backIC.type
+      })
     });
 
-    // 6. Handle response
+    // 5. Handle response (existing code)
     const result = await response.json();
     
     if (!response.ok || !result.success) {
       throw new Error(result.message || 'Registration failed');
     }
 
-    // 7. Show success and redirect
-    showSuccessMessage('Registration successful! Redirecting...');
-    setTimeout(() => {
-      window.location.href = 'login.html?newuser=true';
-    }, 2000);
-
+    showSuccessMessage('Registration successful!');
+    
   } catch (error) {
-    // 8. Error handling
+    // 6. Error handling
     console.error('Registration Error:', error);
+    
+    // Highlight IC field specifically
+    if (error.message.includes('IC')) {
+      document.getElementById('icNumber').classList.add('invalid-input');
+      icInput.focus();
+    }
+    
     showError(error.message);
-    if (error.message.includes('IC already registered')) {
-      document.getElementById('icNumber').focus();
-    }
-    if (error.message.includes('Phone already registered')) {
-      document.getElementById('phone').focus();
-    }
+    
   } finally {
-    // 9. Cleanup
+    // 7. Cleanup
     showLoading(false);
-    form.reset();
     document.getElementById('phone').dispatchEvent(new Event('input'));
   }
 }
@@ -942,8 +934,9 @@ function validateRegistrationForm() {
 
 function validateICNumber(input) {
   const value = input.value.trim();
-  const isValid = /^(\d{2}-?\d{4}-?\d{4}|\d{6}-\d{2}-\d{4})$/.test(value);
-  showError(isValid ? '' : 'Invalid IC format (XX-XXXXXX or XXXXXX-XX-XXXX)', 'icError');
+  // Allow any hyphen placement as long as numbers are correct
+  const isValid = /^(?:\d{2}-?\d{6}|\d{6}-?\d{2}-?\d{4}|\d{12}|\d{2}-?\d{4}-?\d{4,6})$/.test(value);
+  showError(isValid ? '' : 'Valid formats: XX-XXXXXX, XXXXXX-XX-XXXX, or 12 digits', 'icError');
   return isValid;
 }
 
@@ -1035,6 +1028,9 @@ document.addEventListener('DOMContentLoaded', () => {
   // Existing initialization
   detectViewMode();
   initValidationListeners();
+    document.getElementById('icNumber')?.addEventListener('input', function(e) {
+    validateICNumber(e.target);
+  });
   createLoaderElement();
   checkCategoryRequirements();
 
