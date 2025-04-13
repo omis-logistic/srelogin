@@ -743,21 +743,17 @@ async function handleRegistration(e) {
     showLoading(true);
 
     try {
-        // Reset previous errors
+        // Reset errors
         document.getElementById('icNumber').classList.remove('invalid-input');
 
-        // 1. IC Number Handling
-        const icInput = document.getElementById('icNumber');
-        const rawIC = icInput.value.trim().replace(/-+/g, '-');
-        const cleanIC = rawIC.replace(/-/g, '');
-
-        // Validate IC format
+        // 1. Validate IC format
+        const rawIC = document.getElementById('icNumber').value.trim();
         if (!/^\d{2}-?\d{6}$|^\d{6}-?\d{2}-?\d{4}$|^\d{12}$|^\d{2}-?\d{4}-?\d{4,6}$/.test(rawIC)) {
-            throw new Error('Invalid IC format. Valid examples: 00-123456, 001234-56-7890');
+            throw new Error('Invalid IC format');
         }
 
-        // 2. Prepare form data WITHOUT FILES
-        const formData = {
+        // 2. Prepare clean data payload
+        const payload = {
             action: 'registerUser',
             icNumber: rawIC,
             phone: document.getElementById('phone').value.replace(/\D/g, ''),
@@ -765,41 +761,31 @@ async function handleRegistration(e) {
             email: document.getElementById('email').value.toLowerCase().trim(),
             fullName: document.getElementById('fullName').value.trim(),
             address: document.getElementById('address').value.trim(),
-            postcode: document.getElementById('postcode').value.trim(),
-            // Removed file-related fields
+            postcode: document.getElementById('postcode').value.trim()
         };
 
         // 3. Submit to backend
         const response = await fetch(CONFIG.GAS_URL, {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/x-www-form-urlencoded',
-            },
-            body: `data=${encodeURIComponent(JSON.stringify(formData))}`
+            headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+            body: `data=${encodeURIComponent(JSON.stringify(payload))}`
         });
 
         // 4. Handle response
-        const result = await response.json();
-        if (!response.ok || !result.success) {
-            throw new Error(result.message || 'Registration failed');
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.message || 'Registration failed');
         }
 
-        // 5. Show success UI
-        showSuccessMessage('Registration successful!');
-        
+        // 5. Show success
+        document.getElementById('successModal').style.display = 'block';
+        setTimeout(() => window.location.href = 'login.html', 3000);
+
     } catch (error) {
         console.error('Registration Error:', error);
-        
-        if (error.message.includes('IC')) {
-            document.getElementById('icNumber').classList.add('invalid-input');
-            icInput.focus();
-        }
-        
         showError(error.message);
-        
     } finally {
         showLoading(false);
-        document.getElementById('phone').dispatchEvent(new Event('input'));
     }
 }
 
