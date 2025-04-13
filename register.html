@@ -492,29 +492,7 @@ function checkPhoneExistence(phone) {
     return validations.every(validation => validation === true);
 }
 
-        function validateFiles() {
-            const frontIC = document.getElementById('frontIC').files[0];
-            const backIC = document.getElementById('backIC').files[0];
-            const validation = document.getElementById('fileValidation');
-            const validTypes = ['image/jpeg', 'image/png', 'application/pdf'];
-            
-            if (!frontIC || !backIC) {
-                validation.textContent = "Both IC documents are required";
-                validation.className = 'validation-message invalid';
-                return false;
-            }
-
-            if (!validTypes.includes(frontIC.type) || !validTypes.includes(backIC.type)) {
-                validation.textContent = "Only JPG, PNG, or PDF files allowed";
-                validation.className = 'validation-message invalid';
-                return false;
-            }
-
-            validation.textContent = "✓ Valid files selected";
-            validation.className = 'validation-message valid';
-            return true;
-        }
-
+        
 // Complete Form Submission Handler
 document.getElementById('registrationForm').addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -547,11 +525,8 @@ document.getElementById('registrationForm').addEventListener('submit', async (e)
             email: document.getElementById('email').value.toLowerCase().trim(),
             fullName: document.getElementById('fullName').value.trim(),
             address: document.getElementById('address').value.trim(),
-            postcode: document.getElementById('postcode').value.trim(),
-            frontIC: await fileToBase64(document.getElementById('frontIC').files[0]),
-            backIC: await fileToBase64(document.getElementById('backIC').files[0]),
-            frontICType: document.getElementById('frontIC').files[0].type,
-            backICType: document.getElementById('backIC').files[0].type
+            postcode: document.getElementById('postcode').value.trim()
+
         };
 
         // Submit to backend
