@@ -756,7 +756,7 @@ async function handleRegistration(e) {
             throw new Error('Invalid IC format. Valid examples: 00-123456, 001234-56-7890');
         }
 
-        // 2. Prepare form data
+        // 2. Prepare form data WITHOUT FILES
         const formData = {
             action: 'registerUser',
             icNumber: rawIC,
@@ -765,7 +765,8 @@ async function handleRegistration(e) {
             email: document.getElementById('email').value.toLowerCase().trim(),
             fullName: document.getElementById('fullName').value.trim(),
             address: document.getElementById('address').value.trim(),
-            postcode: document.getElementById('postcode').value.trim()
+            postcode: document.getElementById('postcode').value.trim(),
+            // Removed file-related fields
         };
 
         // 3. Submit to backend
@@ -778,19 +779,17 @@ async function handleRegistration(e) {
         });
 
         // 4. Handle response
-        if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.message || 'Registration failed');
+        const result = await response.json();
+        if (!response.ok || !result.success) {
+            throw new Error(result.message || 'Registration failed');
         }
 
         // 5. Show success UI
         showSuccessMessage('Registration successful!');
-        document.getElementById('successModal').style.display = 'block';
-
+        
     } catch (error) {
         console.error('Registration Error:', error);
         
-        // Highlight IC field specifically
         if (error.message.includes('IC')) {
             document.getElementById('icNumber').classList.add('invalid-input');
             icInput.focus();
@@ -799,7 +798,6 @@ async function handleRegistration(e) {
         showError(error.message);
         
     } finally {
-        // 6. Cleanup
         showLoading(false);
         document.getElementById('phone').dispatchEvent(new Event('input'));
     }
