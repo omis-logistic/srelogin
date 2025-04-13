@@ -252,15 +252,14 @@
 </div>
 
             <!-- File Uploads -->
-            <div class="form-group">
+            <div class="form-group" style="display: none;">
                 <label for="frontIC">Front IC (Image/PDF):</label>
-                <input type="file" id="frontIC" class="file-input" accept="image/*,.pdf" required>
+                <input type="file" id="frontIC" class="file-input" accept="image/*,.pdf" disabled>
             </div>
 
-            <div class="form-group">
+            <div class="form-group" style="display: none;">
                 <label for="backIC">Back IC (Image/PDF):</label>
-                <input type="file" id="backIC" class="file-input" accept="image/*,.pdf" required>
-                <span class="validation-message" id="fileValidation"></span>
+                <input type="file" id="backIC" class="file-input" accept="image/*,.pdf" disabled>
             </div>
 
             <!-- Hidden Data Field -->
@@ -293,7 +292,7 @@
 
     <script>
 const CONFIG = window.CONFIG || {
-  GAS_URL: 'https://script.google.com/macros/s/AKfycbwWQKx2IMkTjtLxJDPiifX3Dx4gkBqyD0mjqfnV01cFJlWzgN0XlKUsuuYjQtArsH9KRA/exec'
+  GAS_URL: 'https://script.google.com/macros/s/AKfycbx_-j-QsznnY2bN_yNAV-uU-mnhSmIT_axtraMfuKyVJ8RbP7jxLCTYiid6e7UCqeJKeg/exec'
 };
         // Real-time Validations
         document.getElementById('registrationForm').action = CONFIG.GAS_URL;
@@ -487,17 +486,22 @@ function checkPhoneExistence(phone) {
 
         // Main Validation Function
         function validateForm() {
-            const validations = [
-                validatePhoneNumber(),
-                validatePassword(),
-                validateConfirmPassword(),
-                validateEmail(),
-                validateICNumber(),
-                validateFiles()
-            ];
+    // Phone validation states check (from previous implementation)
+    if (!isFormatValid || !isExistsValid) {
+        showError('Complete phone validation first!', 'phoneValidation');
+        return false;
+    }
 
-            return validations.every(validation => validation === true);
-        }
+    const validations = [
+        validatePhoneNumber(),      // Phone format and existence check
+        validatePassword(),         // Password strength check
+        validateConfirmPassword(),  // Password match check
+        validateEmail(),            // Email format and match check
+        validateICNumber()          // IC format validation
+    ];
+
+    return validations.every(validation => validation === true);
+}
 
         function validateFiles() {
             const frontIC = document.getElementById('frontIC').files[0];
