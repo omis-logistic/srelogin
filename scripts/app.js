@@ -1,7 +1,7 @@
 //scripts/app.js
 // ================= CONFIGURATION =================
 const CONFIG = {
-  GAS_URL: 'https://script.google.com/macros/s/AKfycbwWQKx2IMkTjtLxJDPiifX3Dx4gkBqyD0mjqfnV01cFJlWzgN0XlKUsuuYjQtArsH9KRA/exec',
+  GAS_URL: 'https://script.google.com/macros/s/AKfycbx_-j-QsznnY2bN_yNAV-uU-mnhSmIT_axtraMfuKyVJ8RbP7jxLCTYiid6e7UCqeJKeg/exec',
   PROXY_URL: 'https://script.google.com/macros/s/AKfycbw3cdvA0BGdhQLVliVUzO5sdP4cGlNrY3jU4-URN0DJdQesji8sHaQ5d2MoOGgIXBrW/exec',
   SESSION_TIMEOUT: 3600,
   MAX_FILE_SIZE: 5 * 1024 * 1024,
@@ -738,88 +738,71 @@ async function handleLogin() {
 
 // ================= REGISTRATION HANDLER ================= 
 async function handleRegistration(e) {
-  e.preventDefault();
-  const form = e.target;
-  showLoading(true);
+    e.preventDefault();
+    const form = e.target;
+    showLoading(true);
 
-  try {
-    // Reset previous errors
-    document.getElementById('icNumber').classList.remove('invalid-input');
+    try {
+        // Reset previous errors
+        document.getElementById('icNumber').classList.remove('invalid-input');
 
-    // 1. IC Number Handling
-    const icInput = document.getElementById('icNumber');
-    const rawIC = icInput.value.trim().replace(/-+/g, '-'); // Normalize hyphens
-    const cleanIC = rawIC.replace(/-/g, ''); // Full normalization for validation
+        // 1. IC Number Handling
+        const icInput = document.getElementById('icNumber');
+        const rawIC = icInput.value.trim().replace(/-+/g, '-');
+        const cleanIC = rawIC.replace(/-/g, '');
 
-    // Validate IC format
-    if (!/^\d{2}-?\d{6}$|^\d{6}-?\d{2}-?\d{4}$|^\d{12}$|^\d{2}-?\d{4}-?\d{4,6}$/.test(rawIC)) {
-      throw new Error('Invalid IC format. Valid examples: 00-123456, 001234-56-7890');
+        // Validate IC format
+        if (!/^\d{2}-?\d{6}$|^\d{6}-?\d{2}-?\d{4}$|^\d{12}$|^\d{2}-?\d{4}-?\d{4,6}$/.test(rawIC)) {
+            throw new Error('Invalid IC format. Valid examples: 00-123456, 001234-56-7890');
+        }
+
+        // 2. Prepare form data
+        const formData = {
+            action: 'registerUser',
+            icNumber: rawIC,
+            phone: document.getElementById('phone').value.replace(/\D/g, ''),
+            password: document.getElementById('password').value,
+            email: document.getElementById('email').value.toLowerCase().trim(),
+            fullName: document.getElementById('fullName').value.trim(),
+            address: document.getElementById('address').value.trim(),
+            postcode: document.getElementById('postcode').value.trim()
+        };
+
+        // 3. Submit to backend
+        const response = await fetch(CONFIG.GAS_URL, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: `data=${encodeURIComponent(JSON.stringify(formData))}`
+        });
+
+        // 4. Handle response
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.message || 'Registration failed');
+        }
+
+        // 5. Show success UI
+        showSuccessMessage('Registration successful!');
+        document.getElementById('successModal').style.display = 'block';
+
+    } catch (error) {
+        console.error('Registration Error:', error);
+        
+        // Highlight IC field specifically
+        if (error.message.includes('IC')) {
+            document.getElementById('icNumber').classList.add('invalid-input');
+            icInput.focus();
+        }
+        
+        showError(error.message);
+        
+    } finally {
+        // 6. Cleanup
+        showLoading(false);
+        document.getElementById('phone').dispatchEvent(new Event('input'));
     }
-    // 2. Prepare form data with normalized IC
-    const formData = {
-      icNumber: document.getElementById('icNumber').value.trim(),
-      phone: document.getElementById('phone').value.replace(/\D/g, ''),
-      password: document.getElementById('password').value,
-      email: document.getElementById('email').value.toLowerCase().trim(),
-      fullName: document.getElementById('fullName').value.trim(),
-      address: document.getElementById('address').value.trim(),
-      postcode: document.getElementById('postcode').value.trim(),
-    };
-
-    // 3. File handling (existing code)
-    const frontICFile = document.getElementById('frontIC').files[0];
-    const backICFile = document.getElementById('backIC').files[0];
-    
-    if (!frontICFile || !backICFile) {
-      throw new Error('Both IC documents are required');
-    }
-
-    // 4. Submit to backend (existing code)
-    const [frontIC, backIC] = await Promise.all([
-      fileToBase64(frontICFile),
-      fileToBase64(backICFile)
-    ]);
-
-    const response = await fetch(CONFIG.GAS_URL, {
-      method: 'POST',
-      body: new URLSearchParams({
-        data: JSON.stringify({
-          action: 'registerUser',
-          ...formData
-        }),
-        frontIC: frontIC.data,
-        frontICType: frontIC.type,
-        backIC: backIC.data,
-        backICType: backIC.type
-      })
-    });
-
-    // 5. Handle response (existing code)
-    const result = await response.json();
-    
-    if (!response.ok || !result.success) {
-      throw new Error(result.message || 'Registration failed');
-    }
-
-    showSuccessMessage('Registration successful!');
-    
-  } catch (error) {
-    // 6. Error handling
-    console.error('Registration Error:', error);
-    
-    // Highlight IC field specifically
-    if (error.message.includes('IC')) {
-      document.getElementById('icNumber').classList.add('invalid-input');
-      icInput.focus();
-    }
-    
-    showError(error.message);
-    
-  } finally {
-    // 7. Cleanup
-    showLoading(false);
-    document.getElementById('phone').dispatchEvent(new Event('input'));
-  }
 }
 
 // ================= PASSWORD MANAGEMENT =================
