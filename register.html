@@ -174,18 +174,12 @@
 .login-btn:hover {
     background: #357abd;
 }
-
-      #userIdInput {
-  text-transform: uppercase;
+      .hint {
+    display: block;
+    color: #888;
+    font-size: 0.85em;
+    margin-top: 5px;
 }
-
-.description {
-  display: block;
-  color: #888;
-  font-size: 0.85em;
-  margin-top: 5px;
-}
-      
     </style>
     <script src="app.js"></script>
 </head>
@@ -262,15 +256,13 @@
               • 00-1234-567890">
   <span class="validation-message" id="icError"></span>
 </div>
-
           <div class="form-group">
-  <label for="userIdInput">User ID (Optional):</label>
-  <input type="text" id="userIdInput" 
-         pattern="^(EXT\d{4}|S\d{4})$"
-         title="Format: EXT1234 or S0001"
-         placeholder="EXT1234 or S0001">
-  <small class="description">Input your User ID below if available, leave it blank if unsure</small>
+  <label for="userId">User ID (Optional):</label>
+  <input type="text" id="userId" 
+         pattern="^[A-Za-z0-9-]{3,20}$"
+         title="3-20 alphanumeric characters, hyphens allowed">
   <span class="validation-message" id="userIdValidation"></span>
+  <small class="hint">Input your User ID below if available, leave it blank if unsure</small>
 </div>
 
             <!-- Hidden Data Field -->
@@ -508,7 +500,8 @@ function checkPhoneExistence(phone) {
         validatePassword(),         // Password strength check
         validateConfirmPassword(),  // Password match check
         validateEmail(),            // Email format and match check
-        validateICNumber()          // IC format validation
+        validateICNumber(),         // IC format validation
+        validateUserId()
     ];
 
     return validations.every(validation => validation === true);
@@ -541,6 +534,7 @@ document.getElementById('registrationForm').addEventListener('submit', async (e)
         // Collect all form data
         const formData = {
             action: 'registerUser',
+            userId: document.getElementById('userId').value.trim().toUpperCase(),
             icNumber: document.getElementById('icNumber').value,
             phone: phoneInput.value,
             password: document.getElementById('password').value,
@@ -606,28 +600,7 @@ document.getElementById('registrationForm').addEventListener('submit', async (e)
     }
 });
 
-// Add to real-time validations
-document.getElementById('userIdInput').addEventListener('input', validateUserId);
 
-function validateUserId() {
-  const userIdInput = document.getElementById('userIdInput');
-  const validation = document.getElementById('userIdValidation');
-  const value = userIdInput.value.trim().toUpperCase();
-  
-  userIdInput.value = value.replace(/[^A-Z0-9]/g, ''); // Sanitize input
-  
-  if(value === '') {
-    validation.textContent = '';
-    validation.className = '';
-    return true;
-  }
-  
-  const isValid = /^(EXT\d{4}|S\d{4})$/.test(value);
-  validation.textContent = isValid ? '✓ Valid format' : 'Invalid format (EXT1234 or S0001)';
-  validation.className = isValid ? 'validation-message valid' : 'validation-message invalid';
-  
-  return isValid;
-}
 
 // Modal Control (Required for above)
 function showModal(modal) {
