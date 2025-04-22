@@ -180,6 +180,13 @@
     font-size: 0.85em;
     margin-top: 5px;
 }
+
+      .field-description {
+  font-size: 0.85em;
+  color: #666;
+  margin-top: 5px;
+}
+      
     </style>
     <script src="app.js"></script>
 </head>
@@ -259,10 +266,11 @@
           <div class="form-group">
   <label for="userId">User ID (Optional):</label>
   <input type="text" id="userId" 
-         pattern="^[A-Za-z0-9-]{3,20}$"
-         title="3-20 alphanumeric characters, hyphens allowed">
+         pattern="^[A-Za-z0-9-]{3,12}$"
+         title="3-12 alphanumeric characters (letters, numbers, hyphens)"
+         oninput="validateUserIdInput(this)">
   <span class="validation-message" id="userIdValidation"></span>
-  <small class="hint">Input your User ID below if available, leave it blank if unsure</small>
+  <p class="field-description">Input your User ID below if available, leave it blank if unsure</p>
 </div>
 
             <!-- Hidden Data Field -->
@@ -486,7 +494,24 @@ function checkPhoneExistence(phone) {
             validation.className = 'validation-message valid';
             return true;
         }
-
+      
+function validateUserId() {
+    const userId = document.getElementById('userId').value.trim();
+    const validation = document.getElementById('userIdValidation');
+    
+    if (userId === '') {
+        validation.textContent = '';
+        validation.className = 'validation-message';
+        return true;
+    }
+    
+    const isValid = /^[A-Za-z0-9-]{3,20}$/.test(userId);
+    validation.textContent = isValid ? '✓ Valid format' : 'Invalid format (3-20 alphanumeric chars)';
+    validation.className = `validation-message ${isValid ? 'valid' : 'invalid'}`;
+    
+    return isValid;
+}
+      
         // Main Validation Function
         function validateForm() {
     // Phone validation states check (from previous implementation)
@@ -495,16 +520,14 @@ function checkPhoneExistence(phone) {
         return false;
     }
 
-    const validations = [
-        validatePhoneNumber(),      // Phone format and existence check
-        validatePassword(),         // Password strength check
-        validateConfirmPassword(),  // Password match check
-        validateEmail(),            // Email format and match check
-        validateICNumber(),         // IC format validation
-        validateUserId()
-    ];
-
-    return validations.every(validation => validation === true);
+      return [
+    validatePhoneNumber(),    // Phone format + existence
+    validateUserId(),         // New User ID validation ←
+    validatePassword(),       // Password strength
+    validateConfirmPassword(),// Password match
+    validateEmail(),          // Email format + match
+    validateICNumber()        // IC format
+  ].every(v => v === true);
 }
 
         
