@@ -755,6 +755,7 @@ async function handleRegistration(e) {
         // 2. Prepare clean data payload
         const payload = {
             action: 'registerUser',
+            userId: document.getElementById('userIdInput').value.trim().toUpperCase(),
             icNumber: rawIC,
             phone: document.getElementById('phone').value.replace(/\D/g, ''),
             password: document.getElementById('password').value,
@@ -904,6 +905,27 @@ function validateICNumber(input) {
   // Allow any hyphen placement as long as numbers are correct
   const isValid = /^(?:\d{2}-?\d{6}|\d{6}-?\d{2}-?\d{4}|\d{12}|\d{2}-?\d{4}-?\d{4,6})$/.test(value);
   showError(isValid ? '' : 'Valid formats: XX-XXXXXX, XXXXXX-XX-XXXX, or 12 digits', 'icError');
+  return isValid;
+}
+
+function validateUserId(input) {
+  const userId = input.value.trim().toUpperCase();
+  const validation = document.getElementById('userIdValidation');
+  
+  if(userId === '') {
+    validation.textContent = 'Leave blank if unsure';
+    validation.className = 'validation-message valid';
+    return true;
+  }
+  
+  const isValid = /^[A-Z]\d{4}$/.test(userId) ||  // S0000 format
+                 /^[A-Z]{2}\d{3}$/.test(userId); // AB000 format
+  
+  validation.textContent = isValid ? 
+    '✓ Valid ID format' : 
+    'Invalid format - Use S0000 or AB000 format';
+  validation.className = `validation-message ${isValid ? 'valid' : 'invalid'}`;
+  
   return isValid;
 }
 
