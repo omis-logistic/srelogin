@@ -264,13 +264,13 @@
   <span class="validation-message" id="icError"></span>
 </div>
           <div class="form-group">
-  <label for="userId">User ID (Optional):</label>
-  <input type="text" id="userId" 
-         pattern="^[A-Za-z0-9-]{3,12}$"
-         title="3-12 alphanumeric characters (letters, numbers, hyphens)"
-         oninput="validateUserIdInput(this)">
-  <span class="validation-message" id="userIdValidation"></span>
-  <p class="field-description">Input your User ID below if available, leave it blank if unsure</p>
+            <label for="userIdInput">User ID (Optional):</label>
+            <input type="text" id="userIdInput" 
+                   pattern="^[A-Za-z]\d{4}$|^[A-Za-z]{2}\d{3}$"
+                   title="Format: S0000 or AB000">
+            <span class="validation-message" id="userIdValidation">
+              Enter your existing ID if you have one (Format: S0000 or AB000)
+            </span>
 </div>
 
             <!-- Hidden Data Field -->
