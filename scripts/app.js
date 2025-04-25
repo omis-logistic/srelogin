@@ -1,7 +1,7 @@
 //scripts/app.js
 // ================= CONFIGURATION =================
 const CONFIG = {
-  GAS_URL: 'https://script.google.com/macros/s/AKfycbyHGnrIA6xq2_OeosY0HshXJyuLKBOrN1NDwleExamEtRzONWJCxF9dN88Weh3tFU02ZA/exec',
+  GAS_URL: 'https://script.google.com/macros/s/AKfycbxVSPHCAKcbrnGBjjUr4RO5_MvGhPPd3bx8Fd7FLqADVlMlYkJlAy2zfjfSG6H4gvpn5Q/exec',
   PROXY_URL: 'https://script.google.com/macros/s/AKfycbw3cdvA0BGdhQLVliVUzO5sdP4cGlNrY3jU4-URN0DJdQesji8sHaQ5d2MoOGgIXBrW/exec',
   SESSION_TIMEOUT: 3600,
   MAX_FILE_SIZE: 5 * 1024 * 1024,
@@ -737,55 +737,68 @@ async function handleLogin() {
 }
 
 // ================= REGISTRATION HANDLER ================= 
-// Complete handleRegistration function with User ID additions
 async function handleRegistration(e) {
   e.preventDefault();
   const form = e.target;
-  const submitBtn = form.querySelector('button[type="submit"]');
-  const originalBtnText = submitBtn.innerHTML;
-  const userId = document.getElementById('userId').value.trim().toUpperCase();
-  
+  showLoading(true);
+  const messageDiv = document.getElementById('message');
+
   try {
-    // Show loading state
-    submitBtn.innerHTML = '<div class="button-loader"></div> Processing...';
-    submitBtn.disabled = true;
+    // Reset error states
+    messageDiv.textContent = '';
+    document.querySelectorAll('.validation-message').forEach(el => {
+      el.textContent = '';
+      el.className = 'validation-message';
+    });
 
-    // Validate User ID if provided
-    if (userId && !/^S\d{4}$/.test(userId)) {
-      throw new Error('Invalid User ID format (must be S followed by 4 digits)');
-    }
-
-    // Collect form data (maintain original fields + add userId)
+    // Collect form data
     const formData = {
-      action: 'registerUser',
-      userId: userId || null, // Send null if empty
+      // New User ID field
+      userId: document.getElementById('userId').value.trim().toUpperCase() || null,
+      
+      // Existing fields
       icNumber: document.getElementById('icNumber').value.trim(),
       phone: document.getElementById('phone').value.replace(/\D/g, ''),
       password: document.getElementById('password').value,
       email: document.getElementById('email').value.toLowerCase().trim(),
       fullName: document.getElementById('fullName').value.trim(),
       address: document.getElementById('address').value.trim(),
-      postcode: document.getElementById('postcode').value.trim()
+      postcode: document.getElementById('postcode').value.trim(),
+      
+      // Maintain hidden field for legacy compatibility
+      action: 'registerUser'
     };
 
-    // Validate core fields (original validation)
-    if (!validatePhoneNumber(document.getElementById('phone'))) {
-      throw new Error('Invalid phone number format');
+    // === VALIDATION CHECKS ===
+    // 1. Validate custom User ID format if provided
+    if(formData.userId && !/^S\d{4}$/.test(formData.userId)) {
+      throw new Error('Invalid User ID format - must be S followed by 4 digits (e.g. S0123)');
     }
 
-    if (!validatePasswordComplexity(formData.password)) {
-      throw new Error('Password must contain 6+ characters with 1 uppercase and 1 number');
+    // 2. Existing phone validation
+    const phoneRegex = /^(673\d{7}|60\d{9,10})$/;
+    if(!phoneRegex.test(formData.phone)) {
+      throw new Error('Invalid phone format');
     }
 
-    if (formData.password !== document.getElementById('confirmPassword').value) {
-      throw new Error('Passwords do not match');
+    // 3. Password validation
+    const passwordRegex = /^(?=.*[A-Z])(?=.*\d).{6,}$/;
+    if(!passwordRegex.test(formData.password)) {
+      throw new Error('Password requires 6+ characters with 1 uppercase and 1 number');
     }
 
-    if (formData.email !== document.getElementById('confirmEmail').value.toLowerCase().trim()) {
+    // 4. Email match validation
+    if(formData.email !== document.getElementById('confirmEmail').value.toLowerCase().trim()) {
       throw new Error('Email addresses do not match');
     }
 
-    // Submit to backend (original submission flow)
+    // 5. IC number validation
+    const icRegex = /^(\d{2}-?\d{6}|\d{6}-?\d{2}-?\d{4}|\d{12}|\d{2}-?\d{4}-?\d{4,6})$/;
+    if(!icRegex.test(formData.icNumber)) {
+      throw new Error('Invalid IC number format');
+    }
+
+    // Submit to backend
     const response = await fetch(CONFIG.GAS_URL, {
       method: 'POST',
       headers: {
@@ -794,42 +807,36 @@ async function handleRegistration(e) {
       body: `data=${encodeURIComponent(JSON.stringify(formData))}`
     });
 
-    // Handle response (original logic)
     if (!response.ok) {
       const errorData = await response.json();
       throw new Error(errorData.message || 'Registration failed');
     }
 
-    // Show success UI (original flow)
+    // Show success UI
     document.getElementById('successModal').style.display = 'block';
     form.reset();
 
-    // Auto-redirect after delay (original behavior)
+    // Auto-redirect after delay
     setTimeout(() => {
       window.location.href = 'login.html';
     }, 3000);
 
   } catch (error) {
-    // Original error handling with User ID enhancements
-    const errorMessage = error.message.includes('User ID') ? 
-      `User ID Error: ${error.message}` : 
-      error.message;
-
-    showError(errorMessage, 'message');
-    
-    // Special handling for User ID errors
-    if (error.message.includes('User ID')) {
-      document.getElementById('userId').classList.add('invalid-input');
-      setTimeout(() => {
-        document.getElementById('userId').classList.remove('invalid-input');
-      }, 2000);
+    console.error('Registration Error:', error);
+    showError(error.message, 'message');
+    if(error.message.includes('User ID')) {
+      document.getElementById('userId').classList.add('invalid');
+      document.getElementById('userIdValidation').textContent = error.message;
     }
-
   } finally {
-    // Restore UI state (original cleanup)
-    submitBtn.innerHTML = originalBtnText;
-    submitBtn.disabled = false;
-    document.getElementById('userId').value = userId; // Preserve casing
+    showLoading(false);
+    // Maintain existing analytics
+    if(typeof gtag !== 'undefined') {
+      gtag('event', 'registration_attempt', {
+        'event_category': 'engagement',
+        'event_label': formData.userId ? 'custom_id' : 'auto_id'
+      });
+    }
   }
 }
 
@@ -954,29 +961,29 @@ function validateICNumber(input) {
 document.getElementById('userId').addEventListener('input', validateUserId);
 
 function validateUserId() {
-  const userIdInput = document.getElementById('userId');
+  const input = document.getElementById('userId');
   const validation = document.getElementById('userIdValidation');
-  const value = userIdInput.value.trim().toUpperCase();
+  const value = input.value.trim().toUpperCase();
   
   if(value === '') {
     validation.textContent = '';
-    userIdInput.classList.remove('valid', 'invalid');
+    input.classList.remove('valid', 'invalid');
     return true;
   }
   
-  if(/^S\d{4}$/.test(value)) {
-    validation.textContent = '✓ Valid format';
-    validation.className = 'validation-message valid';
-    userIdInput.classList.add('valid');
-    userIdInput.classList.remove('invalid');
-    return true;
+  if(!/^S\d{4}$/.test(value)) {
+    validation.textContent = 'Invalid format (e.g. S0123)';
+    validation.className = 'validation-message invalid';
+    input.classList.add('invalid');
+    return false;
   }
   
-  validation.textContent = 'Invalid format (e.g. S0123)';
-  validation.className = 'validation-message invalid';
-  userIdInput.classList.add('invalid');
-  return false;
+  validation.textContent = '✓ Valid format';
+  validation.className = 'validation-message valid';
+  input.classList.add('valid');
+  return true;
 }
+
 // ================= UTILITIES =================
 function safeRedirect(path) {
   try {
