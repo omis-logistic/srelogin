@@ -630,7 +630,8 @@ function checkAllFields() {
     validatePrice(document.getElementById('price')),
     validateCollectionPoint(document.getElementById('collectionPoint')),
     validateCategory(document.getElementById('itemCategory')),
-    validateInvoiceFiles()
+    validateInvoiceFiles(),
+    validateUserId()
   ];
 
   return validations.every(v => v === true);
@@ -648,6 +649,15 @@ function updateSubmitButtonState() {
 
 // ================= FORM INITIALIZATION =================
 function initValidationListeners() {
+  const userIdInput = document.getElementById('userId');
+  if(userIdInput) {
+    userIdInput.addEventListener('input', function(e) {
+      e.target.value = e.target.value.toUpperCase();
+      validateUserId();
+      updateSubmitButtonState();
+    });
+  }
+  
   const parcelForm = document.getElementById('parcel-declaration-form');
   if (parcelForm) {
     const inputs = parcelForm.querySelectorAll('input, select');
@@ -905,6 +915,17 @@ function validateICNumber(input) {
   const isValid = /^(?:\d{2}-?\d{6}|\d{6}-?\d{2}-?\d{4}|\d{12}|\d{2}-?\d{4}-?\d{4,6})$/.test(value);
   showError(isValid ? '' : 'Valid formats: XX-XXXXXX, XXXXXX-XX-XXXX, or 12 digits', 'icError');
   return isValid;
+}
+
+function validateUserId() {
+    const userIdInput = document.getElementById('userId');
+    if(!userIdInput) return true; // Skip if no userId field
+    
+    const value = userIdInput.value.trim().toUpperCase();
+    const isValid = value === '' || /^S\d{4}$/.test(value);
+    
+    showError(isValid ? '' : 'Invalid format - must be S followed by 4 digits (e.g. S0123)', 'userIdValidation');
+    return isValid;
 }
 
 // ================= UTILITIES =================
