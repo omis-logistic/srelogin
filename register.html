@@ -174,19 +174,6 @@
 .login-btn:hover {
     background: #357abd;
 }
-      .hint {
-    display: block;
-    color: #888;
-    font-size: 0.85em;
-    margin-top: 5px;
-}
-
-      .field-description {
-  font-size: 0.85em;
-  color: #666;
-  margin-top: 5px;
-}
-      
     </style>
     <script src="app.js"></script>
 </head>
@@ -263,16 +250,19 @@
               • 00-1234-567890">
   <span class="validation-message" id="icError"></span>
 </div>
-          <div class="form-group">
-            <label for="userIdInput">User ID (Optional):</label>
-            <input type="text" id="userIdInput" 
-                   pattern="^[A-Za-z]\d{4}$|^[A-Za-z]{2}\d{3}$"
-                   title="Input your user ID here if available">
-            <small class="form-text text-muted">
-              Leave blank if unsure - we'll assign one automatically
-            </small>
-</div>
 
+          <!-- Optional User ID -->
+<div class="form-group">
+  <label for="userId">User ID (Optional):</label>
+  <input type="text" id="userId" 
+         pattern="^S\d{4}$"
+         title="Format: S followed by 4 digits (e.g. S0123)"
+         style="font-family: monospace;">
+  <span class="validation-message">
+    Leave blank if unsure - we'll assign one automatically
+  </span>
+</div>
+          
             <!-- Hidden Data Field -->
             <input type="hidden" id="jsonData" name="data" value="">
             
@@ -303,7 +293,7 @@
 
     <script>
 const CONFIG = window.CONFIG || {
-  GAS_URL: 'https://script.google.com/macros/s/AKfycbzd0Xf23qWXITJU7sMqQlVB31LHlWmGt6zT9483g1j3fuY3LjX2rRe0BdlMzmGN-c7mkw/exec'
+  GAS_URL: 'https://script.google.com/macros/s/AKfycbx_-j-QsznnY2bN_yNAV-uU-mnhSmIT_axtraMfuKyVJ8RbP7jxLCTYiid6e7UCqeJKeg/exec'
 };
         // Real-time Validations
         document.getElementById('registrationForm').action = CONFIG.GAS_URL;
@@ -494,24 +484,7 @@ function checkPhoneExistence(phone) {
             validation.className = 'validation-message valid';
             return true;
         }
-      
-function validateUserId() {
-    const userId = document.getElementById('userId').value.trim();
-    const validation = document.getElementById('userIdValidation');
-    
-    if (userId === '') {
-        validation.textContent = '';
-        validation.className = 'validation-message';
-        return true;
-    }
-    
-    const isValid = /^[A-Za-z0-9-]{3,20}$/.test(userId);
-    validation.textContent = isValid ? '✓ Valid format' : 'Invalid format (3-20 alphanumeric chars)';
-    validation.className = `validation-message ${isValid ? 'valid' : 'invalid'}`;
-    
-    return isValid;
-}
-      
+
         // Main Validation Function
         function validateForm() {
     // Phone validation states check (from previous implementation)
@@ -520,14 +493,15 @@ function validateUserId() {
         return false;
     }
 
-      return [
-    validatePhoneNumber(),    // Phone format + existence
-    validateUserId(),         // New User ID validation ←
-    validatePassword(),       // Password strength
-    validateConfirmPassword(),// Password match
-    validateEmail(),          // Email format + match
-    validateICNumber()        // IC format
-  ].every(v => v === true);
+    const validations = [
+        validatePhoneNumber(),      // Phone format and existence check
+        validatePassword(),         // Password strength check
+        validateConfirmPassword(),  // Password match check
+        validateEmail(),            // Email format and match check
+        validateICNumber()          // IC format validation
+    ];
+
+    return validations.every(validation => validation === true);
 }
 
         
@@ -557,7 +531,6 @@ document.getElementById('registrationForm').addEventListener('submit', async (e)
         // Collect all form data
         const formData = {
             action: 'registerUser',
-            userId: document.getElementById('userId').value.trim().toUpperCase(),
             icNumber: document.getElementById('icNumber').value,
             phone: phoneInput.value,
             password: document.getElementById('password').value,
