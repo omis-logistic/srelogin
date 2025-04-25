@@ -1,7 +1,7 @@
 //scripts/app.js
 // ================= CONFIGURATION =================
 const CONFIG = {
-  GAS_URL: 'https://script.google.com/macros/s/AKfycbz_eykl2Ce3HARIeJHWLDCDNCWzsx9XUN4BEUDxOvrkHuO66ov3uMRb_YgYit0cdbJRcw/exec',
+  GAS_URL: 'https://script.google.com/macros/s/AKfycbwMrebM6YYtQRkD519c42KrxW3YkRkOCXJ_XGQJ5kbNbktdo-_UBf59p2aX-qruRHaTgw/exec',
   PROXY_URL: 'https://script.google.com/macros/s/AKfycbw3cdvA0BGdhQLVliVUzO5sdP4cGlNrY3jU4-URN0DJdQesji8sHaQ5d2MoOGgIXBrW/exec',
   SESSION_TIMEOUT: 3600,
   MAX_FILE_SIZE: 5 * 1024 * 1024,
@@ -743,38 +743,73 @@ async function handleRegistration(e) {
   showLoading(true);
 
   try {
-    const formData = new FormData(form);
-    const userId = formData.get('userId').trim().toUpperCase(); // Get from form
-
-    const payload = {
-      userId: userId || null, // Explicit null when empty
-      icNumber: formData.get('icNumber').trim(),
-      phone: formData.get('phone').replace(/\D/g, ''),
-      password: formData.get('password'),
-      email: formData.get('email').toLowerCase().trim(),
-      fullName: formData.get('fullName').trim(),
-      address: formData.get('address').trim(),
-      postcode: formData.get('postcode').trim()
-    };
-
-    // Validation check
-    if(userId && !/^S\d{4}$/.test(userId)) {
-      throw new Error('Invalid User ID format');
+    // === EXISTING VALIDATION CHECKS ===
+    // 1. Validate IC format
+    const rawIC = document.getElementById('icNumber').value.trim();
+    if (!/^\d{2}-?\d{6}$|^\d{6}-?\d{2}-?\d{4}$|^\d{12}$|^\d{2}-?\d{4}-?\d{4,6}$/.test(rawIC)) {
+      throw new Error('Invalid IC format');
     }
 
+    // 2. Phone validation
+    const phone = document.getElementById('phone').value.replace(/\D/g, '');
+    if (!/^(673\d{7}|60\d{9,10})$/.test(phone)) {
+      throw new Error('Invalid phone format');
+    }
+
+    // === NEW USER ID VALIDATION ===
+    const userIdInput = document.getElementById('userId');
+    const userId = userIdInput.value.trim().toUpperCase();
+    if (userId && !/^S\d{4}$/.test(userId)) {
+      userIdInput.classList.add('invalid-input');
+      throw new Error('Invalid User ID format (S followed by 4 digits)');
+    }
+
+    // === EXISTING DATA COLLECTION ===
+    const formData = {
+      icNumber: rawIC,
+      phone: phone,
+      password: document.getElementById('password').value,
+      email: document.getElementById('email').value.toLowerCase().trim(),
+      fullName: document.getElementById('fullName').value.trim(),
+      address: document.getElementById('address').value.trim(),
+      postcode: document.getElementById('postcode').value.trim(),
+      // === NEW USER ID FIELD ===
+      userId: userId || null // Preserve null for backend logic
+    };
+
+    // === EXISTING SUBMISSION FLOW ===
     const response = await fetch(CONFIG.GAS_URL, {
       method: 'POST',
-      body: JSON.stringify(payload)
+      headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+      body: `data=${encodeURIComponent(JSON.stringify(formData))}`
     });
 
-    if(!response.ok) throw await response.json();
-    
-    showSuccessMessage();
-    
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || 'Registration failed');
+    }
+
+    // === EXISTING SUCCESS HANDLING ===
+    document.getElementById('successModal').style.display = 'block';
+    setTimeout(() => window.location.href = 'login.html', 3000);
+
   } catch (error) {
-    showError(error.message);
+    // === ENHANCED ERROR HANDLING ===
+    const errorElement = document.getElementById('error-message');
+    if (error.message.includes('User ID')) {
+      errorElement.style.color = '#ff4444';
+      errorElement.textContent = error.message;
+      window.scrollTo({
+        top: document.getElementById('userId').offsetTop - 100,
+        behavior: 'smooth'
+      });
+    } else {
+      showError(error.message);
+    }
   } finally {
+    // === EXISTING CLEANUP ===
     showLoading(false);
+    form.querySelector('button[type="submit"]').disabled = false;
   }
 }
 
