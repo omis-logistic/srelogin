@@ -1,7 +1,7 @@
 //scripts/app.js
 // ================= CONFIGURATION =================
 const CONFIG = {
-  GAS_URL: 'https://script.google.com/macros/s/AKfycbyCrlLh7nK2dcMwTI7BA1Da6-mnnWhByzv-AiYpe9v27YNVouag8HiZPsrSvGPSwXdkmg/exec',
+  GAS_URL: 'https://script.google.com/macros/s/AKfycbxfBgPbuaiv6r_7riuttqEkVROyLpGQCj8TuVD0EAYUCidCul8PNVq437bkBsn2ELv_Mg/exec',
   PROXY_URL: 'https://script.google.com/macros/s/AKfycbw3cdvA0BGdhQLVliVUzO5sdP4cGlNrY3jU4-URN0DJdQesji8sHaQ5d2MoOGgIXBrW/exec',
   SESSION_TIMEOUT: 3600,
   MAX_FILE_SIZE: 5 * 1024 * 1024,
@@ -771,7 +771,8 @@ async function handleRegistration(e) {
             email: document.getElementById('email').value.toLowerCase().trim(),
             fullName: document.getElementById('fullName').value.trim(),
             address: document.getElementById('address').value.trim(),
-            postcode: document.getElementById('postcode').value.trim()
+            postcode: document.getElementById('postcode').value.trim(),
+            userId: document.getElementById('userId').value.toUpperCase() || null
         };
 
         // 3. Submit to backend
