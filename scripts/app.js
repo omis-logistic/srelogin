@@ -740,70 +740,37 @@ async function handleLogin() {
 async function handleRegistration(e) {
   e.preventDefault();
   const form = e.target;
-  showLoading(true);
-  const messageDiv = document.getElementById('message');
-
+  const submitBtn = form.querySelector('button[type="submit"]');
+  const originalBtnText = submitBtn.innerHTML;
+  const userIdInput = document.getElementById('userId');
+  
   try {
-    // Reset error states
-    messageDiv.textContent = '';
-    document.querySelectorAll('.validation-message').forEach(el => {
-      el.textContent = '';
-      el.className = 'validation-message';
-    });
+    // Validate form before submission
+    if (!validateForm()) {
+      showError('Please complete all required fields correctly');
+      return;
+    }
 
-    // Collect form data
+    // Collect form data with new userId field
     const formData = {
-      // New User ID field
-      userId: document.getElementById('userId').value.trim().toUpperCase() || null,
-      
-      // Existing fields
+      userId: userIdInput.value.trim().toUpperCase() || null,
       icNumber: document.getElementById('icNumber').value.trim(),
       phone: document.getElementById('phone').value.replace(/\D/g, ''),
       password: document.getElementById('password').value,
       email: document.getElementById('email').value.toLowerCase().trim(),
       fullName: document.getElementById('fullName').value.trim(),
       address: document.getElementById('address').value.trim(),
-      postcode: document.getElementById('postcode').value.trim(),
-      
-      // Maintain hidden field for legacy compatibility
-      action: 'registerUser'
+      postcode: document.getElementById('postcode').value.trim()
     };
 
-    // === VALIDATION CHECKS ===
-    // 1. Validate custom User ID format if provided
-    if(formData.userId && !/^S\d{4}$/.test(formData.userId)) {
-      throw new Error('Invalid User ID format - must be S followed by 4 digits (e.g. S0123)');
-    }
-
-    // 2. Existing phone validation
-    const phoneRegex = /^(673\d{7}|60\d{9,10})$/;
-    if(!phoneRegex.test(formData.phone)) {
-      throw new Error('Invalid phone format');
-    }
-
-    // 3. Password validation
-    const passwordRegex = /^(?=.*[A-Z])(?=.*\d).{6,}$/;
-    if(!passwordRegex.test(formData.password)) {
-      throw new Error('Password requires 6+ characters with 1 uppercase and 1 number');
-    }
-
-    // 4. Email match validation
-    if(formData.email !== document.getElementById('confirmEmail').value.toLowerCase().trim()) {
-      throw new Error('Email addresses do not match');
-    }
-
-    // 5. IC number validation
-    const icRegex = /^(\d{2}-?\d{6}|\d{6}-?\d{2}-?\d{4}|\d{12}|\d{2}-?\d{4}-?\d{4,6})$/;
-    if(!icRegex.test(formData.icNumber)) {
-      throw new Error('Invalid IC number format');
-    }
+    // Show loading state
+    submitBtn.innerHTML = '<div class="button-loader"></div> Processing...';
+    submitBtn.disabled = true;
 
     // Submit to backend
     const response = await fetch(CONFIG.GAS_URL, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-      },
+      headers: {'Content-Type': 'application/x-www-form-urlencoded'},
       body: `data=${encodeURIComponent(JSON.stringify(formData))}`
     });
 
@@ -814,30 +781,42 @@ async function handleRegistration(e) {
 
     // Show success UI
     document.getElementById('successModal').style.display = 'block';
-    form.reset();
-
-    // Auto-redirect after delay
-    setTimeout(() => {
-      window.location.href = 'login.html';
-    }, 3000);
+    setTimeout(() => window.location.href = 'login.html', 3000);
 
   } catch (error) {
     console.error('Registration Error:', error);
-    showError(error.message, 'message');
-    if(error.message.includes('User ID')) {
-      document.getElementById('userId').classList.add('invalid');
-      document.getElementById('userIdValidation').textContent = error.message;
-    }
+    handleRegistrationError(error, userIdInput);
   } finally {
-    showLoading(false);
-    // Maintain existing analytics
-    if(typeof gtag !== 'undefined') {
-      gtag('event', 'registration_attempt', {
-        'event_category': 'engagement',
-        'event_label': formData.userId ? 'custom_id' : 'auto_id'
-      });
-    }
+    // Reset UI state
+    submitBtn.innerHTML = originalBtnText;
+    submitBtn.disabled = false;
   }
+}
+
+// ================= ERROR HANDLING =================
+function handleRegistrationError(error, userIdInput) {
+  const errorMessage = document.getElementById('message');
+  
+  if (error.message.includes('User ID')) {
+    userIdInput.classList.add('invalid-input');
+    errorMessage.textContent = error.message;
+    errorMessage.style.display = 'block';
+    window.scrollTo({ top: userIdInput.offsetTop - 100, behavior: 'smooth' });
+  } else {
+    showError(error.message);
+  }
+}
+
+// ================= FORM VALIDATION =================
+function validateForm() {
+  return [
+    validatePhoneNumber(document.getElementById('phone')),
+    validatePassword(),
+    validateConfirmPassword(),
+    validateEmail(),
+    validateICNumber(),
+    validateUserId() // New validation
+  ].every(validation => validation === true);
 }
 
 // ================= PASSWORD MANAGEMENT =================
