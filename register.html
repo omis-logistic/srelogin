@@ -253,14 +253,13 @@
 
           <!-- Optional User ID -->
 <div class="form-group">
-  <label for="userId">User ID (Optional):</label>
+  <label for="userId">User ID (Existing user):</label>
   <input type="text" id="userId" 
          pattern="^S\d{4}$"
          title="Format: S followed by 4 digits (e.g. S0123)"
-         style="font-family: monospace;">
-  <span class="validation-message">
-    Leave blank if unsure - we'll assign one automatically
-  </span>
+         placeholder="S0000">
+  <span class="validation-message" id="userIdValidation"></span>
+  <small class="description">Leave it blank for new user - we'll assign one automatically</small>
 </div>
           
             <!-- Hidden Data Field -->
@@ -293,7 +292,7 @@
 
     <script>
 const CONFIG = window.CONFIG || {
-  GAS_URL: 'https://script.google.com/macros/s/AKfycbyHGnrIA6xq2_OeosY0HshXJyuLKBOrN1NDwleExamEtRzONWJCxF9dN88Weh3tFU02ZA/exec'
+  GAS_URL: 'https://script.google.com/macros/s/AKfycbxVSPHCAKcbrnGBjjUr4RO5_MvGhPPd3bx8Fd7FLqADVlMlYkJlAy2zfjfSG6H4gvpn5Q/exec'
 };
         // Real-time Validations
         document.getElementById('registrationForm').action = CONFIG.GAS_URL;
