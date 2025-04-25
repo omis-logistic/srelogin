@@ -201,12 +201,12 @@
     font-size: 0.9em;
 }
 
-    /* New login button styles */
+    /* Updated Login button styles */
     .login-button {
         display: block;
         width: 100%;
         padding: 12px;
-        background: #FF85B3; /* Lighter pink color */
+        background: #FF85B3;
         color: white;
         text-align: center;
         text-decoration: none;
@@ -215,9 +215,15 @@
         border: none;
         cursor: pointer;
         transition: background 0.3s;
-        margin-top: 10px;
+        box-sizing: border-box; /* Added */
+        margin-top: 0; /* Changed from 10px */
     }
 
+    /* Adjust form-group spacing */
+    .form-group:last-child {
+        margin-bottom: 0; /* Remove bottom margin for last form-group */
+    }
+      
     .login-button:hover {
         background: #FF69B4; /* Slightly darker on hover */
     }
@@ -314,7 +320,7 @@
             <div class="form-group">
                 <button type="submit">Register Now</button>
             </div>
-            <div class="form-group">
+            <div class="form-group" style="margin-top: 10px;">
                 <a href="login.html" class="login-button">Back to Login</a>
             </div>
             <div id="message" class="error"></div>
