@@ -1,7 +1,7 @@
 //scripts/app.js
 // ================= CONFIGURATION =================
 const CONFIG = {
-  GAS_URL: 'https://script.google.com/macros/s/AKfycbxVSPHCAKcbrnGBjjUr4RO5_MvGhPPd3bx8Fd7FLqADVlMlYkJlAy2zfjfSG6H4gvpn5Q/exec',
+  GAS_URL: 'https://script.google.com/macros/s/AKfycbz_eykl2Ce3HARIeJHWLDCDNCWzsx9XUN4BEUDxOvrkHuO66ov3uMRb_YgYit0cdbJRcw/exec',
   PROXY_URL: 'https://script.google.com/macros/s/AKfycbw3cdvA0BGdhQLVliVUzO5sdP4cGlNrY3jU4-URN0DJdQesji8sHaQ5d2MoOGgIXBrW/exec',
   SESSION_TIMEOUT: 3600,
   MAX_FILE_SIZE: 5 * 1024 * 1024,
@@ -740,56 +740,41 @@ async function handleLogin() {
 async function handleRegistration(e) {
   e.preventDefault();
   const form = e.target;
-  const submitBtn = form.querySelector('button[type="submit"]');
-  const originalBtnText = submitBtn.innerHTML;
-  const userIdInput = document.getElementById('userId');
-  
-  try {
-    // Validate form before submission
-    if (!validateForm()) {
-      showError('Please complete all required fields correctly');
-      return;
-    }
+  showLoading(true);
 
-    // Collect form data with new userId field
-    const formData = {
-      userId: userIdInput.value.trim().toUpperCase() || null,
-      icNumber: document.getElementById('icNumber').value.trim(),
-      phone: document.getElementById('phone').value.replace(/\D/g, ''),
-      password: document.getElementById('password').value,
-      email: document.getElementById('email').value.toLowerCase().trim(),
-      fullName: document.getElementById('fullName').value.trim(),
-      address: document.getElementById('address').value.trim(),
-      postcode: document.getElementById('postcode').value.trim()
+  try {
+    const formData = new FormData(form);
+    const userId = formData.get('userId').trim().toUpperCase(); // Get from form
+
+    const payload = {
+      userId: userId || null, // Explicit null when empty
+      icNumber: formData.get('icNumber').trim(),
+      phone: formData.get('phone').replace(/\D/g, ''),
+      password: formData.get('password'),
+      email: formData.get('email').toLowerCase().trim(),
+      fullName: formData.get('fullName').trim(),
+      address: formData.get('address').trim(),
+      postcode: formData.get('postcode').trim()
     };
 
-    // Show loading state
-    submitBtn.innerHTML = '<div class="button-loader"></div> Processing...';
-    submitBtn.disabled = true;
-
-    // Submit to backend
-    const response = await fetch(CONFIG.GAS_URL, {
-      method: 'POST',
-      headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-      body: `data=${encodeURIComponent(JSON.stringify(formData))}`
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.message || 'Registration failed');
+    // Validation check
+    if(userId && !/^S\d{4}$/.test(userId)) {
+      throw new Error('Invalid User ID format');
     }
 
-    // Show success UI
-    document.getElementById('successModal').style.display = 'block';
-    setTimeout(() => window.location.href = 'login.html', 3000);
+    const response = await fetch(CONFIG.GAS_URL, {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    });
 
+    if(!response.ok) throw await response.json();
+    
+    showSuccessMessage();
+    
   } catch (error) {
-    console.error('Registration Error:', error);
-    handleRegistrationError(error, userIdInput);
+    showError(error.message);
   } finally {
-    // Reset UI state
-    submitBtn.innerHTML = originalBtnText;
-    submitBtn.disabled = false;
+    showLoading(false);
   }
 }
 
