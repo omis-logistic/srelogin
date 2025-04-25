@@ -1,7 +1,7 @@
 //scripts/app.js
 // ================= CONFIGURATION =================
 const CONFIG = {
-  GAS_URL: 'https://script.google.com/macros/s/AKfycbzd0Xf23qWXITJU7sMqQlVB31LHlWmGt6zT9483g1j3fuY3LjX2rRe0BdlMzmGN-c7mkw/exec',
+  GAS_URL: 'https://script.google.com/macros/s/AKfycbyHGnrIA6xq2_OeosY0HshXJyuLKBOrN1NDwleExamEtRzONWJCxF9dN88Weh3tFU02ZA/exec',
   PROXY_URL: 'https://script.google.com/macros/s/AKfycbw3cdvA0BGdhQLVliVUzO5sdP4cGlNrY3jU4-URN0DJdQesji8sHaQ5d2MoOGgIXBrW/exec',
   SESSION_TIMEOUT: 3600,
   MAX_FILE_SIZE: 5 * 1024 * 1024,
@@ -737,57 +737,100 @@ async function handleLogin() {
 }
 
 // ================= REGISTRATION HANDLER ================= 
+// Complete handleRegistration function with User ID additions
 async function handleRegistration(e) {
-    e.preventDefault();
-    const form = e.target;
-    showLoading(true);
+  e.preventDefault();
+  const form = e.target;
+  const submitBtn = form.querySelector('button[type="submit"]');
+  const originalBtnText = submitBtn.innerHTML;
+  const userId = document.getElementById('userId').value.trim().toUpperCase();
+  
+  try {
+    // Show loading state
+    submitBtn.innerHTML = '<div class="button-loader"></div> Processing...';
+    submitBtn.disabled = true;
 
-    try {
-        // Reset errors
-        document.getElementById('icNumber').classList.remove('invalid-input');
-
-        // 1. Validate IC format
-        const rawIC = document.getElementById('icNumber').value.trim();
-        if (!/^\d{2}-?\d{6}$|^\d{6}-?\d{2}-?\d{4}$|^\d{12}$|^\d{2}-?\d{4}-?\d{4,6}$/.test(rawIC)) {
-            throw new Error('Invalid IC format');
-        }
-
-        // 2. Prepare clean data payload
-        const payload = {
-            action: 'registerUser',
-            userId: document.getElementById('userIdInput').value.trim().toUpperCase(),
-            icNumber: rawIC,
-            phone: document.getElementById('phone').value.replace(/\D/g, ''),
-            password: document.getElementById('password').value,
-            email: document.getElementById('email').value.toLowerCase().trim(),
-            fullName: document.getElementById('fullName').value.trim(),
-            address: document.getElementById('address').value.trim(),
-            postcode: document.getElementById('postcode').value.trim()
-        };
-
-        // 3. Submit to backend
-        const response = await fetch(CONFIG.GAS_URL, {
-            method: 'POST',
-            headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-            body: `data=${encodeURIComponent(JSON.stringify(payload))}`
-        });
-
-        // 4. Handle response
-        if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.message || 'Registration failed');
-        }
-
-        // 5. Show success
-        document.getElementById('successModal').style.display = 'block';
-        setTimeout(() => window.location.href = 'login.html', 3000);
-
-    } catch (error) {
-        console.error('Registration Error:', error);
-        showError(error.message);
-    } finally {
-        showLoading(false);
+    // Validate User ID if provided
+    if (userId && !/^S\d{4}$/.test(userId)) {
+      throw new Error('Invalid User ID format (must be S followed by 4 digits)');
     }
+
+    // Collect form data (maintain original fields + add userId)
+    const formData = {
+      action: 'registerUser',
+      userId: userId || null, // Send null if empty
+      icNumber: document.getElementById('icNumber').value.trim(),
+      phone: document.getElementById('phone').value.replace(/\D/g, ''),
+      password: document.getElementById('password').value,
+      email: document.getElementById('email').value.toLowerCase().trim(),
+      fullName: document.getElementById('fullName').value.trim(),
+      address: document.getElementById('address').value.trim(),
+      postcode: document.getElementById('postcode').value.trim()
+    };
+
+    // Validate core fields (original validation)
+    if (!validatePhoneNumber(document.getElementById('phone'))) {
+      throw new Error('Invalid phone number format');
+    }
+
+    if (!validatePasswordComplexity(formData.password)) {
+      throw new Error('Password must contain 6+ characters with 1 uppercase and 1 number');
+    }
+
+    if (formData.password !== document.getElementById('confirmPassword').value) {
+      throw new Error('Passwords do not match');
+    }
+
+    if (formData.email !== document.getElementById('confirmEmail').value.toLowerCase().trim()) {
+      throw new Error('Email addresses do not match');
+    }
+
+    // Submit to backend (original submission flow)
+    const response = await fetch(CONFIG.GAS_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: `data=${encodeURIComponent(JSON.stringify(formData))}`
+    });
+
+    // Handle response (original logic)
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || 'Registration failed');
+    }
+
+    // Show success UI (original flow)
+    document.getElementById('successModal').style.display = 'block';
+    form.reset();
+
+    // Auto-redirect after delay (original behavior)
+    setTimeout(() => {
+      window.location.href = 'login.html';
+    }, 3000);
+
+  } catch (error) {
+    // Original error handling with User ID enhancements
+    const errorMessage = error.message.includes('User ID') ? 
+      `User ID Error: ${error.message}` : 
+      error.message;
+
+    showError(errorMessage, 'message');
+    
+    // Special handling for User ID errors
+    if (error.message.includes('User ID')) {
+      document.getElementById('userId').classList.add('invalid-input');
+      setTimeout(() => {
+        document.getElementById('userId').classList.remove('invalid-input');
+      }, 2000);
+    }
+
+  } finally {
+    // Restore UI state (original cleanup)
+    submitBtn.innerHTML = originalBtnText;
+    submitBtn.disabled = false;
+    document.getElementById('userId').value = userId; // Preserve casing
+  }
 }
 
 // ================= PASSWORD MANAGEMENT =================
@@ -908,27 +951,32 @@ function validateICNumber(input) {
   return isValid;
 }
 
-function validateUserId(input) {
-  const userId = input.value.trim().toUpperCase();
+document.getElementById('userId').addEventListener('input', validateUserId);
+
+function validateUserId() {
+  const userIdInput = document.getElementById('userId');
   const validation = document.getElementById('userIdValidation');
+  const value = userIdInput.value.trim().toUpperCase();
   
-  if(userId === '') {
-    validation.textContent = 'Leave blank if unsure';
-    validation.className = 'validation-message valid';
+  if(value === '') {
+    validation.textContent = '';
+    userIdInput.classList.remove('valid', 'invalid');
     return true;
   }
   
-  const isValid = /^[A-Z]\d{4}$/.test(userId) ||  // S0000 format
-                 /^[A-Z]{2}\d{3}$/.test(userId); // AB000 format
+  if(/^S\d{4}$/.test(value)) {
+    validation.textContent = '✓ Valid format';
+    validation.className = 'validation-message valid';
+    userIdInput.classList.add('valid');
+    userIdInput.classList.remove('invalid');
+    return true;
+  }
   
-  validation.textContent = isValid ? 
-    '✓ Valid ID format' : 
-    'Invalid format - Use S0000 or AB000 format';
-  validation.className = `validation-message ${isValid ? 'valid' : 'invalid'}`;
-  
-  return isValid;
+  validation.textContent = 'Invalid format (e.g. S0123)';
+  validation.className = 'validation-message invalid';
+  userIdInput.classList.add('invalid');
+  return false;
 }
-
 // ================= UTILITIES =================
 function safeRedirect(path) {
   try {
