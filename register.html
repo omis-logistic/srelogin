@@ -175,12 +175,13 @@
     background: #357abd;
 }
 
-.description {
-  display: block;
-  color: #888;
-  margin-top: 5px;
-  font-size: 0.9em;
+.description-text {
+    display: block;
+    margin-top: 4px;
+    color: #666;
+    font-size: 0.9em;
 }
+      
     </style>
     <script src="app.js"></script>
 </head>
@@ -258,17 +259,15 @@
   <span class="validation-message" id="icError"></span>
 </div>
 
-          <!-- Optional User ID -->
-<div class="form-group">
-  <label for="userId">User ID (Existing user):</label>
-  <input type="text" id="userId" 
-         pattern="^S\d{4}$"
-         title="Format: S followed by 4 digits (e.g. S0123)"
-         placeholder="S0000">
-  <span class="validation-message" id="userIdValidation"></span>
-  <small class="description">Leave it blank for new user - we'll assign one automatically</small>
+          <div class="form-group">
+    <label for="userId">User ID (Existing user):</label>
+    <input type="text" id="userId" 
+           pattern="^S\d{4}$"
+           title="Format: S followed by 4 digits (e.g. S0123)">
+    <small class="description-text">Leave it blank for new user - we'll assign one automatically</small>
+    <span class="validation-message" id="userIdValidation"></span>
 </div>
-          
+
             <!-- Hidden Data Field -->
             <input type="hidden" id="jsonData" name="data" value="">
             
@@ -299,7 +298,7 @@
 
     <script>
 const CONFIG = window.CONFIG || {
-  GAS_URL: 'https://script.google.com/macros/s/AKfycbwMrebM6YYtQRkD519c42KrxW3YkRkOCXJ_XGQJ5kbNbktdo-_UBf59p2aX-qruRHaTgw/exec'
+  GAS_URL: 'https://script.google.com/macros/s/AKfycbyCrlLh7nK2dcMwTI7BA1Da6-mnnWhByzv-AiYpe9v27YNVouag8HiZPsrSvGPSwXdkmg/exec'
 };
         // Real-time Validations
         document.getElementById('registrationForm').action = CONFIG.GAS_URL;
@@ -328,6 +327,12 @@ document.getElementById('phone').addEventListener('input', function(e) {
     let phone = input.value.replace(/\D/g, '');
     input.value = phone; // Store raw digits without formatting
     validatePhoneNumber(input);
+});
+
+document.getElementById('userId').addEventListener('input', function(e) {
+    // Auto-format to uppercase
+    e.target.value = e.target.value.toUpperCase();
+    validateUserId();
 });
 
 // Validation States
@@ -491,6 +496,30 @@ function checkPhoneExistence(phone) {
             return true;
         }
 
+      function validateUserId() {
+    const userIdInput = document.getElementById('userId');
+    const validation = document.getElementById('userIdValidation');
+    
+    if(userIdInput.value === '') {
+        validation.textContent = '';
+        validation.className = '';
+        userIdInput.classList.remove('valid', 'invalid');
+        return true;
+    }
+    
+    if(!/^S\d{4}$/i.test(userIdInput.value)) {
+        validation.textContent = 'Invalid format - must be S followed by 4 digits (e.g. S0123)';
+        validation.className = 'validation-message invalid';
+        userIdInput.classList.add('invalid');
+        return false;
+    }
+    
+    validation.textContent = '✓ Valid User ID format';
+    validation.className = 'validation-message valid';
+    userIdInput.classList.add('valid');
+    return true;
+}
+
         // Main Validation Function
         function validateForm() {
     // Phone validation states check (from previous implementation)
@@ -501,6 +530,7 @@ function checkPhoneExistence(phone) {
 
     const validations = [
         validatePhoneNumber(),      // Phone format and existence check
+        validateUserId(),           // New check
         validatePassword(),         // Password strength check
         validateConfirmPassword(),  // Password match check
         validateEmail(),            // Email format and match check
@@ -537,6 +567,7 @@ document.getElementById('registrationForm').addEventListener('submit', async (e)
         // Collect all form data
         const formData = {
             action: 'registerUser',
+            userId: document.getElementById('userId').value.toUpperCase(),
             icNumber: document.getElementById('icNumber').value,
             phone: phoneInput.value,
             password: document.getElementById('password').value,
@@ -633,5 +664,702 @@ function showError(text, targetId = 'message') {
 }
         
     </script>
+</body>
+</html>
+
+//my-info.html
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <title>My Info - Safhanarizqi Enterprise</title>
+  <link rel="stylesheet" href="styles/main.css">
+  <style>
+    .my-info-page {
+      max-width: 500px;
+      animation: slideIn 0.3s ease-out;
+    }
+
+    #changePasswordSection,
+    #changeEmailSection {
+      border-left: 3px solid var(--gold);
+      padding-left: 15px;
+      margin: 15px 0;
+      overflow: hidden;
+      transition: all 0.3s ease-out;
+    }
+
+    #changePasswordSection button,
+#changeEmailSection button {
+  position: relative;
+}
+
+    .password-rules {
+      font-size: 0.9em;
+      color: var(--gold);
+      margin: 5px 0 10px;
+    }
+
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateX(-20px); }
+      to { opacity: 1; transform: translateX(0); }
+    }
+
+    @media (max-width: 480px) {
+      .my-info-page {
+        padding: 15px;
+      }
+      
+      #changePasswordSection,
+      #changeEmailSection {
+        padding-left: 10px;
+      }
+    }
+
+    body {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.container {
+  flex: 1;
+}
+
+.file-link {
+  color: var(--primary-color);
+  text-decoration: none;
+  border-bottom: 1px dashed currentColor;
+  padding: 8px 0;
+  display: inline-block;
+}
+
+.file-link:hover {
+  color: #8A45A3;
+}
+
+input[readonly] {
+  background-color: #f5f5f5 !important;
+  border-color: #ddd !important;
+}
+    .user-info-section {
+      background: rgba(255,255,255,0.05);
+      padding: 20px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+    }
+    
+    .editable-field-group {
+      position: relative;
+      margin: 15px 0;
+    }
+    
+    .edit-icon {
+      position: absolute;
+      right: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+      cursor: pointer;
+      color: var(--gold);
+      display: none;
+    }
+    
+    .editable-field-group:hover .edit-icon {
+      display: block !important; /* Force show on hover */
+    }
+    
+    .save-section {
+      border-top: 1px solid var(--gold);
+      padding-top: 20px;
+      margin-top: 20px;
+    }
+
+    .button-loader {
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    border: 2px solid #fff;
+    border-radius: 50%;
+    border-top-color: transparent;
+    animation: spin 0.8s linear infinite;
+    margin-right: 8px;
+}
+
+.success-message {
+    background: #00C851dd;
+    color: white;
+    padding: 12px;
+    border-radius: 4px;
+    margin-bottom: 15px;
+    animation: slideIn 0.3s ease-out;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+@keyframes slideIn {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.loading-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0,0,0,0.7);
+  display: none;
+  justify-content: center;
+  align-items: center;
+  z-index: 9999;
+}
+
+.loading-spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid #f3f3f3;
+  border-top: 4px solid var(--gold);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+#passwordError {
+    color: #ff4444;
+    font-size: 0.9em;
+    margin-top: 8px;
+    display: none;
+}
+
+.shake {
+    animation: shake 0.5s;
+    border-color: #ff4444 !important;
+}
+
+@keyframes shake {
+    0% { transform: translateX(0); }
+    25% { transform: translateX(-5px); }
+    50% { transform: translateX(5px); }
+    75% { transform: translateX(-5px); }
+    100% { transform: translateX(0); }
+}
+  </style>
+</head>
+<body>
+  <div class="container my-info-page">
+    <h1>My Information</h1>
+    
+    <div class="user-info-section">
+      <!-- Read-only Fields -->
+      <div class="input-group">
+        <label>User ID:</label>
+        <input type="text" id="userId" readonly>
+      </div>
+      
+      <div class="input-group">
+        <label>IC Number:</label>
+        <input type="text" id="icNumber" readonly>
+      </div>
+
+      <div class="input-group" style="display: none;">
+        <label>Front IC:</label>
+        <a id="frontIC" target="_blank" class="file-link">View Document</a>
+      </div>
+
+      <div class="input-group" style="display: none;">
+        <label>Back IC:</label>
+        <a id="backIC" target="_blank" class="file-link">View Document</a>
+      </div>
+
+      <div class="input-group">
+        <label>Full Name:</label>
+        <input type="text" id="fullName" readonly>
+      </div>
+
+      <!-- Editable Fields -->
+      <div class="editable-field-group">
+        <label>Mailing Address:</label>
+        <input type="text" id="address" readonly>
+        <span class="edit-icon" onclick="enableEditing('address')">✏️</span>
+      </div>
+
+      <div class="editable-field-group">
+        <label>Postcode:</label>
+      <input type="text" id="postcode" readonly 
+           style="text-transform: uppercase"
+           maxlength="10"> <!-- Optional character limit -->
+    <span class="edit-icon" onclick="enableEditing('postcode')">✏️</span>
+</div>
+
+      <!-- Save Section -->
+      <div class="save-section" id="saveSection" style="display: none;">
+        <div class="input-group">
+          <input type="password" id="verifyPassword" 
+                 placeholder="Enter password to save changes">
+          <div class="success-message" style="display: none;"></div>
+        </div>
+        <button onclick="saveChanges()" class="gold-btn">Save Changes</button>
+        <button onclick="cancelEditing()" class="secondary-btn">Cancel</button>
+      </div>
+    </div>
+    
+    <div class="input-group">
+      <input type="tel" id="infoPhone" placeholder="Phone Number" readonly>
+    </div>
+    
+    <div class="input-group">
+      <p>Registered Email: <span id="currentEmail" class="gold-text"></span></p>
+    </div>
+
+    <!-- Password Change Section -->
+    <div class="input-group">
+      <button id="changePassBtn" class="secondary-btn">
+        Change Password
+      </button>
+    </div>
+    
+    <div class="input-group" id="changePasswordSection" style="display: none;">
+      <input type="password" id="currentPassword" placeholder="Current Password" required>
+      <div class="error-message" id="currentPasswordError"></div>
+      
+      <input type="password" id="newPassword" placeholder="New Password" 
+             pattern="^(?=.*[A-Z])(?=.*\d).{6,}$" required>
+      <div class="password-rules">6+ characters, 1 uppercase, 1 number</div>
+      <div class="error-message" id="newPasswordError"></div>
+      
+      <input type="password" id="repeatNewPassword" placeholder="Repeat New Password" required>
+      <div class="error-message" id="repeatNewPasswordError"></div>
+      
+      <button onclick="handleChangePassword()" class="gold-btn">Save New Password</button>
+    </div>
+
+    <!-- Email Change Section -->
+    <div class="input-group">
+      <button id="changeEmailBtn" class="secondary-btn">
+        Change Email Address
+      </button>
+    </div>
+    
+    <div class="input-group" id="changeEmailSection" style="display: none;">
+    <input type="password" 
+           id="currentPasswordEmail" 
+           placeholder="Current Password"
+           required>
+    <div class="error-message" id="emailError"></div>
+    
+    <input type="email" 
+           id="newEmail" 
+           placeholder="New Email Address"
+           required>
+           
+    <input type="email" 
+           id="confirmNewEmail" 
+           placeholder="Confirm New Email"
+           required>
+    
+    <button onclick="handleChangeEmail()" class="gold-btn">Save New Email</button>
+</div>
+
+    <!-- Navigation Buttons -->
+    <button class="secondary-btn" onclick="safeRedirect('dashboard.html')">
+      Back to Dashboard
+    </button>
+    <button class="secondary-btn" onclick="handleLogout()" style="margin-top: 10px;">
+      Logout
+    </button>
+  </div>
+  
+  <div id="globalLoader" class="loading-overlay" style="display: none;">
+  <div class="loading-spinner"></div>
+</div>
+  
+  <script src="scripts/app.js"></script>
+<script>
+
+
+// ================== GLOBAL LOADING ==================
+function showGlobalLoader(show = true) {
+  document.getElementById('globalLoader').style.display = show ? 'flex' : 'none';
+}
+
+// ================== MY INFO PAGE LOADING ==================
+document.addEventListener('DOMContentLoaded', () => {
+    showGlobalLoader(true); // Show loader on page load
+    
+    const userData = checkSession();
+    if(!userData) {
+        safeRedirect('login.html');
+        return;
+    }
+    // Load user info immediately
+    loadUserInfo(userData.phone);
+
+    document.querySelectorAll('.edit-icon').forEach(icon => {
+        icon.style.display = 'block'; // Force show edit icons for testing
+    });
+    
+    // Section toggles
+    document.getElementById('changePassBtn').addEventListener('click', () => {
+        toggleSection('changePasswordSection');
+    });
+
+    document.getElementById('changeEmailBtn').addEventListener('click', () => {
+        toggleSection('changeEmailSection');
+    });
+
+    document.getElementById('postcode').addEventListener('input', function() {
+    this.value = this.value.toUpperCase(); // Real-time uppercase conversion
+});
+});
+
+// ================== ENHANCED DATA LOADING ==================
+function loadUserInfo(phone) {
+    const callbackName = `userInfo_${Date.now()}`;
+    const script = document.createElement('script');
+    script.src = `${CONFIG.GAS_URL}?action=getUserInfo&phone=${encodeURIComponent(phone)}&callback=${callbackName}`;
+
+    window[callbackName] = (response) => {
+        showGlobalLoader(false); // Hide global loader
+        
+        if(response.success) {
+            // Populate fields
+            document.getElementById('userId').value = response.userId || 'N/A';
+            document.getElementById('icNumber').value = response.icNumber || 'N/A';
+            document.getElementById('frontIC').href = response.frontIC || '#';
+            document.getElementById('backIC').href = response.backIC || '#';
+            document.getElementById('fullName').value = response.fullName || 'N/A';
+            document.getElementById('address').value = response.address || '';
+            document.getElementById('postcode').value = response.postcode || '';
+            document.getElementById('infoPhone').value = response.phone || 'N/A';
+            document.getElementById('currentEmail').textContent = response.email || 'N/A';
+        } else {
+            showError('Failed to load user data');
+        }
+        
+        document.body.removeChild(script);
+        delete window[callbackName];
+    };
+    document.body.appendChild(script);
+}
+
+// MARK 1-STYLE SECTION HANDLING
+function toggleSection(sectionId) {
+    const section = document.getElementById(sectionId);
+    section.style.display = section.style.display === 'none' ? 'block' : 'none';
+    document.getElementById('verifyPassword').value = '';
+    clearErrors();
+}
+
+// ================== PASSWORD CHANGE ==================
+function handleChangePassword() {
+    const btn = document.querySelector('#changePasswordSection button');
+    const originalHTML = btn.innerHTML;
+    const currentPass = document.getElementById('currentPassword').value;
+    const newPass = document.getElementById('newPassword').value;
+    const repeatPass = document.getElementById('repeatNewPassword').value;
+    const userData = checkSession();
+
+    // Mark 1 validation pattern
+    if (!currentPass || !newPass || !repeatPass) {
+        showError('All fields are required', 'currentPasswordError');
+        return;
+    }
+    if (newPass !== repeatPass) {
+        showError('Passwords do not match', 'repeatNewPasswordError');
+        return;
+    }
+    if (!/^(?=.*[A-Z])(?=.*\d).{6,}$/.test(newPass)) {
+        showError('6+ chars, 1 uppercase, 1 number', 'newPasswordError');
+        return;
+    }
+
+    // Mark 1 loading state
+    btn.innerHTML = '<div class="button-loader"></div> Updating...';
+    btn.disabled = true;
+
+    const callbackName = `pwdUpdate_${Date.now()}`;
+    const script = document.createElement('script');
+    script.src = `${CONFIG.GAS_URL}?action=updatePassword&phone=${userData.phone}` +
+        `&currentPassword=${encodeURIComponent(currentPass)}` +
+        `&newPassword=${encodeURIComponent(newPass)}` +
+        `&confirmPassword=${encodeURIComponent(repeatPass)}` +
+        `&callback=${callbackName}`;
+
+    window[callbackName] = (response) => {
+        btn.innerHTML = originalHTML;
+        btn.disabled = false;
+        
+        if (response.success) {
+            // Mark 1 success flow
+            showError('Password updated! Please login again', 'success');
+            setTimeout(handleLogout, 2000);
+        } else {
+            // Mark 1 error handling
+            const errorMsg = response.message.includes('password') ? 
+                'Incorrect Password' : response.message;
+            showError(errorMsg, 'currentPasswordError');
+            
+            if(errorMsg === 'Incorrect Password') {
+                document.getElementById('currentPassword').classList.add('shake');
+                setTimeout(() => {
+                    document.getElementById('currentPassword').classList.remove('shake');
+                }, 500);
+            }
+        }
+        
+        document.body.removeChild(script);
+        delete window[callbackName];
+    };
+    document.body.appendChild(script);
+}
+
+// ================== EMAIL CHANGE ==================
+function handleChangeEmail() {
+    const btn = document.querySelector('#changeEmailSection button');
+    const originalHTML = btn.innerHTML;
+    
+    // Get correct field values from Mark 1 HTML structure
+    const password = document.getElementById('currentPasswordEmail').value; // Changed ID
+    const newEmail = document.getElementById('newEmail').value.trim();
+    const confirmEmail = document.getElementById('confirmNewEmail').value.trim(); // Changed ID
+    
+    // Clear previous errors
+    clearEmailErrors();
+
+    // Mark 1 validation flow
+    if (!password || !newEmail || !confirmEmail) {
+        showError('All fields are required', 'emailError');
+        return;
+    }
+    if (newEmail !== confirmEmail) {
+        showError('Emails must match', 'emailError');
+        return;
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newEmail)) {
+        showError('Invalid email format', 'emailError');
+        return;
+    }
+
+    // Mark 1 loading state
+    btn.innerHTML = '<div class="button-loader"></div> Updating...';
+    btn.disabled = true;
+
+    const userData = checkSession();
+    const callbackName = `emailUpdate_${Date.now()}`;
+    const script = document.createElement('script');
+    script.src = `${CONFIG.GAS_URL}?action=updateEmail&phone=${userData.phone}` +
+        `&currentPassword=${encodeURIComponent(password)}` +
+        `&newEmail=${encodeURIComponent(newEmail)}` +
+        `&confirmEmail=${encodeURIComponent(confirmEmail)}` + // Match Mark 1 parameter names
+        `&callback=${callbackName}`;
+
+    window[callbackName] = (response) => {
+        btn.innerHTML = originalHTML;
+        btn.disabled = false;
+        
+        if (response.success) {
+            // Mark 1 success flow
+            showError('Email updated successfully!', 'success');
+            document.getElementById('currentEmail').textContent = newEmail;
+            document.getElementById('changeEmailSection').style.display = 'none';
+        } else {
+            // Mark 1 error handling
+            const errorMsg = response.message.includes('password') ? 
+                'Incorrect Password' : response.message;
+            showError(errorMsg, 'emailError');
+            
+            if(errorMsg === 'Incorrect Password') {
+                document.getElementById('currentPasswordEmail').classList.add('shake');
+                setTimeout(() => {
+                    document.getElementById('currentPasswordEmail').classList.remove('shake');
+                }, 500);
+            }
+        }
+        
+        document.body.removeChild(script);
+        delete window[callbackName];
+    };
+    document.body.appendChild(script);
+}
+
+// ================== MARK 1 UTILITIES ==================
+function clearEmailErrors() {
+    document.querySelectorAll('#changeEmailSection .error-message').forEach(el => {
+        el.textContent = '';
+        el.style.display = 'none';
+    });
+}
+
+// MARK 1 VALIDATION PATTERNS
+function validatePasswordChange(current, newPass, repeat) {
+    if(!current || !newPass || !repeat) {
+        showError('All fields are required');
+        return false;
+    }
+    if(newPass !== repeat) {
+        showError('Passwords do not match');
+        return false;
+    }
+    if(!/^(?=.*[A-Z])(?=.*\d).{6,}$/.test(newPass)) {
+        showError('Password must contain 6+ characters with 1 uppercase and 1 number');
+        return false;
+    }
+    return true;
+}
+
+function validateEmailChange(newEmail, repeatEmail, password) {
+    if(!password || !newEmail || !repeatEmail) {
+        showError('All fields are required');
+        return false;
+    }
+    if(newEmail !== repeatEmail) {
+        showError('Emails do not match');
+        return false;
+    }
+    if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newEmail)) {
+        showError('Invalid email format');
+        return false;
+    }
+    return true;
+}
+
+// ================== MARK 1 SHARED FUNCTIONS ==================
+function handleAuthResponse(response, successMessage, errorContainer) {
+    if (response.success) {
+        showError(successMessage, 'success');
+    } else {
+        const errorMsg = response.message.includes('password') ? 
+            'Incorrect Password' : response.message;
+        showError(errorMsg, errorContainer);
+    }
+}
+
+// MARK 1 UTILITIES
+function clearErrors() {
+    document.querySelectorAll('.error-message').forEach(el => {
+        el.textContent = '';
+        el.style.display = 'none';
+    });
+}
+
+function showError(message, targetId = 'error-message') {
+    const errorElement = document.getElementById(targetId) || createErrorElement();
+    errorElement.textContent = message;
+    errorElement.className = message.includes('success') ? 
+        'success-message' : 'error-message';
+    errorElement.style.display = 'block';
+    setTimeout(() => errorElement.style.display = 'none', 5000);
+}
+
+function enableEditing(fieldId) {
+    const field = document.getElementById(fieldId);
+    field.readOnly = false;
+    field.style.backgroundColor = '#2a2a2a';
+    field.style.borderColor = 'var(--gold)';
+    document.getElementById('saveSection').style.display = 'block';
+}
+
+function cancelEditing() {
+    document.querySelectorAll('.editable-field-group input').forEach(input => {
+        input.readOnly = true;
+        input.style.backgroundColor = '#f5f5f5';
+        input.style.borderColor = '#ddd';
+    });
+    document.getElementById('saveSection').style.display = 'none';
+    document.getElementById('verifyPassword').value = '';
+    clearErrors();
+    loadUserInfo(JSON.parse(sessionStorage.getItem('userData')).phone); // Reload original values
+}
+
+// ======== UPDATE THESE FUNCTIONS ========
+function saveChanges() {
+    const saveBtn = document.querySelector('#saveSection .gold-btn');
+    const originalText = saveBtn.innerHTML;
+    const userData = checkSession();
+    
+    // Show loading state
+    saveBtn.innerHTML = '<div class="button-loader"></div> Saving...';
+    saveBtn.disabled = true;
+
+    const password = document.getElementById('verifyPassword').value;
+    const address = document.getElementById('address').value.trim();
+    const postcode = document.getElementById('postcode').value.trim().toUpperCase();
+
+    // MARK 1-STYLE VALIDATION
+    if (!validateAddressChange(address, postcode)) {
+        saveBtn.innerHTML = originalText;
+        saveBtn.disabled = false;
+        return;
+    }
+
+    // MARK 1-STYLE REQUEST HANDLING
+    const callbackName = `saveAddr_${Date.now()}`;
+    const script = document.createElement('script');
+    script.src = `${CONFIG.GAS_URL}?action=updateAddress&phone=${userData.phone}` +
+        `&address=${encodeURIComponent(address)}` +
+        `&postcode=${encodeURIComponent(postcode)}` +
+        `&password=${encodeURIComponent(password)}` +
+        `&callback=${callbackName}`;
+
+    window[callbackName] = (response) => {
+        // MARK 1-STYLE RESPONSE HANDLING
+        handleAuthResponse(
+            response, 
+            'Address updated successfully!',
+            () => {
+                cancelEditing();
+                loadUserInfo(userData.phone);
+            }
+        );
+        saveBtn.innerHTML = originalText;
+        saveBtn.disabled = false;
+        document.body.removeChild(script);
+        delete window[callbackName];
+    };
+    document.body.appendChild(script);
+}
+
+function handleSaveError(message, saveBtn, cancelBtn, originalBtnHTML) {
+    const passwordError = document.getElementById('passwordError');
+    passwordError.textContent = message;
+    passwordError.style.display = 'block';
+    resetSaveButtons(saveBtn, cancelBtn, originalBtnHTML);
+}
+
+function resetSaveButtons(saveBtn, cancelBtn, originalHTML) {
+    saveBtn.innerHTML = originalHTML;
+    saveBtn.disabled = false;
+    cancelBtn.disabled = false;
+    cancelBtn.style.display = 'inline-block';
+}
+
+// ======== UPDATE VALIDATION ========
+function validateAddressChange(address, postcode) {
+    let isValid = true;
+    const errorElement = document.getElementById('passwordError');
+
+    if (!address || address.length < 10) {
+        showError('Address must be at least 10 characters', 'passwordError');
+        isValid = false;
+    }
+    if (!postcode) {
+        showError('Postcode is required', 'passwordError');
+        isValid = false;
+    }
+    return isValid;
+}
+  
+</script>
+  <div class="footer-text">
+    Built by Omis Logistics. For more info 👉
+    <a href="https://wa.me/6737187776" target="_blank" rel="noopener">here</a>
+  </div>
 </body>
 </html>
