@@ -455,7 +455,7 @@ function validateInvoiceFiles() {
     '* HEADPHONE ; EARPHONE',
     '* PLAYING CARD ;GAMING ; VIDEO GAMES',
     '* GOLD COIN',
-    '* GOLDSMITHS ; SILVERSMITHS WARES'
+    '* GOLDSMITHS ; SILVERSMITHS WARES',
     '* LIVE PLANTS ( ITEM KAWALAN )',
     '* ESSENTIAL OIL',
     '* PERFUME',
@@ -522,7 +522,7 @@ function validateFiles(category, files) {
     '*HEADPHONE ; EARPHONE',
     '*PLAYING CARD ;GAMING ; VIDEO GAMES',
     '*GOLD COIN',
-    '*GOLDSMITHS ; SILVERSMITHS WARES'
+    '*GOLDSMITHS ; SILVERSMITHS WARES',
     '*LIVE PLANTS ( ITEM KAWALAN )',
     '*ESSENTIAL OIL',
     '*PERFUME',
@@ -577,7 +577,7 @@ function handleFileSelection(input) {
     '*HEADPHONE ; EARPHONE',
     '*PLAYING CARD ;GAMING ; VIDEO GAMES',
     '*GOLD COIN',
-    '*GOLDSMITHS ; SILVERSMITHS WARES'
+    '*GOLDSMITHS ; SILVERSMITHS WARES',
     '*LIVE PLANTS ( ITEM KAWALAN )',
     '*ESSENTIAL OIL',
     '*PERFUME',
@@ -1167,7 +1167,7 @@ function checkCategoryRequirements() {
     '*HEADPHONE ; EARPHONE',
     '*PLAYING CARD ;GAMING ; VIDEO GAMES',
     '*GOLD COIN',
-    '*GOLDSMITHS ; SILVERSMITHS WARES'
+    '*GOLDSMITHS ; SILVERSMITHS WARES',
     '*LIVE PLANTS ( ITEM KAWALAN )',
     '*ESSENTIAL OIL',
     '*PERFUME',
