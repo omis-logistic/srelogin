@@ -242,7 +242,7 @@ async function handleParcelSubmission(e) {
       trackingNumber: formData.get('trackingNumber').trim().toUpperCase(),
       nameOnParcel: formData.get('nameOnParcel').trim(),
       phone: document.getElementById('phone').value, 
-      itemDescription: formData.get('itemDescription').trim(),
+      itemDescription: formData.get('itemDescription').trim().toUpperCase(),
       quantity: formData.get('quantity'),
       price: formData.get('price'),
       collectionPoint: formData.get('collectionPoint'),
