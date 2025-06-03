@@ -145,15 +145,8 @@
   }
 }
 
-.thumbnail[onclick="showTrackParcel()"] {
-    display: none !important;
-    visibility: hidden;
-    position: absolute;
-    left: -9999px;
-    pointer-events: none;
-    opacity: 0;
-  }
-      
+/* REMOVED THE HIDING STYLE FOR TRACK PARCEL BUTTON */
+
 /* Add this to keep modal hidden initially */
 #welcomeModal { display: none; }
 </style>
@@ -178,18 +171,10 @@
       </div>
       
       <div class="thumbnail" onclick="showTrackParcel()">
-        <h2>🚚 Track Parcel</h2>
+        <h2>🔍 Tracking History</h2>
         <p>Check your parcel status</p>
       </div>
     </div>
-
-        <a href="https://script.google.com/macros/s/AKfycbwCb-obvJ0XKvc1V9opRe8KnvDtKM7WwIiqtEyRl2p7k9grrLUNbTlnLzEf4T27F5pwMw/exec" target="_blank" rel="noopener noreferrer">
-    <div class="thumbnail">
-      <h2>🔍 Search Tracking</h2>
-      <p>Track your parcel status</p>
-    </div>
-  </a>
-</div>
     
     <button class="logout-btn" onclick="handleLogout()">Log Out</button>
   </div>
