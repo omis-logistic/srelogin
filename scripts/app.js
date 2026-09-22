@@ -253,11 +253,16 @@ async function handleParcelSubmission(e) {
 
     console.log('Submission Payload:', payload); // Debug log
 
+    // ===== MODIFIED FETCH (adapted from first version) =====
     await fetch(CONFIG.PROXY_URL, {
       method: 'POST',
-      headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+      mode: 'no-cors',                               // added no-cors
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded'   // charset removed
+      },
       body: `payload=${encodeURIComponent(JSON.stringify(payload))}`
     });
+    // ===== END MODIFICATION =====
 
   } catch (error) {
     console.error('Submission error:', error);
@@ -613,16 +618,18 @@ function handleFileSelection(input) {
 // ================= SUBMISSION HANDLER =================
 async function submitDeclaration(payload) {
   try {
+    // ===== MODIFIED FETCH (adapted from first version) =====
     const response = await fetch(CONFIG.PROXY_URL, {
       method: 'POST',
+      mode: 'no-cors',                               // changed from 'cors'
       headers: {
-        'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8'
+        'Content-Type': 'application/x-www-form-urlencoded'   // charset removed
       },
       body: `payload=${encodeURIComponent(JSON.stringify(payload))}`,
-      mode: 'cors',
       redirect: 'follow',
       referrerPolicy: 'no-referrer'
     });
+    // ===== END MODIFICATION =====
 
     // Handle Google's URL redirection pattern
     const finalResponse = response.url.includes('/exec') 
